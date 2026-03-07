@@ -1,0 +1,94 @@
+import asyncio
+import json
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, Response
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apliqa.db.session import get_db
+from apliqa.providers.mistral import MistralProvider
+from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse
+from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf
+
+router = APIRouter(prefix="/api/cv", tags=["cv"])
+
+_LLM_TIMEOUT_SECONDS = 60.0
+
+
+def _get_provider() -> MistralProvider:
+    return MistralProvider()
+
+
+@router.post(
+    "/generate",
+    response_model=CVGenerateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_generate(
+    body: CVGenerateRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    provider: MistralProvider = Depends(_get_provider),
+) -> CVGenerateResponse:
+    base_url = str(request.base_url).rstrip("/")
+    try:
+        return await asyncio.wait_for(
+            generate_cv(body.job_id, db, provider, base_url),
+            timeout=_LLM_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="LLM request timed out",
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="LLM returned invalid JSON",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+@router.get("/{cv_id}/html", response_class=HTMLResponse)
+async def get_html(
+    cv_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+    try:
+        html = await get_cv_html(cv_id, db)
+        return HTMLResponse(content=html)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+@router.get("/{cv_id}/pdf")
+async def get_pdf(
+    cv_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    try:
+        pdf_bytes = await get_cv_pdf(cv_id, db)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="lebenslauf-{cv_id}.pdf"'},
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
