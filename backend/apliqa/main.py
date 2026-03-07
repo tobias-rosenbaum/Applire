@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from apliqa import __version__
 from apliqa.config import settings
 from apliqa.routers import cv, health, job, profile, session
 
@@ -17,7 +18,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Apliqa API",
     description="AI-powered DACH CV tailoring — Community Edition",
-    version="0.1.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
