@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from apliqa import __version__
 from apliqa.config import settings
 
 router = APIRouter()
@@ -9,8 +10,9 @@ router = APIRouter()
 class HealthResponse(BaseModel):
     status: str
     edition: str
+    version: str
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    return HealthResponse(status="ok", edition=settings.apliqa_edition)
+    return HealthResponse(status="ok", edition=settings.apliqa_edition, version=__version__)
