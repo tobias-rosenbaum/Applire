@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.db.session import get_db
-from apliqa.providers.mistral import MistralProvider
+from apliqa.providers import get_provider
+from apliqa.providers.base import LLMProvider
 from apliqa.schemas.profile import LinkedInImportRequest, MasterProfileResponse
 from apliqa.services.profile import (
     get_profile,
@@ -20,14 +21,14 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 _LLM_TIMEOUT_SECONDS = 60.0
 
 
-def _get_provider() -> MistralProvider:
-    return MistralProvider()
+def _get_provider() -> LLMProvider:
+    return get_provider()
 
 
 @router.post("/import", response_model=MasterProfileResponse, status_code=status.HTTP_200_OK)
 async def import_profile(
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
     file: Annotated[UploadFile | None, File(description="CV as PDF")] = None,
     linkedin_json: Annotated[str | None, Form(description="LinkedIn export JSON string")] = None,
 ) -> MasterProfileResponse:

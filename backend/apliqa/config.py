@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     database_url: str
     llm_provider: str = "mistral"
     mistral_api_key: str = ""
+    openai_api_key: str = ""
+    ollama_base_url: str = "http://ollama:11434"
+    ollama_model: str = "llama3.2"
     auth_provider: str = "none"
 
     @property

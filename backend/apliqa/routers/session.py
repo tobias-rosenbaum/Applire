@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.db.session import get_db
-from apliqa.providers.mistral import MistralProvider
+from apliqa.providers import get_provider
+from apliqa.providers.base import LLMProvider
 from apliqa.schemas.session import (
     SessionCreateRequest,
     SessionCreateResponse,
@@ -20,15 +21,15 @@ router = APIRouter(prefix="/api/session", tags=["session"])
 _LLM_TIMEOUT_SECONDS = 30.0
 
 
-def _get_provider() -> MistralProvider:
-    return MistralProvider()
+def _get_provider() -> LLMProvider:
+    return get_provider()
 
 
 @router.post("", response_model=SessionCreateResponse, status_code=status.HTTP_201_CREATED)
 async def start_session(
     body: SessionCreateRequest,
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
 ) -> SessionCreateResponse:
     try:
         return await asyncio.wait_for(
@@ -63,7 +64,7 @@ async def post_message(
     session_id: uuid.UUID,
     body: SessionMessageRequest,
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
 ) -> SessionMessageResponse:
     if not body.message.strip():
         raise HTTPException(

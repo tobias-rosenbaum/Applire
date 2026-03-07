@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.db.session import get_db
-from apliqa.providers.mistral import MistralProvider
+from apliqa.providers import get_provider
+from apliqa.providers.base import LLMProvider
 from apliqa.schemas.gap import GapAnalysisResponse
 from apliqa.schemas.job import JobAnalyzeRequest, JobAnalysisResponse
 from apliqa.services.gap import analyze_gaps
@@ -17,15 +18,15 @@ router = APIRouter(prefix="/api/job", tags=["job"])
 _LLM_TIMEOUT_SECONDS = 30.0
 
 
-def _get_provider() -> MistralProvider:
-    return MistralProvider()
+def _get_provider() -> LLMProvider:
+    return get_provider()
 
 
 @router.post("/analyze", response_model=JobAnalysisResponse, status_code=status.HTTP_200_OK)
 async def analyze_job_description(
     body: JobAnalyzeRequest,
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
 ) -> JobAnalysisResponse:
     if not body.text.strip():
         raise HTTPException(
@@ -63,7 +64,7 @@ async def analyze_job_description(
 async def get_gap_analysis(
     job_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
 ) -> GapAnalysisResponse:
     try:
         return await asyncio.wait_for(

@@ -7,7 +7,8 @@ from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.db.session import get_db
-from apliqa.providers.mistral import MistralProvider
+from apliqa.providers import get_provider
+from apliqa.providers.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse
 from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf
 
@@ -16,8 +17,8 @@ router = APIRouter(prefix="/api/cv", tags=["cv"])
 _LLM_TIMEOUT_SECONDS = 60.0
 
 
-def _get_provider() -> MistralProvider:
-    return MistralProvider()
+def _get_provider() -> LLMProvider:
+    return get_provider()
 
 
 @router.post(
@@ -29,7 +30,7 @@ async def post_generate(
     body: CVGenerateRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
 ) -> CVGenerateResponse:
     base_url = str(request.base_url).rstrip("/")
     try:
