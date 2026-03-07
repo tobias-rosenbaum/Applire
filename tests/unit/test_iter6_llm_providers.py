@@ -1,7 +1,10 @@
 """
-Iteration 6 — LLM Provider Choice
-Unit tests for the provider factory and OpenAI / Ollama implementations.
-Run without Docker: pytest tests/unit/
+Iteration 6 — LLM Provider Choice (unit tests)
+Mock-based tests for the provider factory and OpenAI / Ollama implementations.
+No Docker or real LLM calls required.
+
+Run:
+    pytest tests/unit/ -v
 """
 import json
 from typing import Any
@@ -76,7 +79,6 @@ def test_factory_is_case_insensitive():
 
 
 def _make_openai_response(content: str) -> MagicMock:
-    """Build a mock that looks like openai.ChatCompletion."""
     choice = MagicMock()
     choice.message.content = content
     response = MagicMock()
@@ -162,7 +164,6 @@ async def test_openai_aparse_json_requests_json_format():
 
 
 def _make_httpx_response(body: dict[str, Any]) -> MagicMock:
-    """Build a mock that looks like an httpx.Response."""
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
     mock_resp.json = MagicMock(return_value=body)
@@ -170,8 +171,6 @@ def _make_httpx_response(body: dict[str, Any]) -> MagicMock:
 
 
 def _patch_httpx_post(return_value: MagicMock):
-    """Patch httpx.AsyncClient so its async context manager yields a client
-    whose .post() is an AsyncMock returning return_value."""
     mock_client = MagicMock()
     mock_client.post = AsyncMock(return_value=return_value)
     mock_async_cm = MagicMock()
@@ -255,5 +254,4 @@ async def test_ollama_strips_trailing_slash_from_base_url():
         await provider.acomplete("hi")
 
     url = mock_client.post.call_args.args[0]
-    assert not url.startswith("http://localhost:11434//")
     assert url == "http://localhost:11434/api/chat"
