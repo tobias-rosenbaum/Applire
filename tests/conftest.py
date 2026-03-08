@@ -50,12 +50,9 @@ def _wait_for_api() -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def docker_environment():
-    # Only build and start the services the API tests need.
-    # The frontend service is excluded: npm install + next build takes several
-    # minutes and is not required for backend integration tests.
-    _docker_compose("stop", "postgres", "backend")
-    _docker_compose("build", "backend", "postgres")
-    _docker_compose("up", "-d", "--force-recreate", "postgres", "backend")
+    _docker_compose("down")
+    _docker_compose("build")
+    _docker_compose("up", "-d", "--force-recreate")
     _wait_for_api()
     _docker_compose("exec", "backend", "python", "-m", "alembic", "upgrade", "head")
     yield
