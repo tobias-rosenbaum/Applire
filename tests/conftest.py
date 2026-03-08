@@ -53,6 +53,7 @@ def docker_environment():
     # Only build and start the services the API tests need.
     # The frontend service is excluded: npm install + next build takes several
     # minutes and is not required for backend integration tests.
+    _docker_compose("stop", "postgres", "backend")
     _docker_compose("build", "backend", "postgres")
     _docker_compose("up", "-d", "--force-recreate", "postgres", "backend")
     _wait_for_api()
