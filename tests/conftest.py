@@ -54,7 +54,7 @@ def docker_environment():
     # The frontend service is excluded: npm install + next build takes several
     # minutes and is not required for backend integration tests.
     _docker_compose("build", "backend", "postgres")
-    _docker_compose("up", "-d", "postgres", "backend")
+    _docker_compose("up", "-d", "--force-recreate", "postgres", "backend")
     _wait_for_api()
     _docker_compose("exec", "backend", "python", "-m", "alembic", "upgrade", "head")
     yield
