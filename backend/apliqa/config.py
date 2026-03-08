@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     llm_provider: str = "mistral"
     mistral_api_key: str = ""
     openai_api_key: str = ""
+    openai_base_url: str = ""          # empty = use OpenAI default; set to point at LM Studio etc.
+    openai_model: str = "gpt-4o"
     ollama_base_url: str = "http://ollama:11434"
     ollama_model: str = "llama3.2"
     auth_provider: str = "none"

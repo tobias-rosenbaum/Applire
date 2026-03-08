@@ -6,15 +6,25 @@ import openai
 from apliqa.config import settings
 from apliqa.providers.base import LLMProvider
 
-DEFAULT_MODEL = "gpt-4o"
-
-
 class OpenAIProvider(LLMProvider):
-    """OpenAI provider (ADR 009)."""
+    """OpenAI-compatible provider (ADR 009).
 
-    def __init__(self, api_key: str | None = None, model: str = DEFAULT_MODEL) -> None:
-        self._client = openai.AsyncOpenAI(api_key=api_key or settings.openai_api_key)
-        self._model = model
+    Works with OpenAI, LM Studio, and any other OpenAI-compatible server.
+    Set OPENAI_BASE_URL to point at a local server (e.g. http://host.docker.internal:1234/v1).
+    """
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        resolved_base_url = base_url or settings.openai_base_url or None
+        self._client = openai.AsyncOpenAI(
+            api_key=api_key or settings.openai_api_key or "local",
+            base_url=resolved_base_url,
+        )
+        self._model = model or settings.openai_model
 
     async def acomplete(
         self,

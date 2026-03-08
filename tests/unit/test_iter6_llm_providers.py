@@ -36,6 +36,8 @@ def test_factory_returns_openai_provider():
         mock_settings.llm_provider = "openai"
         with patch("apliqa.providers.openai.settings") as openai_settings:
             openai_settings.openai_api_key = "test-key"
+            openai_settings.openai_base_url = ""
+            openai_settings.openai_model = "gpt-4o"
             provider = get_provider()
     assert isinstance(provider, OpenAIProvider)
 
@@ -90,6 +92,8 @@ def _make_openai_response(content: str) -> MagicMock:
 async def test_openai_acomplete_sends_messages():
     with patch("apliqa.providers.openai.settings") as mock_settings:
         mock_settings.openai_api_key = "test-key"
+        mock_settings.openai_base_url = ""
+        mock_settings.openai_model = "gpt-4o"
 
         from apliqa.providers.openai import OpenAIProvider
 
@@ -109,6 +113,8 @@ async def test_openai_acomplete_sends_messages():
 async def test_openai_acomplete_without_system():
     with patch("apliqa.providers.openai.settings") as mock_settings:
         mock_settings.openai_api_key = "test-key"
+        mock_settings.openai_base_url = ""
+        mock_settings.openai_model = "gpt-4o"
 
         from apliqa.providers.openai import OpenAIProvider
 
@@ -129,6 +135,8 @@ async def test_openai_aparse_json_returns_dict():
 
     with patch("apliqa.providers.openai.settings") as mock_settings:
         mock_settings.openai_api_key = "test-key"
+        mock_settings.openai_base_url = ""
+        mock_settings.openai_model = "gpt-4o"
 
         from apliqa.providers.openai import OpenAIProvider
 
@@ -145,6 +153,8 @@ async def test_openai_aparse_json_returns_dict():
 async def test_openai_aparse_json_requests_json_format():
     with patch("apliqa.providers.openai.settings") as mock_settings:
         mock_settings.openai_api_key = "test-key"
+        mock_settings.openai_base_url = ""
+        mock_settings.openai_model = "gpt-4o"
 
         from apliqa.providers.openai import OpenAIProvider
 
