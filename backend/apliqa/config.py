@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://ollama:11434"
     ollama_model: str = "llama3.2"
     auth_provider: str = "none"
+    mcp_transport: str = "stdio"
+    apliqa_base_url: str = "http://localhost:8001"
 
     @property
     def is_community(self) -> bool:

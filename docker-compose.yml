@@ -51,6 +51,27 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
+  # MCP server — stdio transport for agent integration (ADR 010).
+  # This service is useful for verifying startup in CI.
+  # For actual agent use, launch directly: python -m apliqa.mcp
+  # See docs/mcp.md for Claude Desktop / Cursor configuration.
+  mcp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    profiles: [mcp]
+    env_file:
+      - .env.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: python -m apliqa.mcp
+    stdin_open: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   postgres_data:
   ollama_data:
