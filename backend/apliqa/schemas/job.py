@@ -3,6 +3,14 @@ import uuid
 from pydantic import BaseModel, field_validator
 
 
+def _coerce_to_list(v: object) -> list[str]:
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        return [item.strip() for item in v.split(",") if item.strip()]
+    return []
+
+
 class JobAnalyzeRequest(BaseModel):
     text: str
 
@@ -19,3 +27,8 @@ class JobAnalysisResponse(BaseModel):
     raw_text_hash: str
 
     model_config = {"from_attributes": True}
+
+    @field_validator("required_skills", "nice_to_have_skills", "keywords", "company_culture_signals", mode="before")
+    @classmethod
+    def coerce_list_fields(cls, v: object) -> list[str]:
+        return _coerce_to_list(v)

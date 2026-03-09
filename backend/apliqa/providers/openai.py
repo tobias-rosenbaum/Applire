@@ -60,11 +60,21 @@ class OpenAIProvider(LLMProvider):
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
+        kwargs: dict = {}
+        if not (settings.openai_base_url):
+            kwargs["response_format"] = {"type": "json_object"}
+
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format={"type": "json_object"},
+            **kwargs,
         )
-        return json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        # Strip markdown code fences if present (common with local models)
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        return json.loads(content.strip())
