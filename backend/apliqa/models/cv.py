@@ -25,6 +25,7 @@ class GeneratedCV(Base):
         ForeignKey("master_profiles.id"), nullable=False
     )
     tailored_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    template: Mapped[str] = mapped_column(default="classic_german", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

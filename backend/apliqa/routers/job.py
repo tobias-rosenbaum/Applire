@@ -5,6 +5,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apliqa.auth import get_auth_provider
+from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
 from apliqa.providers import get_provider
 from apliqa.providers.base import LLMProvider
@@ -28,6 +30,7 @@ async def analyze_job_description(
     body: JobAnalyzeRequest,
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> JobAnalysisResponse:
     # Resolve text: either from the body directly or scraped from a URL.
     if body.url:
@@ -79,6 +82,7 @@ async def get_gap_analysis(
     job_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> GapAnalysisResponse:
     try:
         return await asyncio.wait_for(

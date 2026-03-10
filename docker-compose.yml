@@ -51,6 +51,23 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
+  # Retention worker — daily GDPR TTL enforcement (ADR 005).
+  # Not profile-gated: data hygiene is a core operational concern.
+  retention:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: sh -c "while true; do python -m apliqa.retention; sleep 86400; done"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   # MCP server — stdio transport for agent integration (ADR 010).
   # This service is useful for verifying startup in CI.
   # For actual agent use, launch directly: python -m apliqa.mcp

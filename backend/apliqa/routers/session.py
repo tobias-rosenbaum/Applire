@@ -5,6 +5,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apliqa.auth import get_auth_provider
+from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
 from apliqa.providers import get_provider
 from apliqa.providers.base import LLMProvider
@@ -30,6 +32,7 @@ async def start_session(
     body: SessionCreateRequest,
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> SessionCreateResponse:
     try:
         return await asyncio.wait_for(
@@ -65,6 +68,7 @@ async def post_message(
     body: SessionMessageRequest,
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> SessionMessageResponse:
     if not body.message.strip():
         raise HTTPException(

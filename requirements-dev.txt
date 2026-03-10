@@ -1,3 +1,4 @@
 pytest==8.3.4
 pytest-asyncio==0.25.2
 requests==2.32.3
+aiosqlite==0.20.0

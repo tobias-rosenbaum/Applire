@@ -5,6 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apliqa.auth import get_auth_provider
+from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
 from apliqa.providers import get_provider
 from apliqa.providers.base import LLMProvider
@@ -12,6 +14,8 @@ from apliqa.schemas.profile import LinkedInImportRequest, MasterProfileResponse
 from apliqa.services.profile import (
     get_profile,
     import_from_linkedin,
+    import_from_linkedin_pdf,
+    import_from_linkedin_zip,
     import_from_pdf,
     patch_profile_section,
 )
@@ -25,33 +29,53 @@ def _get_provider() -> LLMProvider:
     return get_provider()
 
 
+def _is_zip(file: UploadFile) -> bool:
+    if file.filename and file.filename.lower().endswith(".zip"):
+        return True
+    if file.content_type in ("application/zip", "application/x-zip-compressed"):
+        return True
+    return False
+
+
+def _is_pdf(file: UploadFile) -> bool:
+    if file.filename and file.filename.lower().endswith(".pdf"):
+        return True
+    if file.content_type == "application/pdf":
+        return True
+    return False
+
+
 @router.post("/import", response_model=MasterProfileResponse, status_code=status.HTTP_200_OK)
 async def import_profile(
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
-    file: Annotated[UploadFile | None, File(description="CV as PDF")] = None,
+    _auth: AuthProvider = Depends(get_auth_provider),
+    file: Annotated[UploadFile | None, File(description="CV as PDF or LinkedIn export ZIP")] = None,
     linkedin_json: Annotated[str | None, Form(description="LinkedIn export JSON string")] = None,
 ) -> MasterProfileResponse:
     if file is None and linkedin_json is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Provide either a PDF file or linkedin_json",
+            detail="Provide either a PDF file, a LinkedIn export ZIP, or linkedin_json",
         )
     if file is not None and linkedin_json is not None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Provide either a PDF file or linkedin_json, not both",
+            detail="Provide either a file or linkedin_json, not both",
         )
 
     try:
         if file is not None:
-            if not file.filename or not file.filename.lower().endswith(".pdf"):
+            file_bytes = await file.read()
+            if _is_zip(file):
+                coro = import_from_linkedin_zip(file_bytes, db, provider)
+            elif _is_pdf(file):
+                coro = import_from_linkedin_pdf(file_bytes, db, provider)
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Uploaded file must be a PDF",
+                    detail="Uploaded file must be a PDF or a LinkedIn export ZIP",
                 )
-            file_bytes = await file.read()
-            coro = import_from_pdf(file_bytes, db, provider)
         else:
             try:
                 parsed = json.loads(linkedin_json)
@@ -91,6 +115,7 @@ async def import_profile(
 @router.get("", response_model=MasterProfileResponse, status_code=status.HTTP_200_OK)
 async def get_current_profile(
     db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> MasterProfileResponse:
     profile = await get_profile(db)
     if not profile:
@@ -106,6 +131,7 @@ async def patch_section(
     section: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> MasterProfileResponse:
     body = await request.json()
     try:

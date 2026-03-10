@@ -150,6 +150,7 @@ export default function Home() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const zipRef = useRef<HTMLInputElement>(null);
 
   // Interview
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -164,6 +165,7 @@ export default function Home() {
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState("");
   const [generatedCV, setGeneratedCV] = useState<GeneratedCV | null>(null);
+  const [cvTemplate, setCvTemplate] = useState<"classic_german" | "modern_swiss">("classic_german");
 
   // ---------------------------------------------------------------------------
   // Step 1 — Analyse JD
@@ -208,9 +210,7 @@ export default function Home() {
     }
   }
 
-  async function uploadCV() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) { setProfileError("Select a PDF first."); return; }
+  async function _uploadFile(file: File) {
     setProfileError("");
     setProfileLoading(true);
     try {
@@ -227,6 +227,18 @@ export default function Home() {
     } finally {
       setProfileLoading(false);
     }
+  }
+
+  async function uploadCV() {
+    const file = fileRef.current?.files?.[0];
+    if (!file) { setProfileError("Select a PDF first."); return; }
+    await _uploadFile(file);
+  }
+
+  async function uploadZip() {
+    const file = zipRef.current?.files?.[0];
+    if (!file) { setProfileError("Select a LinkedIn ZIP first."); return; }
+    await _uploadFile(file);
   }
 
   // ---------------------------------------------------------------------------
@@ -298,7 +310,7 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/api/cv/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobAnalysis.id }),
+        body: JSON.stringify({ job_id: jobAnalysis.id, template: cvTemplate }),
       });
       if (!res.ok) throw new Error(await apiErrorMessage(res));
       const data = await res.json();
@@ -401,18 +413,33 @@ export default function Home() {
               ✓ Profil geladen — Vollständigkeit: <strong>{profileStatus.completeness}%</strong>
             </div>
           )}
-          <input ref={fileRef} type="file" accept=".pdf" style={s.fileInput} />
-          {profileError && <div style={s.error}>{profileError}</div>}
-          <div style={s.row}>
-            <button style={s.btn("primary")} onClick={uploadCV} disabled={profileLoading}>
-              {profileLoading ? "Lade hoch …" : profileStatus ? "PDF ersetzen & weiter" : "PDF hochladen"}
-            </button>
-            {profileStatus && (
-              <button style={s.btn("secondary")} onClick={() => { setStep("interview"); void startInterview(); }}>
-                Weiter (bestehendes Profil verwenden)
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ ...s.label, marginBottom: 4 }}>PDF-Lebenslauf</div>
+            <input ref={fileRef} type="file" accept=".pdf" style={s.fileInput} />
+            <div style={s.row}>
+              <button style={s.btn("primary")} onClick={uploadCV} disabled={profileLoading}>
+                {profileLoading ? "Lade hoch …" : profileStatus ? "PDF ersetzen & weiter" : "PDF hochladen"}
               </button>
-            )}
+            </div>
           </div>
+          <div style={{ marginBottom: 4 }}>
+            <div style={{ ...s.label, marginBottom: 4 }}>LinkedIn-Export ZIP</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
+              LinkedIn → Einstellungen → Datenschutz → Daten abrufen → Vollständiges Archiv herunterladen
+            </div>
+            <input ref={zipRef} type="file" accept=".zip" style={s.fileInput} />
+            <div style={s.row}>
+              <button style={s.btn("secondary")} onClick={uploadZip} disabled={profileLoading}>
+                {profileLoading ? "Lade hoch …" : "ZIP hochladen"}
+              </button>
+            </div>
+          </div>
+          {profileError && <div style={s.error}>{profileError}</div>}
+          {profileStatus && (
+            <button style={{ ...s.btn("secondary"), marginTop: 8 }} onClick={() => { setStep("interview"); void startInterview(); }}>
+              Weiter (bestehendes Profil verwenden)
+            </button>
+          )}
         </div>
       )}
 
@@ -463,6 +490,25 @@ export default function Home() {
             <div style={{ ...s.info, color: "#16a34a" }}>✓ Lebenslauf erstellt</div>
           ) : (
             <>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...s.label, marginBottom: 6 }}>Vorlage / Template</label>
+                <select
+                  value={cvTemplate}
+                  onChange={(e) => setCvTemplate(e.target.value as "classic_german" | "modern_swiss")}
+                  style={{
+                    padding: "7px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #d1d5db",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="classic_german">Klassischer Lebenslauf (DE)</option>
+                  <option value="modern_swiss">Modern Swiss CV (EN/DE)</option>
+                </select>
+              </div>
               {genError && <div style={s.error}>{genError}</div>}
               <div style={s.row}>
                 <button style={s.btn("primary")} onClick={generateCV} disabled={genLoading}>
