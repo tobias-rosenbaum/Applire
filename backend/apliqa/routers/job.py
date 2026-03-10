@@ -12,6 +12,7 @@ from apliqa.schemas.gap import GapAnalysisResponse
 from apliqa.schemas.job import JobAnalyzeRequest, JobAnalysisResponse
 from apliqa.services.gap import analyze_gaps
 from apliqa.services.job import analyze_jd
+from apliqa.services.scraper import ScraperError, scrape_job_url
 
 router = APIRouter(prefix="/api/job", tags=["job"])
 
@@ -28,15 +29,28 @@ async def analyze_job_description(
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
 ) -> JobAnalysisResponse:
-    if not body.text.strip():
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="text must not be empty",
-        )
+    # Resolve text: either from the body directly or scraped from a URL.
+    if body.url:
+        try:
+            text = await scrape_job_url(body.url)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            )
+        except ScraperError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=exc.reason,
+            )
+        source_url = body.url
+    else:
+        text = body.text.strip()  # type: ignore[union-attr]
+        source_url = None
 
     try:
         return await asyncio.wait_for(
-            analyze_jd(body.text.strip(), db, provider),
+            analyze_jd(text, db, provider, source_url=source_url),
             timeout=_LLM_TIMEOUT_SECONDS,
         )
     except asyncio.TimeoutError:

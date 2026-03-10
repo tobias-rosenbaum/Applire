@@ -11,7 +11,10 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 async function apiErrorMessage(res: Response): Promise<string> {
   try {
     const body = await res.json();
-    return body.detail ?? res.statusText;
+    const detail = body.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) return detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join("; ");
+    return res.statusText || `HTTP ${res.status}`;
   } catch {
     return res.statusText || `HTTP ${res.status}`;
   }
@@ -105,6 +108,26 @@ const s = {
   },
   row: { display: "flex", gap: 10, alignItems: "center", marginTop: 10, flexWrap: "wrap" as const },
   fileInput: { fontSize: 13 },
+  tabRow: { display: "flex", gap: 4, marginBottom: 12 },
+  tab: (active: boolean) => ({
+    padding: "5px 14px",
+    borderRadius: 6,
+    border: "1px solid #d1d5db",
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 600,
+    background: active ? "#2563eb" : "#f9fafb",
+    color: active ? "#fff" : "#374151",
+  }),
+  urlInput: {
+    width: "100%",
+    padding: "9px 12px",
+    borderRadius: 6,
+    border: "1px solid #d1d5db",
+    fontSize: 13,
+    fontFamily: "inherit",
+    boxSizing: "border-box" as const,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -115,6 +138,8 @@ export default function Home() {
   const [step, setStep] = useState<Step>("jd");
 
   // JD
+  const [jdMode, setJdMode] = useState<"url" | "text">("url");
+  const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
   const [jdLoading, setJdLoading] = useState(false);
   const [jdError, setJdError] = useState("");
@@ -144,14 +169,16 @@ export default function Home() {
   // Step 1 — Analyse JD
   // ---------------------------------------------------------------------------
   async function analyseJD() {
-    if (!jdText.trim()) { setJdError("Please paste a job description."); return; }
+    if (jdMode === "url" && !jdUrl.trim()) { setJdError("Bitte eine URL eingeben."); return; }
+    if (jdMode === "text" && !jdText.trim()) { setJdError("Bitte Stellenbeschreibung einfügen."); return; }
     setJdError("");
     setJdLoading(true);
     try {
+      const body = jdMode === "url" ? { url: jdUrl.trim() } : { text: jdText };
       const res = await fetch(`${API_BASE}/api/job/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: jdText }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(await apiErrorMessage(res));
       const data = await res.json();
@@ -323,13 +350,34 @@ export default function Home() {
       {/* ---- Step 1: JD ---- */}
       <div style={s.card}>
         <label style={s.label}>Stellenanzeige einfügen</label>
-        <textarea
-          style={s.textarea}
-          placeholder="Füge die vollständige Stellenbeschreibung hier ein …"
-          value={jdText}
-          onChange={(e) => setJdText(e.target.value)}
-          disabled={!!jobAnalysis}
-        />
+        {!jobAnalysis && (
+          <div style={s.tabRow}>
+            <button style={s.tab(jdMode === "url")} onClick={() => setJdMode("url")}>
+              URL eingeben
+            </button>
+            <button style={s.tab(jdMode === "text")} onClick={() => setJdMode("text")}>
+              Text einfügen
+            </button>
+          </div>
+        )}
+        {jdMode === "url" ? (
+          <input
+            type="url"
+            style={s.urlInput}
+            placeholder="https://www.stepstone.de/…"
+            value={jdUrl}
+            onChange={(e) => setJdUrl(e.target.value)}
+            disabled={!!jobAnalysis}
+          />
+        ) : (
+          <textarea
+            style={s.textarea}
+            placeholder="Füge die vollständige Stellenbeschreibung hier ein …"
+            value={jdText}
+            onChange={(e) => setJdText(e.target.value)}
+            disabled={!!jobAnalysis}
+          />
+        )}
         {jdError && <div style={s.error}>{jdError}</div>}
         {jobAnalysis ? (
           <div style={{ ...s.info, color: "#16a34a", marginTop: 8 }}>
