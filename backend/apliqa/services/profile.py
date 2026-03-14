@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apliqa.models.profile import MasterProfile
 from apliqa.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
 from apliqa.providers.base import LLMProvider
+from apliqa.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from apliqa.schemas.profile import (
     Contact,
     EducationEntry,
@@ -140,6 +141,24 @@ async def _import_from_text(
     await db.commit()
     await db.refresh(record)
     return _to_response(record)
+
+
+async def import_from_linkedin_zip(
+    zip_bytes: bytes,
+    db: AsyncSession,
+    provider: LLMProvider,
+) -> MasterProfileResponse:
+    raw_text = parse_linkedin_zip(zip_bytes)
+    return await _import_from_text(raw_text, db, provider)
+
+
+async def import_from_linkedin_pdf(
+    pdf_bytes: bytes,
+    db: AsyncSession,
+    provider: LLMProvider,
+) -> MasterProfileResponse:
+    raw_text = parse_linkedin_pdf(pdf_bytes)
+    return await _import_from_text(raw_text, db, provider)
 
 
 async def get_profile(db: AsyncSession) -> MasterProfileResponse | None:

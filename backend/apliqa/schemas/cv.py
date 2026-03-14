@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
+
+CVTemplate = Literal["classic_german", "modern_swiss"]
 
 
 class CVGenerateRequest(BaseModel):
     job_id: uuid.UUID
+    template: CVTemplate = "classic_german"
 
 
 class CVGenerateResponse(BaseModel):

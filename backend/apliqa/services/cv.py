@@ -28,7 +28,12 @@ from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.prompts.cv_tailoring import SYSTEM_PROMPT, build_user_prompt
 from apliqa.providers.base import LLMProvider
-from apliqa.schemas.cv import CVGenerateResponse, TailoredCVData
+from apliqa.schemas.cv import CVGenerateResponse, CVTemplate, TailoredCVData
+
+_TEMPLATE_FILES: dict[str, str] = {
+    "classic_german": "lebenslauf.html.j2",
+    "modern_swiss": "modern_swiss.html.j2",
+}
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 _jinja_env = Environment(
@@ -47,6 +52,7 @@ async def generate_cv(
     db: AsyncSession,
     provider: LLMProvider,
     base_url: str,
+    template: CVTemplate = "classic_german",
 ) -> CVGenerateResponse:
     # Load job analysis
     job_result = await db.execute(
@@ -111,6 +117,7 @@ async def generate_cv(
         job_analysis_id=job.id,
         profile_id=profile.id,
         tailored_data=tailored.model_dump(),
+        template=template,
     )
     db.add(record)
     await db.commit()
@@ -132,7 +139,8 @@ async def generate_cv(
 async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
     record = await _load_cv(cv_id, db)
     tailored = TailoredCVData.model_validate(record.tailored_data)
-    template = _jinja_env.get_template("lebenslauf.html.j2")
+    template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
+    template = _jinja_env.get_template(template_file)
     return template.render(cv=tailored)
 
 

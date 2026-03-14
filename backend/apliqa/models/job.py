@@ -14,6 +14,7 @@ class JobAnalysis(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     raw_text_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
     role_title: Mapped[str] = mapped_column(Text, nullable=False)
     required_skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     nice_to_have_skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)

@@ -29,6 +29,8 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn apliqa.main:app --host 0.0.0.0 --port 8000 --reload
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
     build:
@@ -41,5 +43,52 @@ services:
     depends_on:
       - backend
 
+  ollama:
+    image: ollama/ollama
+    profiles: [ollama]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  # Retention worker — daily GDPR TTL enforcement (ADR 005).
+  # Not profile-gated: data hygiene is a core operational concern.
+  retention:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: sh -c "while true; do python -m apliqa.retention; sleep 86400; done"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # MCP server — stdio transport for agent integration (ADR 010).
+  # This service is useful for verifying startup in CI.
+  # For actual agent use, launch directly: python -m apliqa.mcp
+  # See docs/mcp.md for Claude Desktop / Cursor configuration.
+  mcp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    profiles: [mcp]
+    env_file:
+      - .env.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: python -m apliqa.mcp
+    stdin_open: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   postgres_data:
+  ollama_data:

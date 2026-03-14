@@ -11,7 +11,10 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 async function apiErrorMessage(res: Response): Promise<string> {
   try {
     const body = await res.json();
-    return body.detail ?? res.statusText;
+    const detail = body.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) return detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join("; ");
+    return res.statusText || `HTTP ${res.status}`;
   } catch {
     return res.statusText || `HTTP ${res.status}`;
   }
@@ -105,6 +108,26 @@ const s = {
   },
   row: { display: "flex", gap: 10, alignItems: "center", marginTop: 10, flexWrap: "wrap" as const },
   fileInput: { fontSize: 13 },
+  tabRow: { display: "flex", gap: 4, marginBottom: 12 },
+  tab: (active: boolean) => ({
+    padding: "5px 14px",
+    borderRadius: 6,
+    border: "1px solid #d1d5db",
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 600,
+    background: active ? "#2563eb" : "#f9fafb",
+    color: active ? "#fff" : "#374151",
+  }),
+  urlInput: {
+    width: "100%",
+    padding: "9px 12px",
+    borderRadius: 6,
+    border: "1px solid #d1d5db",
+    fontSize: 13,
+    fontFamily: "inherit",
+    boxSizing: "border-box" as const,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -115,6 +138,8 @@ export default function Home() {
   const [step, setStep] = useState<Step>("jd");
 
   // JD
+  const [jdMode, setJdMode] = useState<"url" | "text">("url");
+  const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
   const [jdLoading, setJdLoading] = useState(false);
   const [jdError, setJdError] = useState("");
@@ -125,6 +150,7 @@ export default function Home() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const zipRef = useRef<HTMLInputElement>(null);
 
   // Interview
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -139,19 +165,22 @@ export default function Home() {
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState("");
   const [generatedCV, setGeneratedCV] = useState<GeneratedCV | null>(null);
+  const [cvTemplate, setCvTemplate] = useState<"classic_german" | "modern_swiss">("classic_german");
 
   // ---------------------------------------------------------------------------
   // Step 1 — Analyse JD
   // ---------------------------------------------------------------------------
   async function analyseJD() {
-    if (!jdText.trim()) { setJdError("Please paste a job description."); return; }
+    if (jdMode === "url" && !jdUrl.trim()) { setJdError("Bitte eine URL eingeben."); return; }
+    if (jdMode === "text" && !jdText.trim()) { setJdError("Bitte Stellenbeschreibung einfügen."); return; }
     setJdError("");
     setJdLoading(true);
     try {
+      const body = jdMode === "url" ? { url: jdUrl.trim() } : { text: jdText };
       const res = await fetch(`${API_BASE}/api/job/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: jdText }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(await apiErrorMessage(res));
       const data = await res.json();
@@ -181,9 +210,7 @@ export default function Home() {
     }
   }
 
-  async function uploadCV() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) { setProfileError("Select a PDF first."); return; }
+  async function _uploadFile(file: File) {
     setProfileError("");
     setProfileLoading(true);
     try {
@@ -200,6 +227,18 @@ export default function Home() {
     } finally {
       setProfileLoading(false);
     }
+  }
+
+  async function uploadCV() {
+    const file = fileRef.current?.files?.[0];
+    if (!file) { setProfileError("Select a PDF first."); return; }
+    await _uploadFile(file);
+  }
+
+  async function uploadZip() {
+    const file = zipRef.current?.files?.[0];
+    if (!file) { setProfileError("Select a LinkedIn ZIP first."); return; }
+    await _uploadFile(file);
   }
 
   // ---------------------------------------------------------------------------
@@ -271,7 +310,7 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/api/cv/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobAnalysis.id }),
+        body: JSON.stringify({ job_id: jobAnalysis.id, template: cvTemplate }),
       });
       if (!res.ok) throw new Error(await apiErrorMessage(res));
       const data = await res.json();
@@ -323,13 +362,34 @@ export default function Home() {
       {/* ---- Step 1: JD ---- */}
       <div style={s.card}>
         <label style={s.label}>Stellenanzeige einfügen</label>
-        <textarea
-          style={s.textarea}
-          placeholder="Füge die vollständige Stellenbeschreibung hier ein …"
-          value={jdText}
-          onChange={(e) => setJdText(e.target.value)}
-          disabled={!!jobAnalysis}
-        />
+        {!jobAnalysis && (
+          <div style={s.tabRow}>
+            <button style={s.tab(jdMode === "url")} onClick={() => setJdMode("url")}>
+              URL eingeben
+            </button>
+            <button style={s.tab(jdMode === "text")} onClick={() => setJdMode("text")}>
+              Text einfügen
+            </button>
+          </div>
+        )}
+        {jdMode === "url" ? (
+          <input
+            type="url"
+            style={s.urlInput}
+            placeholder="https://www.stepstone.de/…"
+            value={jdUrl}
+            onChange={(e) => setJdUrl(e.target.value)}
+            disabled={!!jobAnalysis}
+          />
+        ) : (
+          <textarea
+            style={s.textarea}
+            placeholder="Füge die vollständige Stellenbeschreibung hier ein …"
+            value={jdText}
+            onChange={(e) => setJdText(e.target.value)}
+            disabled={!!jobAnalysis}
+          />
+        )}
         {jdError && <div style={s.error}>{jdError}</div>}
         {jobAnalysis ? (
           <div style={{ ...s.info, color: "#16a34a", marginTop: 8 }}>
@@ -353,18 +413,33 @@ export default function Home() {
               ✓ Profil geladen — Vollständigkeit: <strong>{profileStatus.completeness}%</strong>
             </div>
           )}
-          <input ref={fileRef} type="file" accept=".pdf" style={s.fileInput} />
-          {profileError && <div style={s.error}>{profileError}</div>}
-          <div style={s.row}>
-            <button style={s.btn("primary")} onClick={uploadCV} disabled={profileLoading}>
-              {profileLoading ? "Lade hoch …" : profileStatus ? "PDF ersetzen & weiter" : "PDF hochladen"}
-            </button>
-            {profileStatus && (
-              <button style={s.btn("secondary")} onClick={() => { setStep("interview"); void startInterview(); }}>
-                Weiter (bestehendes Profil verwenden)
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ ...s.label, marginBottom: 4 }}>PDF-Lebenslauf</div>
+            <input ref={fileRef} type="file" accept=".pdf" style={s.fileInput} />
+            <div style={s.row}>
+              <button style={s.btn("primary")} onClick={uploadCV} disabled={profileLoading}>
+                {profileLoading ? "Lade hoch …" : profileStatus ? "PDF ersetzen & weiter" : "PDF hochladen"}
               </button>
-            )}
+            </div>
           </div>
+          <div style={{ marginBottom: 4 }}>
+            <div style={{ ...s.label, marginBottom: 4 }}>LinkedIn-Export ZIP</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>
+              LinkedIn → Einstellungen → Datenschutz → Daten abrufen → Vollständiges Archiv herunterladen
+            </div>
+            <input ref={zipRef} type="file" accept=".zip" style={s.fileInput} />
+            <div style={s.row}>
+              <button style={s.btn("secondary")} onClick={uploadZip} disabled={profileLoading}>
+                {profileLoading ? "Lade hoch …" : "ZIP hochladen"}
+              </button>
+            </div>
+          </div>
+          {profileError && <div style={s.error}>{profileError}</div>}
+          {profileStatus && (
+            <button style={{ ...s.btn("secondary"), marginTop: 8 }} onClick={() => { setStep("interview"); void startInterview(); }}>
+              Weiter (bestehendes Profil verwenden)
+            </button>
+          )}
         </div>
       )}
 
@@ -415,6 +490,25 @@ export default function Home() {
             <div style={{ ...s.info, color: "#16a34a" }}>✓ Lebenslauf erstellt</div>
           ) : (
             <>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...s.label, marginBottom: 6 }}>Vorlage / Template</label>
+                <select
+                  value={cvTemplate}
+                  onChange={(e) => setCvTemplate(e.target.value as "classic_german" | "modern_swiss")}
+                  style={{
+                    padding: "7px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #d1d5db",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="classic_german">Klassischer Lebenslauf (DE)</option>
+                  <option value="modern_swiss">Modern Swiss CV (EN/DE)</option>
+                </select>
+              </div>
               {genError && <div style={s.error}>{genError}</div>}
               <div style={s.row}>
                 <button style={s.btn("primary")} onClick={generateCV} disabled={genLoading}>

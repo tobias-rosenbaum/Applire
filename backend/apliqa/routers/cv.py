@@ -6,8 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apliqa.auth import get_auth_provider
+from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
-from apliqa.providers.mistral import MistralProvider
+from apliqa.providers import get_provider
+from apliqa.providers.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse
 from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf
 
@@ -16,8 +19,8 @@ router = APIRouter(prefix="/api/cv", tags=["cv"])
 _LLM_TIMEOUT_SECONDS = 60.0
 
 
-def _get_provider() -> MistralProvider:
-    return MistralProvider()
+def _get_provider() -> LLMProvider:
+    return get_provider()
 
 
 @router.post(
@@ -29,12 +32,13 @@ async def post_generate(
     body: CVGenerateRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    provider: MistralProvider = Depends(_get_provider),
+    provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> CVGenerateResponse:
     base_url = str(request.base_url).rstrip("/")
     try:
         return await asyncio.wait_for(
-            generate_cv(body.job_id, db, provider, base_url),
+            generate_cv(body.job_id, db, provider, base_url, body.template),
             timeout=_LLM_TIMEOUT_SECONDS,
         )
     except asyncio.TimeoutError:
@@ -60,6 +64,7 @@ async def post_generate(
 async def get_html(
     cv_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> HTMLResponse:
     try:
         html = await get_cv_html(cv_id, db)
@@ -77,6 +82,7 @@ async def get_html(
 async def get_pdf(
     cv_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
 ) -> Response:
     try:
         pdf_bytes = await get_cv_pdf(cv_id, db)
