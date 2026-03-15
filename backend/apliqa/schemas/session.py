@@ -30,7 +30,8 @@ class InterviewState(TypedDict):
     job_id: str
     gap_analysis_id: str
     profile_id: str
-    critical_gaps: list[str]
+    critical_gaps: list[str]  # ordered: Category C first, then Category B
+    gap_categories: dict  # {gap_str: "B" | "C"} — used by QuestionGenerator
     addressed_gaps: list[str]
     current_gap_index: int
     current_question: str

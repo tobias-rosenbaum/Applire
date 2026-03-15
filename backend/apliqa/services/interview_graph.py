@@ -9,6 +9,7 @@ Node flow:
 State is persisted as JSONB in interview_sessions.state between HTTP calls.
 """
 
+from apliqa.models.gap import GapAnalysis
 from apliqa.prompts.interview import (
     QUESTION_SYSTEM_PROMPT,
     RESPONSE_PARSER_SYSTEM_PROMPT,
@@ -24,13 +25,41 @@ from apliqa.schemas.session import InterviewState
 # ---------------------------------------------------------------------------
 
 
-def gap_detector(critical_gaps: list[str]) -> list[str]:
-    """Extract and return the ordered list of critical gaps to address.
-
-    In this iteration the gaps come directly from the stored GapAnalysis.
-    Future versions may re-rank or filter based on profile completeness.
+def gap_detector(gap_analysis: GapAnalysis) -> tuple[list[str], dict[str, str]]:
     """
-    return [g for g in critical_gaps if g]
+    Return (ordered_gaps, gap_categories) from a GapAnalysis.
+
+    Priority order:
+      1. Category C (UNKNOWN) — highest value; interview must ask about these
+      2. Category B (LIKELY BUT UNSTATED) — confirm inferred experience
+      Category A items are excluded — already matched, no interview action needed.
+
+    Falls back to critical_gaps (legacy records without A/B/C columns).
+
+    Returns:
+        ordered_gaps: list[str] ordered C-first then B
+        gap_categories: dict mapping each gap string to "B" or "C"
+    """
+    targets: list[str] = []
+    categories: dict[str, str] = {}
+
+    if gap_analysis.category_c or gap_analysis.category_b:
+        for gap in (gap_analysis.category_c or []):
+            if gap:
+                targets.append(gap)
+                categories[gap] = "C"
+        for gap in (gap_analysis.category_b or []):
+            if gap:
+                targets.append(gap)
+                categories[gap] = "B"
+    else:
+        # Legacy fallback: records created before A/B/C columns existed
+        for gap in (gap_analysis.critical_gaps or []):
+            if gap:
+                targets.append(gap)
+                categories[gap] = "C"
+
+    return targets, categories
 
 
 # ---------------------------------------------------------------------------
@@ -59,11 +88,15 @@ async def question_generator_with_profile(
     state: InterviewState,
     profile: dict,
     provider: LLMProvider,
+    gap_category: str | None = None,
 ) -> str:
-    """Generate a targeted question, including the full profile for context."""
+    """Generate a targeted question, including the full profile for context.
+
+    gap_category: "B" (confirmation) | "C" (exploratory) | None (legacy fallback to C behaviour)
+    """
     gap = state["critical_gaps"][state["current_gap_index"]]
     question = await provider.acomplete(
-        build_question_prompt(gap, profile, state["messages"]),
+        build_question_prompt(gap, profile, state["messages"], gap_category=gap_category),
         system=QUESTION_SYSTEM_PROMPT,
         temperature=0.4,
         max_tokens=256,

@@ -2,7 +2,7 @@
 Session service — orchestrates the interview state machine across REST calls.
 
 Turn 1  (POST /api/session):
-    GapDetector → QuestionGenerator → persist state → return first question
+    [lazy gap analysis if needed] → GapDetector → QuestionGenerator → persist state → return first question
 
 Turn N  (POST /api/session/{id}/message):
     load state → ResponseParser → ProfileUpdater → persist profile
@@ -21,12 +21,12 @@ from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.models.session import InterviewSession
 from apliqa.providers.base import LLMProvider
-from apliqa.schemas.profile import MasterProfileData
 from apliqa.schemas.session import (
     InterviewState,
     SessionCreateResponse,
     SessionMessageResponse,
 )
+from apliqa.services.gap import analyze_gaps
 from apliqa.services.interview_graph import (
     gap_detector,
     profile_updater,
@@ -56,7 +56,7 @@ async def create_session(
     if job is None:
         raise LookupError(f"Job analysis {job_id} not found")
 
-    # Resolve latest gap analysis for this job
+    # Lazy gap analysis: compute if none exists for this job
     gap_result = await db.execute(
         select(GapAnalysis)
         .where(
@@ -68,9 +68,12 @@ async def create_session(
     )
     gap_analysis = gap_result.scalar_one_or_none()
     if gap_analysis is None:
-        raise LookupError(
-            f"No gap analysis found for job {job_id} — run POST /api/job/{{job_id}}/gaps first"
+        gap_response = await analyze_gaps(job_id, db, provider)
+        # Reload as ORM model object
+        gap_result2 = await db.execute(
+            select(GapAnalysis).where(GapAnalysis.id == gap_response.id)
         )
+        gap_analysis = gap_result2.scalar_one()
 
     # Resolve latest profile
     profile_result = await db.execute(
@@ -83,16 +86,16 @@ async def create_session(
     if profile_record is None:
         raise LookupError("No profile found — import a CV first")
 
-    # Node: GapDetector
-    critical_gaps = gap_detector(gap_analysis.critical_gaps)
+    # Node: GapDetector — returns ordered C-first, then B
+    critical_gaps, gap_categories = gap_detector(gap_analysis)
 
     if not critical_gaps:
-        # Nothing to ask — create a completed session immediately
         state: InterviewState = {
             "job_id": str(job_id),
             "gap_analysis_id": str(gap_analysis.id),
             "profile_id": str(profile_record.id),
             "critical_gaps": [],
+            "gap_categories": {},
             "addressed_gaps": [],
             "current_gap_index": 0,
             "current_question": "",
@@ -116,18 +119,21 @@ async def create_session(
         )
 
     # Node: QuestionGenerator for the first gap
+    first_gap = critical_gaps[0]
+    first_category = gap_categories.get(first_gap)
     state = {
         "job_id": str(job_id),
         "gap_analysis_id": str(gap_analysis.id),
         "profile_id": str(profile_record.id),
         "critical_gaps": critical_gaps,
+        "gap_categories": gap_categories,
         "addressed_gaps": [],
         "current_gap_index": 0,
         "current_question": "",
         "messages": [],
     }
     first_question = await question_generator_with_profile(
-        state, profile_record.profile_json, provider
+        state, profile_record.profile_json, provider, gap_category=first_category
     )
     state["current_question"] = first_question
     state["messages"].append({"role": "assistant", "content": first_question})
@@ -201,7 +207,6 @@ async def send_message(
     gaps_remaining = len(state["critical_gaps"]) - next_index
 
     if gaps_remaining <= 0 or message.strip().lower() in _DONE_SIGNALS:
-        # Session complete (4.7)
         state["current_gap_index"] = next_index
         record.state = state
         record.status = "complete"
@@ -211,8 +216,10 @@ async def send_message(
 
     # Node: QuestionGenerator — generate question for the next gap
     state["current_gap_index"] = next_index
+    next_gap = state["critical_gaps"][next_index]
+    next_category = (state.get("gap_categories") or {}).get(next_gap)
     next_question = await question_generator_with_profile(
-        state, updated_profile, provider
+        state, updated_profile, provider, gap_category=next_category
     )
     state["current_question"] = next_question
     state["messages"].append({"role": "assistant", "content": next_question})
