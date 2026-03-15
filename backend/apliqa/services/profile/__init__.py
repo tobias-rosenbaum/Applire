@@ -268,3 +268,95 @@ async def get_enrichment_history(db: AsyncSession) -> list[EnrichmentRecord]:
     if not profile_data.metadata:
         return []
     return profile_data.metadata.enrichment_history
+
+
+async def resolve_conflict(
+    conflict_id: str,
+    resolution: str,
+    value: object,
+    db: AsyncSession,
+) -> MasterProfileResponse:
+    """
+    Resolve a pending conflict by conflict_id.
+
+    resolution:
+        "existing" — discard the incoming value, keep existing as-is
+        "incoming" — accept the incoming value into the profile field
+        "manual"   — write `value` into the profile field
+
+    The conflict is marked resolved=True and removed from pending_conflicts.
+    An enrichment record is appended.
+    """
+    record = await _get_latest(db)
+    if not record:
+        raise LookupError("No profile found")
+
+    profile_data = MasterProfileData.model_validate(record.profile_json)
+
+    if not profile_data.metadata or not profile_data.metadata.pending_conflicts:
+        raise LookupError(f"Conflict '{conflict_id}' not found")
+
+    conflict = next(
+        (c for c in profile_data.metadata.pending_conflicts if c.conflict_id == conflict_id),
+        None,
+    )
+    if conflict is None:
+        raise LookupError(f"Conflict '{conflict_id}' not found")
+
+    # Determine the winning value
+    if resolution == "existing":
+        chosen = conflict.existing_value
+    elif resolution == "incoming":
+        chosen = conflict.incoming_value
+    elif resolution == "manual":
+        chosen = value
+    else:
+        raise ValueError(f"Invalid resolution '{resolution}'. Must be existing, incoming, or manual.")
+
+    # Apply the chosen value to the profile (only for non-list sections with a single field)
+    section = conflict.section
+    field_name = conflict.field
+    profile_dict = profile_data.model_dump(mode="json")
+
+    section_data = profile_dict.get(section)
+    if isinstance(section_data, dict):
+        section_data[field_name] = chosen
+        profile_dict[section] = section_data
+    # For list-type sections (work_experience etc.) date conflicts reference a specific entry;
+    # we update the first matching entry. Caller may PATCH the section directly for complex edits.
+    elif isinstance(section_data, list) and section == "work_experience":
+        # Best effort: update the first entry that still has the old value on that field
+        for entry in section_data:
+            if entry.get(field_name) == conflict.existing_value:
+                entry[field_name] = chosen
+                break
+        profile_dict[section] = section_data
+
+    updated = MasterProfileData.model_validate(profile_dict)
+
+    # Mark conflict resolved and rebuild pending list
+    resolved_ids = {conflict_id}
+    updated.metadata = profile_data.metadata.model_copy(deep=True)
+    updated.metadata.pending_conflicts = [
+        c.model_copy(update={"resolved": True}) if c.conflict_id in resolved_ids else c
+        for c in updated.metadata.pending_conflicts
+        if c.conflict_id not in resolved_ids  # remove resolved conflicts from pending
+    ]
+
+    now = datetime.now(timezone.utc)
+    enrichment = _make_enrichment_record(
+        source="manual_edit",
+        section=section,
+        action="updated",
+        old_value=conflict.existing_value,
+        new_value=chosen,
+    )
+    updated.metadata.enrichment_history.append(enrichment)
+    updated.metadata.last_updated = now
+    updated.metadata.completeness_score = updated.calculate_completeness()
+
+    record.profile_json = updated.model_dump(mode="json")
+    record.updated_at = now
+    await db.commit()
+    await db.refresh(record)
+    return _to_response(record)

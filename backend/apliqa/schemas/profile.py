@@ -36,6 +36,10 @@ Contact = PersonalInfo
 class WorkEntry(BaseModel):
     company: str
     role: str
+    # All role titles ever used for this position across different CVs/applications.
+    # Enables the CV tailoring engine to pick the most relevant title per application
+    # (e.g. "Team Lead" for leadership roles, "2nd Level Support" for technical roles).
+    role_aliases: list[str] = Field(default_factory=list)
     location: str | None = None
     # str — LLM returns partial dates like "2020-01"; not valid ISO date
     start_date: str | None = None
@@ -245,3 +249,16 @@ class MasterProfileResponse(BaseModel):
 
 class LinkedInImportRequest(BaseModel):
     linkedin_json: dict
+
+
+class ConflictResolutionRequest(BaseModel):
+    """
+    Payload for POST /api/profile/conflicts/{conflict_id}/resolve.
+
+    resolution:
+        "existing" — keep the existing value as-is
+        "incoming" — replace with the incoming value
+        "manual"   — supply a custom value via `value`
+    """
+    resolution: Literal["existing", "incoming", "manual"]
+    value: Any | None = None

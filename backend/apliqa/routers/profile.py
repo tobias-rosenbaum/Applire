@@ -10,7 +10,12 @@ from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
 from apliqa.providers import get_provider
 from apliqa.providers.base import LLMProvider
-from apliqa.schemas.profile import EnrichmentRecord, LinkedInImportRequest, MasterProfileResponse
+from apliqa.schemas.profile import (
+    ConflictResolutionRequest,
+    EnrichmentRecord,
+    LinkedInImportRequest,
+    MasterProfileResponse,
+)
 from apliqa.services.profile import (
     get_enrichment_history,
     get_profile,
@@ -19,6 +24,7 @@ from apliqa.services.profile import (
     import_from_linkedin_zip,
     import_from_pdf,
     patch_profile_section,
+    resolve_conflict,
 )
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -137,6 +143,27 @@ async def get_profile_enrichment_history(
     _auth: AuthProvider = Depends(get_auth_provider),
 ) -> list[EnrichmentRecord]:
     return await get_enrichment_history(db)
+
+
+@router.post(
+    "/conflicts/{conflict_id}/resolve",
+    response_model=MasterProfileResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def resolve_profile_conflict(
+    conflict_id: str,
+    body: ConflictResolutionRequest,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> MasterProfileResponse:
+    try:
+        return await resolve_conflict(conflict_id, body.resolution, body.value, db)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.patch("/{section}", response_model=MasterProfileResponse, status_code=status.HTTP_200_OK)
