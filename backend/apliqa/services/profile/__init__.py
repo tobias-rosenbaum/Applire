@@ -1,4 +1,6 @@
+import hashlib
 import json
+import uuid
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -7,11 +9,20 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.models.profile import MasterProfile
+from apliqa.models.uploads import UploadRecord
+from apliqa.prompts.cv_extraction import (
+    GENERIC_CV_EXTRACTION_PROMPT,
+    JD_AWARE_CV_EXTRACTION_PROMPT,
+    build_generic_prompt,
+    build_jd_aware_prompt,
+)
 from apliqa.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
 from apliqa.providers.base import LLMProvider
 from apliqa.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from apliqa.services.profile.merge import merge_profiles
 from apliqa.schemas.profile import (
+    ConflictSummary,
+    CVUploadResponse,
     EnrichmentRecord,
     FieldChange,
     MasterProfileData,
@@ -360,3 +371,164 @@ async def resolve_conflict(
     await db.commit()
     await db.refresh(record)
     return _to_response(record)
+
+
+async def upload_cv(
+    file_bytes: bytes,
+    filename: str,
+    content_type: str,
+    db: AsyncSession,
+    provider: LLMProvider,
+    storage,  # StorageProvider — imported inline to avoid circular imports
+    ocr_extractor,  # CVImageExtractor
+    job_id: uuid.UUID | None = None,
+) -> CVUploadResponse:
+    """Parse an uploaded CV file and merge it into the Master Profile (ADR 014).
+
+    Steps:
+      1. Extract raw text (format-aware, OCR fallback for scanned PDFs/images)
+      2. Optionally fetch JobAnalysis context for JD-aware extraction
+      3. LLM extraction → MasterProfileData
+      4. Merge with existing profile (or create first profile)
+      5. Persist UploadRecord (file + cost metadata)
+      6. Return CVUploadResponse with status, completeness, and conflicts
+    """
+    from apliqa.models.job import JobAnalysis
+    from apliqa.services.cv_parser import extract_text
+
+    # 1. Text extraction
+    raw_text = await extract_text(file_bytes, filename, content_type, ocr_extractor)
+
+    # 2. JD context (optional)
+    job_analysis_dict: dict | None = None
+    if job_id is not None:
+        result = await db.execute(
+            select(JobAnalysis).where(
+                JobAnalysis.id == job_id,
+                JobAnalysis.deleted_at.is_(None),
+            )
+        )
+        job_record = result.scalar_one_or_none()
+        if job_record:
+            job_analysis_dict = {
+                "role_title": job_record.role_title,
+                "required_skills": job_record.required_skills,
+                "nice_to_have_skills": job_record.nice_to_have_skills,
+                "keywords": job_record.keywords,
+                "seniority_level": job_record.seniority_level,
+                "language_requirement": job_record.language_requirement,
+            }
+
+    # 3. LLM extraction
+    if job_analysis_dict:
+        prompt = build_jd_aware_prompt(raw_text, job_analysis_dict)
+        system = JD_AWARE_CV_EXTRACTION_PROMPT
+    else:
+        prompt = build_generic_prompt(raw_text)
+        system = GENERIC_CV_EXTRACTION_PROMPT
+
+    data: dict = await provider.aparse_json(prompt, system=system, temperature=0.1)
+    incoming = MasterProfileData.model_validate(data)
+    now = datetime.now(timezone.utc)
+
+    # 4. Merge with existing profile (or create first profile)
+    enrichment_id = uuid.uuid4()
+    existing = await _get_latest(db)
+
+    if existing:
+        existing_data = MasterProfileData.model_validate(existing.profile_json)
+        merge_result = merge_profiles(existing_data, incoming, source="cv_upload")
+        merged = merge_result.merged_profile
+
+        enrichment = _make_enrichment_record(
+            source="cv_upload",
+            section="*",
+            action="merged",
+            new_value={"added": merge_result.added, "conflicts": len(merge_result.conflicts)},
+        )
+        # Patch enrichment_id onto the record for traceability
+        enrichment_id = uuid.uuid4()
+
+        if merged.metadata is None:
+            merged.metadata = ProfileMetadata(
+                completeness_score=merged.calculate_completeness(),
+                created_via="cv_upload",
+                created_at=existing.created_at,
+                last_updated=now,
+                enrichment_history=[enrichment],
+                pending_conflicts=merge_result.conflicts,
+            )
+        else:
+            merged.metadata.completeness_score = merged.calculate_completeness()
+            merged.metadata.last_updated = now
+            merged.metadata.enrichment_history.append(enrichment)
+            merged.metadata.pending_conflicts = merge_result.conflicts
+
+        existing.profile_json = merged.model_dump(mode="json")
+        existing.updated_at = now
+        await db.commit()
+        await db.refresh(existing)
+
+        profile_id = existing.id
+        completeness = merged.calculate_completeness()
+        conflicts = merge_result.conflicts
+    else:
+        # First upload — create the profile
+        enrichment = _make_enrichment_record(
+            source="cv_upload",
+            action="added",
+            new_value="initial import",
+        )
+        incoming.metadata = ProfileMetadata(
+            completeness_score=incoming.calculate_completeness(),
+            created_via="cv_upload",
+            created_at=now,
+            last_updated=now,
+            enrichment_history=[enrichment],
+        )
+
+        record = MasterProfile(profile_json=incoming.model_dump(mode="json"))
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
+
+        profile_id = record.id
+        completeness = incoming.calculate_completeness()
+        conflicts = []
+
+    # 5. Persist file + cost metadata
+    content_hash = hashlib.sha256(file_bytes).hexdigest()
+    file_path = await storage.save(file_bytes, filename)
+
+    upload_record = UploadRecord(
+        original_filename=filename,
+        content_hash=content_hash,
+        mime_type=content_type,
+        file_path=file_path,
+        byte_size=len(file_bytes),
+        llm_tokens_used=None,  # token tracking deferred — LLMProvider ABC not extended yet
+        llm_provider=provider.__class__.__name__,
+    )
+    db.add(upload_record)
+    await db.commit()
+
+    # 6. Build response
+    status = "DRAFT" if (completeness < 0.5 or bool(conflicts)) else "COMPLETE"
+    conflict_summaries = [
+        ConflictSummary(
+            conflict_id=c.conflict_id,
+            section=c.section,
+            field=c.field,
+            source=c.source,
+        )
+        for c in conflicts
+    ]
+
+    return CVUploadResponse(
+        profile_id=profile_id,
+        status=status,
+        completeness_score=completeness,
+        conflicts=conflict_summaries,
+        enrichment_record_id=enrichment_id,
+        expires_at=upload_record.expires_at,
+    )

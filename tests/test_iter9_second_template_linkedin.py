@@ -320,7 +320,7 @@ def test_linkedin_zip_import_returns_profile_response(api):
     assert r.status_code == 200, r.text
     body = r.json()
     assert isinstance(body.get("id"), str) and len(body["id"]) == 36
-    assert isinstance(body.get("completeness"), int)
+    assert isinstance(body.get("completeness"), float)
     assert body["completeness"] > 0
 
 
@@ -333,7 +333,7 @@ def test_linkedin_zip_profile_has_contact_name(api):
     )
     assert r.status_code == 200, r.text
     profile = r.json()["profile"]
-    assert profile["contact"]["name"], "contact.name must be non-empty after ZIP import"
+    assert profile["personal_info"]["name"], "personal_info.name must be non-empty after ZIP import"
 
 
 def test_linkedin_zip_profile_has_work_history(api):
@@ -344,9 +344,9 @@ def test_linkedin_zip_profile_has_work_history(api):
         timeout=90,
     )
     assert r.status_code == 200, r.text
-    work = r.json()["profile"]["work_history"]
+    work = r.json()["profile"]["work_experience"]
     assert isinstance(work, list) and len(work) > 0, (
-        "work_history must be non-empty after LinkedIn ZIP import"
+        "work_experience must be non-empty after LinkedIn ZIP import"
     )
 
 
@@ -377,7 +377,7 @@ def test_linkedin_zip_get_profile_after_import(api):
     r_get = requests.get(f"{api}/api/profile", timeout=10)
     assert r_get.status_code == 200, r_get.text
     body = r_get.json()
-    assert body["profile"]["contact"]["name"], "GET /api/profile contact.name must be set"
+    assert body["profile"]["personal_info"]["name"], "GET /api/profile personal_info.name must be set"
 
 
 def test_linkedin_zip_invalid_file_returns_422(api):
@@ -479,7 +479,7 @@ def test_linkedin_pdf_import_returns_profile_response(api):
     assert r.status_code == 200, r.text
     body = r.json()
     assert isinstance(body.get("id"), str) and len(body["id"]) == 36
-    assert isinstance(body.get("completeness"), int)
+    assert isinstance(body.get("completeness"), float)
     assert body["completeness"] > 0
 
 
@@ -491,9 +491,9 @@ def test_linkedin_pdf_profile_has_work_history(api):
         timeout=90,
     )
     assert r.status_code == 200, r.text
-    work = r.json()["profile"]["work_history"]
+    work = r.json()["profile"]["work_experience"]
     assert isinstance(work, list) and len(work) > 0, (
-        "work_history must be non-empty after LinkedIn PDF import"
+        "work_experience must be non-empty after LinkedIn PDF import"
     )
 
 
@@ -505,8 +505,8 @@ def test_linkedin_pdf_profile_has_contact_name(api):
         timeout=90,
     )
     assert r.status_code == 200, r.text
-    assert r.json()["profile"]["contact"]["name"], (
-        "contact.name must be non-empty after LinkedIn PDF import"
+    assert r.json()["profile"]["personal_info"]["name"], (
+        "personal_info.name must be non-empty after LinkedIn PDF import"
     )
 
 
@@ -522,8 +522,8 @@ def test_linkedin_pdf_get_profile_after_import(api):
 
     r_get = requests.get(f"{api}/api/profile", timeout=10)
     assert r_get.status_code == 200, r_get.text
-    assert r_get.json()["profile"]["contact"]["name"], (
-        "GET /api/profile contact.name must be set after PDF import"
+    assert r_get.json()["profile"]["personal_info"]["name"], (
+        "GET /api/profile personal_info.name must be set after PDF import"
     )
 
 

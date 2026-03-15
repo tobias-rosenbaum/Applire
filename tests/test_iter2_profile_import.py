@@ -15,7 +15,7 @@ _REAL_CV_PDF = Path(__file__).parent / "files" / "Profile.pdf"
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
 
-_VALID_SECTIONS = {"work_history", "skills", "education", "languages", "contact"}
+_VALID_SECTIONS = {"work_experience", "skills", "education", "languages", "personal_info"}
 
 
 def _make_cv_pdf() -> bytes:
@@ -170,36 +170,36 @@ def test_import_pdf_response_structure(api):
 
     assert isinstance(body.get("id"), str) and len(body["id"]) == 36
     assert isinstance(body.get("profile"), dict)
-    assert isinstance(body.get("completeness"), int)
-    assert 0 <= body["completeness"] <= 100
+    assert isinstance(body.get("completeness"), float)
+    assert 0.0 <= body["completeness"] <= 1.0
     assert isinstance(body.get("created_at"), str)
     assert isinstance(body.get("updated_at"), str)
 
     profile = body["profile"]
-    assert isinstance(profile.get("work_history"), list)
+    assert isinstance(profile.get("work_experience"), list)
     assert isinstance(profile.get("skills"), list)
     assert isinstance(profile.get("education"), list)
     assert isinstance(profile.get("languages"), list)
-    assert isinstance(profile.get("contact"), dict)
+    assert isinstance(profile.get("personal_info"), dict)
 
 
 def test_import_pdf_extracts_major_sections(api):
     profile = _import_pdf(api).json()["profile"]
 
-    assert profile["work_history"], "Expected at least one work entry"
-    entry = profile["work_history"][0]
+    assert profile["work_experience"], "Expected at least one work entry"
+    entry = profile["work_experience"][0]
     assert isinstance(entry.get("company"), str) and entry["company"]
     assert isinstance(entry.get("role"), str) and entry["role"]
     assert isinstance(entry.get("start_date"), str) and entry["start_date"]
 
     assert profile["skills"], "Expected at least one skill"
-    assert all(isinstance(s, str) for s in profile["skills"])
+    assert all(isinstance(s, dict) and "name" in s for s in profile["skills"])
 
     assert profile["education"], "Expected at least one education entry"
     assert profile["languages"], "Expected at least one language"
 
-    contact = profile["contact"]
-    assert isinstance(contact, dict)
+    personal_info = profile["personal_info"]
+    assert isinstance(personal_info, dict)
 
 
 # ---------------------------------------------------------------------------
@@ -217,18 +217,18 @@ def test_import_linkedin_response_structure(api):
 
     assert isinstance(body.get("id"), str) and len(body["id"]) == 36
     profile = body["profile"]
-    assert isinstance(profile.get("work_history"), list)
+    assert isinstance(profile.get("work_experience"), list)
     assert isinstance(profile.get("skills"), list)
     assert isinstance(profile.get("education"), list)
     assert isinstance(profile.get("languages"), list)
-    assert isinstance(profile.get("contact"), dict)
+    assert isinstance(profile.get("personal_info"), dict)
 
 
 def test_import_linkedin_extracts_positions(api):
     profile = _import_linkedin(api).json()["profile"]
 
-    assert len(profile["work_history"]) >= 2, "Expected both LinkedIn positions"
-    companies = [e["company"] for e in profile["work_history"]]
+    assert len(profile["work_experience"]) >= 2, "Expected both LinkedIn positions"
+    companies = [e["company"] for e in profile["work_experience"]]
     assert any("Munich Tech" in c or "Consulting" in c for c in companies)
 
 
@@ -249,16 +249,16 @@ def test_get_profile_structure(api):
 
     assert isinstance(body.get("id"), str)
     assert isinstance(body.get("profile"), dict)
-    assert isinstance(body.get("completeness"), int)
-    assert 0 <= body["completeness"] <= 100
+    assert isinstance(body.get("completeness"), float)
+    assert 0.0 <= body["completeness"] <= 1.0
 
 
 def test_get_profile_completeness_reflects_content(api):
     _import_pdf(api)
     body = _get_profile(api).json()
-    # A CV with work history, skills, education, languages and contact
-    # should score at least 60% (3 of 5 sections).
-    assert body["completeness"] >= 60
+    # A CV with work experience, skills, education, languages and personal_info
+    # should score at least 0.6 (3 of 5 sections).
+    assert body["completeness"] >= 0.6
 
 
 # ---------------------------------------------------------------------------
@@ -286,19 +286,21 @@ def test_patch_skills_updates_value(api):
     )
     assert r.status_code == 200, r.text
     updated = r.json()["profile"]["skills"]
-    assert updated == new_skills
+    # Skills are now Skill objects; compare by name
+    updated_names = [s["name"] for s in updated]
+    assert updated_names == new_skills
 
 
 def test_patch_contact_returns_200(api):
     _import_pdf(api)
     r = requests.patch(
-        f"{api}/api/profile/contact",
+        f"{api}/api/profile/personal_info",
         json={"name": "Max Mustermann", "email": "patched@example.de", "location": "Berlin"},
         timeout=10,
     )
     assert r.status_code == 200, r.text
-    contact = r.json()["profile"]["contact"]
-    assert contact["email"] == "patched@example.de"
+    personal_info = r.json()["profile"]["personal_info"]
+    assert personal_info["email"] == "patched@example.de"
 
 
 def test_patch_work_history_returns_200(api):
@@ -308,15 +310,15 @@ def test_patch_work_history_returns_200(api):
         "role": "Test Engineer",
         "start_date": "2023-01",
         "end_date": None,
-        "bullets": ["Wrote tests", "Fixed bugs"],
+        "responsibilities": ["Wrote tests", "Fixed bugs"],
     }
     r = requests.patch(
-        f"{api}/api/profile/work_history",
+        f"{api}/api/profile/work_experience",
         json=[new_entry],
         timeout=10,
     )
     assert r.status_code == 200, r.text
-    history = r.json()["profile"]["work_history"]
+    history = r.json()["profile"]["work_experience"]
     assert len(history) == 1
     assert history[0]["company"] == "Test Corp"
 
@@ -391,22 +393,22 @@ def test_real_pdf_response_structure(api):
     body = _import_real_pdf(api).json()
 
     assert isinstance(body.get("id"), str) and len(body["id"]) == 36
-    assert isinstance(body.get("completeness"), int)
-    assert 0 <= body["completeness"] <= 100
+    assert isinstance(body.get("completeness"), float)
+    assert 0.0 <= body["completeness"] <= 1.0
 
     profile = body["profile"]
-    assert isinstance(profile.get("work_history"), list)
+    assert isinstance(profile.get("work_experience"), list)
     assert isinstance(profile.get("skills"), list)
     assert isinstance(profile.get("education"), list)
     assert isinstance(profile.get("languages"), list)
-    assert isinstance(profile.get("contact"), dict)
+    assert isinstance(profile.get("personal_info"), dict)
 
 
 def test_real_pdf_extracts_work_history(api):
     profile = _import_real_pdf(api).json()["profile"]
 
-    assert profile["work_history"], "Expected at least one work entry from real CV"
-    entry = profile["work_history"][0]
+    assert profile["work_experience"], "Expected at least one work entry from real CV"
+    entry = profile["work_experience"][0]
     assert isinstance(entry.get("company"), str) and entry["company"]
     assert isinstance(entry.get("role"), str) and entry["role"]
     assert isinstance(entry.get("start_date"), str) and entry["start_date"]
@@ -415,12 +417,12 @@ def test_real_pdf_extracts_work_history(api):
 def test_real_pdf_extracts_skills(api):
     profile = _import_real_pdf(api).json()["profile"]
     assert profile["skills"], "Expected skills extracted from real CV"
-    assert all(isinstance(s, str) for s in profile["skills"])
+    assert all(isinstance(s, dict) and "name" in s for s in profile["skills"])
 
 
 def test_real_pdf_completeness_high(api):
     body = _import_real_pdf(api).json()
-    # A complete LinkedIn PDF should populate most sections → ≥ 80%
-    assert body["completeness"] >= 80, (
-        f"Completeness {body['completeness']}% is lower than expected for a full LinkedIn profile"
+    # A complete LinkedIn PDF should populate most sections → ≥ 0.8
+    assert body["completeness"] >= 0.8, (
+        f"Completeness {body['completeness']} is lower than expected for a full LinkedIn profile"
     )

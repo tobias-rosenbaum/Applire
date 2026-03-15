@@ -6,15 +6,12 @@ from mistralai import Mistral
 from apliqa.config import settings
 from apliqa.providers.base import LLMProvider
 
-DEFAULT_MODEL = "mistral-large-latest"
-
-
 class MistralProvider(LLMProvider):
     """Mistral AI provider — EU-hosted default (ADR 009)."""
 
-    def __init__(self, api_key: str | None = None, model: str = DEFAULT_MODEL) -> None:
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self._client = Mistral(api_key=api_key or settings.mistral_api_key)
-        self._model = model
+        self._model = model or settings.mistral_model
 
     async def acomplete(
         self,

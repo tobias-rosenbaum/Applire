@@ -262,3 +262,26 @@ class ConflictResolutionRequest(BaseModel):
     """
     resolution: Literal["existing", "incoming", "manual"]
     value: Any | None = None
+
+
+class ConflictSummary(BaseModel):
+    """Lightweight conflict summary for CVUploadResponse (avoids leaking full values)."""
+    conflict_id: str
+    section: str
+    field: str
+    source: str
+
+
+class CVUploadResponse(BaseModel):
+    """Response for POST /api/profile/upload (ADR 014).
+
+    Distinct from MasterProfileResponse — provides upload-specific feedback:
+    transient DRAFT/COMPLETE status, GDPR expiry, and traceability back to
+    the EnrichmentRecord. MasterProfileResponse remains unchanged.
+    """
+    profile_id: uuid.UUID
+    status: Literal["DRAFT", "COMPLETE"]
+    completeness_score: float
+    conflicts: list[ConflictSummary] = Field(default_factory=list)
+    enrichment_record_id: uuid.UUID
+    expires_at: datetime

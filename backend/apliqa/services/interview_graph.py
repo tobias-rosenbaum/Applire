@@ -111,7 +111,7 @@ def profile_updater(current_profile: dict, patch: dict) -> dict:
 
     Rules (4.6):
     - skills: union — add new skills, never remove existing ones
-    - work_history: append entries whose (company, role) pair is not already present
+    - work_experience: append entries whose (company, role) pair is not already present
     - No field is ever overwritten if it already has a non-empty value
     - Conflicts (same company, different dates) are appended as new entries
       so the user can review them manually
@@ -119,15 +119,16 @@ def profile_updater(current_profile: dict, patch: dict) -> dict:
     profile = dict(current_profile)
 
     # --- Skills: union merge ---
-    existing_skills = {s.lower() for s in profile.get("skills", [])}
+    # Skills in profile_json may be Skill dicts (iter 11+) or plain strings.
+    existing_skills = {_skill_name(s).lower() for s in profile.get("skills", [])}
     new_skills = [
         s for s in patch.get("skills_to_add", []) if s.lower() not in existing_skills
     ]
     if new_skills:
         profile["skills"] = list(profile.get("skills", [])) + new_skills
 
-    # --- Work history: append-only, deduplicate by (company, role) ---
-    existing_work = profile.get("work_history", [])
+    # --- Work experience: append-only, deduplicate by (company, role) ---
+    existing_work = profile.get("work_experience", [])
     existing_keys = {
         (_norm(e.get("company")), _norm(e.get("role"))) for e in existing_work
     }
@@ -138,9 +139,16 @@ def profile_updater(current_profile: dict, patch: dict) -> dict:
             additions.append(entry)
             existing_keys.add(key)
     if additions:
-        profile["work_history"] = list(existing_work) + additions
+        profile["work_experience"] = list(existing_work) + additions
 
     return profile
+
+
+def _skill_name(s: str | dict) -> str:
+    """Extract a comparable skill name from either a plain string or a Skill dict."""
+    if isinstance(s, dict):
+        return s.get("name", "")
+    return str(s)
 
 
 def _norm(value: str | None) -> str:
