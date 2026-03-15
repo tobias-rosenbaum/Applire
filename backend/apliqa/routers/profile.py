@@ -10,8 +10,9 @@ from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
 from apliqa.providers import get_provider
 from apliqa.providers.base import LLMProvider
-from apliqa.schemas.profile import LinkedInImportRequest, MasterProfileResponse
+from apliqa.schemas.profile import EnrichmentRecord, LinkedInImportRequest, MasterProfileResponse
 from apliqa.services.profile import (
+    get_enrichment_history,
     get_profile,
     import_from_linkedin,
     import_from_linkedin_pdf,
@@ -124,6 +125,18 @@ async def get_current_profile(
             detail="No profile found. Import a CV first.",
         )
     return profile
+
+
+@router.get(
+    "/enrichment-history",
+    response_model=list[EnrichmentRecord],
+    status_code=status.HTTP_200_OK,
+)
+async def get_profile_enrichment_history(
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> list[EnrichmentRecord]:
+    return await get_enrichment_history(db)
 
 
 @router.patch("/{section}", response_model=MasterProfileResponse, status_code=status.HTTP_200_OK)
