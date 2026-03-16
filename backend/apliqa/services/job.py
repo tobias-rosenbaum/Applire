@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.models.job import JobAnalysis
 from apliqa.prompts.job_analysis import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.job import JobAnalysisResponse
 
 

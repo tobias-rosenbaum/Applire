@@ -137,7 +137,7 @@ _LINKEDIN_JSON = {
 
 def _import_pdf(api: str) -> requests.Response:
     return requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("cv.pdf", _CV_PDF, "application/pdf")},
         timeout=90,
     )
@@ -168,23 +168,17 @@ def test_import_pdf_returns_200(api):
 def test_import_pdf_response_structure(api):
     body = _import_pdf(api).json()
 
-    assert isinstance(body.get("id"), str) and len(body["id"]) == 36
-    assert isinstance(body.get("profile"), dict)
-    assert isinstance(body.get("completeness"), float)
-    assert 0.0 <= body["completeness"] <= 1.0
-    assert isinstance(body.get("created_at"), str)
-    assert isinstance(body.get("updated_at"), str)
-
-    profile = body["profile"]
-    assert isinstance(profile.get("work_experience"), list)
-    assert isinstance(profile.get("skills"), list)
-    assert isinstance(profile.get("education"), list)
-    assert isinstance(profile.get("languages"), list)
-    assert isinstance(profile.get("personal_info"), dict)
+    assert isinstance(body.get("profile_id"), str) and len(body["profile_id"]) == 36
+    assert isinstance(body.get("completeness_score"), float)
+    assert 0.0 <= body["completeness_score"] <= 1.0
+    assert isinstance(body.get("status"), str)
+    assert body["status"] in ("DRAFT", "COMPLETE")
+    assert isinstance(body.get("enrichment_record_id"), str)
 
 
 def test_import_pdf_extracts_major_sections(api):
-    profile = _import_pdf(api).json()["profile"]
+    _import_pdf(api)
+    profile = requests.get(f"{api}/api/profile", timeout=10).json()["profile"]
 
     assert profile["work_experience"], "Expected at least one work entry"
     entry = profile["work_experience"][0]
@@ -378,7 +372,7 @@ def test_patch_invalid_section_returns_422(api):
 def _import_real_pdf(api: str) -> requests.Response:
     pdf_bytes = _REAL_CV_PDF.read_bytes()
     return requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("Profile.pdf", pdf_bytes, "application/pdf")},
         timeout=90,
     )
@@ -392,20 +386,16 @@ def test_real_pdf_import_returns_200(api):
 def test_real_pdf_response_structure(api):
     body = _import_real_pdf(api).json()
 
-    assert isinstance(body.get("id"), str) and len(body["id"]) == 36
-    assert isinstance(body.get("completeness"), float)
-    assert 0.0 <= body["completeness"] <= 1.0
-
-    profile = body["profile"]
-    assert isinstance(profile.get("work_experience"), list)
-    assert isinstance(profile.get("skills"), list)
-    assert isinstance(profile.get("education"), list)
-    assert isinstance(profile.get("languages"), list)
-    assert isinstance(profile.get("personal_info"), dict)
+    assert isinstance(body.get("profile_id"), str) and len(body["profile_id"]) == 36
+    assert isinstance(body.get("completeness_score"), float)
+    assert 0.0 <= body["completeness_score"] <= 1.0
+    assert isinstance(body.get("status"), str)
+    assert body["status"] in ("DRAFT", "COMPLETE")
 
 
 def test_real_pdf_extracts_work_history(api):
-    profile = _import_real_pdf(api).json()["profile"]
+    _import_real_pdf(api)
+    profile = requests.get(f"{api}/api/profile", timeout=10).json()["profile"]
 
     assert profile["work_experience"], "Expected at least one work entry from real CV"
     entry = profile["work_experience"][0]
@@ -415,7 +405,8 @@ def test_real_pdf_extracts_work_history(api):
 
 
 def test_real_pdf_extracts_skills(api):
-    profile = _import_real_pdf(api).json()["profile"]
+    _import_real_pdf(api)
+    profile = requests.get(f"{api}/api/profile", timeout=10).json()["profile"]
     assert profile["skills"], "Expected skills extracted from real CV"
     assert all(isinstance(s, dict) and "name" in s for s in profile["skills"])
 
@@ -423,6 +414,6 @@ def test_real_pdf_extracts_skills(api):
 def test_real_pdf_completeness_high(api):
     body = _import_real_pdf(api).json()
     # A complete LinkedIn PDF should populate most sections → ≥ 0.8
-    assert body["completeness"] >= 0.8, (
-        f"Completeness {body['completeness']} is lower than expected for a full LinkedIn profile"
+    assert body["completeness_score"] >= 0.8, (
+        f"Completeness {body['completeness_score']} is lower than expected for a full LinkedIn profile"
     )

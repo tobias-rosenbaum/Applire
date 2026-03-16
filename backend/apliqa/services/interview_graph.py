@@ -27,7 +27,7 @@ from apliqa.prompts.interview import (
     build_question_prompt,
     build_response_parser_prompt,
 )
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.session import InterviewState
 
 # Sections included in a MODE B guided build, in default priority order.
@@ -242,7 +242,7 @@ def profile_updater(current_profile: dict, patch: dict) -> dict:
     # --- Skills: union merge ---
     existing_skills = {_skill_name(s).lower() for s in profile.get("skills", [])}
     new_skills = [
-        s for s in patch.get("skills_to_add", []) if s.lower() not in existing_skills
+        s for s in patch.get("skills_to_add", []) if _skill_name(s).lower() not in existing_skills
     ]
     if new_skills:
         profile["skills"] = list(profile.get("skills", [])) + new_skills

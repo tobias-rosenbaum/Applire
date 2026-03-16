@@ -17,7 +17,7 @@ from apliqa.prompts.cv_extraction import (
     build_jd_aware_prompt,
 )
 from apliqa.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from apliqa.services.profile.merge import merge_profiles
 from apliqa.schemas.profile import (
