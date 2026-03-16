@@ -126,7 +126,8 @@ async def run_interview(job_id: str) -> dict:
     provider = get_provider()
     async with get_db() as db:
         try:
-            result = await session_svc.create_session(jid, db, provider)
+            from apliqa.schemas.session import SessionCreateRequest as _SCR
+            result = await session_svc.create_session(_SCR(job_id=jid), db, provider)
         except LookupError as exc:
             raise not_found(str(exc))
         except Exception as exc:

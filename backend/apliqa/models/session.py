@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,10 +21,14 @@ class InterviewSession(Base):
     profile_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("master_profiles.id"), nullable=False
     )
+    # "targeted" (MODE A) | "guided" (MODE B)
+    mode: Mapped[str] = mapped_column(String(20), nullable=False, default="targeted")
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active"
     )  # "active" | "complete"
     state: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    questions_asked: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    hard_ceiling: Mapped[int] = mapped_column(Integer, nullable=False, default=12)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -35,6 +39,9 @@ class InterviewSession(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

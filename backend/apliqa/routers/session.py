@@ -16,9 +16,10 @@ from apliqa.schemas.session import (
     SessionCreateResponse,
     SessionMessageRequest,
     SessionMessageResponse,
+    SessionStateResponse,
 )
 from apliqa.services.gap import analyze_gaps_for_session
-from apliqa.services.session import create_session, send_message
+from apliqa.services.session import create_session, get_session_state, send_message
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 
@@ -38,7 +39,7 @@ async def start_session(
 ) -> SessionCreateResponse:
     try:
         return await asyncio.wait_for(
-            create_session(body.job_id, db, provider),
+            create_session(body, db, provider),
             timeout=_LLM_TIMEOUT_SECONDS,
         )
     except asyncio.TimeoutError:
@@ -53,6 +54,27 @@ async def start_session(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="LLM returned invalid JSON",
         )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+@router.get(
+    "/{session_id}",
+    response_model=SessionStateResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_session(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> SessionStateResponse:
+    try:
+        return await get_session_state(session_id, db)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
