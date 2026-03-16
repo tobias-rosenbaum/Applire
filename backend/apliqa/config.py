@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o"
     ollama_base_url: str = "http://ollama:11434"
     ollama_model: str = "llama3.2"
+    openrouter_api_key: str = ""
+    openrouter_model: str = "mistralai/mistral-large-latest"
+    openrouter_base_url: str = ""          # empty = use https://openrouter.ai/api/v1
     auth_provider: str = "none"
     mcp_transport: str = "stdio"
     apliqa_base_url: str = "http://localhost:8001"
