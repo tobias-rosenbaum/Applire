@@ -94,6 +94,7 @@ def pre_classify(job_analysis: dict, profile: dict) -> PreClassification:
         reasons: list[str] = []
 
         req_lower = req.lower()
+        req_tokens = [w for w in req_lower.split() if len(w) > 2]
 
         # Tenure signal: if any long-tenure role's industry/tech overlaps with req
         for tenure_role in long_tenures:
@@ -102,6 +103,7 @@ def pre_classify(job_analysis: dict, profile: dict) -> PreClassification:
             company = (tenure_role.get("company") or "").lower()
             if (
                 req_lower in industry
+                or any(token in industry for token in req_tokens)
                 or any(req_lower in t for t in technologies)
                 or req_lower in company
             ):

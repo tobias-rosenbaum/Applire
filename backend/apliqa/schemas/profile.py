@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ─── Section sub-models ───────────────────────────────────────────────────────
@@ -34,8 +34,13 @@ Contact = PersonalInfo
 
 
 class WorkEntry(BaseModel):
-    company: str
+    company: str = ""
     role: str
+
+    @field_validator("company", mode="before")
+    @classmethod
+    def coerce_company(cls, v: object) -> str:
+        return v if isinstance(v, str) else ""
     # All role titles ever used for this position across different CVs/applications.
     # Enables the CV tailoring engine to pick the most relevant title per application
     # (e.g. "Team Lead" for leadership roles, "2nd Level Support" for technical roles).
@@ -72,6 +77,20 @@ class Certification(BaseModel):
     credential_url: str | None = None
 
 
+_PROFICIENCY_ALIASES: dict[str, str] = {
+    "beginner": "basic",
+    "novice": "basic",
+    "junior": "basic",
+    "elementary": "basic",
+    "proficient": "advanced",
+    "senior": "advanced",
+    "fluent": "advanced",
+    "native": "expert",
+    "expert": "expert",
+    "master": "expert",
+}
+
+
 class Skill(BaseModel):
     name: str
     category: Literal["technical", "soft", "language", "domain"] = "technical"
@@ -79,6 +98,15 @@ class Skill(BaseModel):
     years_experience: int | None = None
     source: str | None = None  # which role/interview surfaced this
     last_used: date | None = None
+
+    @field_validator("proficiency", mode="before")
+    @classmethod
+    def normalize_proficiency(cls, v: object) -> object:
+        if isinstance(v, str):
+            normalized = _PROFICIENCY_ALIASES.get(v.lower())
+            if normalized:
+                return normalized
+        return v
 
 
 class Language(BaseModel):

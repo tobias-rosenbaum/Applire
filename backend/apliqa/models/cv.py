@@ -1,9 +1,11 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+
+_JSON = JSONB().with_variant(JSON(), "sqlite")
 
 from apliqa.db.session import Base
 
@@ -24,7 +26,7 @@ class GeneratedCV(Base):
     profile_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("master_profiles.id"), nullable=False
     )
-    tailored_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    tailored_data: Mapped[dict] = mapped_column(_JSON, nullable=False)
     template: Mapped[str] = mapped_column(default="classic_german", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

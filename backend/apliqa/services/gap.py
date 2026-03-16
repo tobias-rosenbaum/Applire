@@ -18,7 +18,7 @@ from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.models.session import InterviewSession
 from apliqa.prompts.gap_analysis import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.gap import GapAnalysisResponse
 from apliqa.services.gap_inference import pre_classify
 

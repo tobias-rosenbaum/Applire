@@ -1,4 +1,3 @@
-import asyncio
 import json
 import uuid
 from typing import Annotated
@@ -9,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apliqa.auth import get_auth_provider
 from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
+from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
 from apliqa.ocr import get_ocr_extractor
 from apliqa.ocr.base import CVImageExtractor
 from apliqa.providers import get_provider
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.profile import (
     ConflictResolutionRequest,
     CVUploadResponse,
@@ -35,8 +35,6 @@ from apliqa.storage import get_storage
 from apliqa.storage.base import StorageProvider
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
-
-_LLM_TIMEOUT_SECONDS = 60.0
 
 
 def _get_provider() -> LLMProvider:
@@ -91,7 +89,7 @@ async def upload_cv_endpoint(
 
     try:
         file_bytes = await file.read()
-        coro = upload_cv(
+        return await upload_cv(
             file_bytes=file_bytes,
             filename=filename,
             content_type=content_type,
@@ -101,15 +99,12 @@ async def upload_cv_endpoint(
             ocr_extractor=ocr,
             job_id=job_id,
         )
-        return await asyncio.wait_for(coro, timeout=_LLM_TIMEOUT_SECONDS)
-
     except HTTPException:
         raise
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LLM request timed out",
-        )
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -170,15 +165,14 @@ async def import_profile(
                 )
             coro = import_from_linkedin(parsed, db, provider)
 
-        return await asyncio.wait_for(coro, timeout=_LLM_TIMEOUT_SECONDS)
+        return await coro
 
     except HTTPException:
         raise
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LLM request timed out",
-        )
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

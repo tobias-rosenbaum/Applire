@@ -1,4 +1,3 @@
-import asyncio
 import json
 import uuid
 
@@ -8,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apliqa.auth import get_auth_provider
 from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
+from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
 from apliqa.providers import get_provider
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.gap import GapAnalysisResponse
 from apliqa.schemas.session import (
     SessionCreateRequest,
@@ -22,8 +22,6 @@ from apliqa.services.gap import analyze_gaps_for_session
 from apliqa.services.session import create_session, get_session_state, send_message
 
 router = APIRouter(prefix="/api/session", tags=["session"])
-
-_LLM_TIMEOUT_SECONDS = 30.0
 
 
 def _get_provider() -> LLMProvider:
@@ -38,15 +36,11 @@ async def start_session(
     _auth: AuthProvider = Depends(get_auth_provider),
 ) -> SessionCreateResponse:
     try:
-        return await asyncio.wait_for(
-            create_session(body, db, provider),
-            timeout=_LLM_TIMEOUT_SECONDS,
-        )
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LLM request timed out",
-        )
+        return await create_session(body, db, provider)
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except json.JSONDecodeError:
@@ -55,10 +49,7 @@ async def start_session(
             detail="LLM returned invalid JSON",
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.get(
@@ -76,10 +67,7 @@ async def get_session(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.post(
@@ -94,15 +82,11 @@ async def analyze_session_gaps(
     _auth: AuthProvider = Depends(get_auth_provider),
 ) -> GapAnalysisResponse:
     try:
-        return await asyncio.wait_for(
-            analyze_gaps_for_session(session_id, db, provider),
-            timeout=_LLM_TIMEOUT_SECONDS,
-        )
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LLM request timed out",
-        )
+        return await analyze_gaps_for_session(session_id, db, provider)
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except json.JSONDecodeError:
@@ -111,10 +95,7 @@ async def analyze_session_gaps(
             detail="LLM returned invalid JSON",
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.post(
@@ -135,29 +116,19 @@ async def post_message(
             detail="message must not be empty",
         )
     try:
-        return await asyncio.wait_for(
-            send_message(session_id, body.message.strip(), db, provider),
-            timeout=_LLM_TIMEOUT_SECONDS,
-        )
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LLM request timed out",
-        )
+        return await send_message(session_id, body.message.strip(), db, provider)
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="LLM returned invalid JSON",
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))

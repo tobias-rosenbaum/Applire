@@ -32,7 +32,7 @@ from apliqa.models.gap import GapAnalysis
 from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.models.session import InterviewSession
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.profile import MasterProfileData
 from apliqa.schemas.session import (
     InterviewState,

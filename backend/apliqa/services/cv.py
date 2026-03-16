@@ -27,7 +27,7 @@ from apliqa.models.gap import GapAnalysis
 from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.prompts.cv_tailoring import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateResponse, CVTemplate, TailoredCVData
 
 _TEMPLATE_FILES: dict[str, str] = {

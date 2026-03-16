@@ -100,6 +100,9 @@ async def extract_text(
     For PDFs with a text layer, pymupdf is used directly.
     For scanned PDFs (< _MIN_PDF_TEXT_CHARS), OCR fallback is invoked.
     """
+    if not file_bytes:
+        raise ValueError("Empty file — nothing to extract")
+
     fmt = detect_format(filename, content_type)
 
     if fmt == "pdf":

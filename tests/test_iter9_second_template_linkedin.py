@@ -462,7 +462,7 @@ def _build_linkedin_pdf() -> bytes:
 def test_linkedin_pdf_import_returns_200(api):
     pdf_bytes = _build_linkedin_pdf()
     r = requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("linkedin_profile.pdf", pdf_bytes, "application/pdf")},
         timeout=90,
     )
@@ -472,49 +472,50 @@ def test_linkedin_pdf_import_returns_200(api):
 def test_linkedin_pdf_import_returns_profile_response(api):
     pdf_bytes = _build_linkedin_pdf()
     r = requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("linkedin_profile.pdf", pdf_bytes, "application/pdf")},
         timeout=90,
     )
     assert r.status_code == 200, r.text
     body = r.json()
-    assert isinstance(body.get("id"), str) and len(body["id"]) == 36
-    assert isinstance(body.get("completeness"), float)
-    assert body["completeness"] > 0
+    assert isinstance(body.get("profile_id"), str) and len(body["profile_id"]) == 36
+    assert isinstance(body.get("completeness_score"), float)
+    assert body["completeness_score"] > 0
 
 
 def test_linkedin_pdf_profile_has_work_history(api):
     pdf_bytes = _build_linkedin_pdf()
     r = requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("linkedin_profile.pdf", pdf_bytes, "application/pdf")},
         timeout=90,
     )
     assert r.status_code == 200, r.text
-    work = r.json()["profile"]["work_experience"]
+    work = requests.get(f"{api}/api/profile", timeout=10).json()["profile"]["work_experience"]
     assert isinstance(work, list) and len(work) > 0, (
-        "work_experience must be non-empty after LinkedIn PDF import"
+        "work_experience must be non-empty after LinkedIn PDF upload"
     )
 
 
 def test_linkedin_pdf_profile_has_contact_name(api):
     pdf_bytes = _build_linkedin_pdf()
     r = requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("linkedin_profile.pdf", pdf_bytes, "application/pdf")},
         timeout=90,
     )
     assert r.status_code == 200, r.text
-    assert r.json()["profile"]["personal_info"]["name"], (
-        "personal_info.name must be non-empty after LinkedIn PDF import"
+    profile = requests.get(f"{api}/api/profile", timeout=10).json()["profile"]
+    assert profile["personal_info"]["name"], (
+        "personal_info.name must be non-empty after LinkedIn PDF upload"
     )
 
 
 def test_linkedin_pdf_get_profile_after_import(api):
-    """GET /api/profile after PDF import must return the imported data."""
+    """GET /api/profile after PDF upload must return the imported data."""
     pdf_bytes = _build_linkedin_pdf()
     r_import = requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("linkedin_profile.pdf", pdf_bytes, "application/pdf")},
         timeout=90,
     )
@@ -523,7 +524,7 @@ def test_linkedin_pdf_get_profile_after_import(api):
     r_get = requests.get(f"{api}/api/profile", timeout=10)
     assert r_get.status_code == 200, r_get.text
     assert r_get.json()["profile"]["personal_info"]["name"], (
-        "GET /api/profile personal_info.name must be set after PDF import"
+        "GET /api/profile personal_info.name must be set after PDF upload"
     )
 
 
@@ -541,7 +542,7 @@ def test_linkedin_pdf_detection_by_content_type(api):
     """PDF upload without .pdf extension but with application/pdf content-type must be accepted."""
     pdf_bytes = _build_linkedin_pdf()
     r = requests.post(
-        f"{api}/api/profile/import",
+        f"{api}/api/profile/upload",
         files={"file": ("linkedin_export", pdf_bytes, "application/pdf")},
         timeout=90,
     )

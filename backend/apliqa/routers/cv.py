@@ -1,4 +1,3 @@
-import asyncio
 import json
 import uuid
 
@@ -9,14 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apliqa.auth import get_auth_provider
 from apliqa.auth.base import AuthProvider
 from apliqa.db.session import get_db
+from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
 from apliqa.providers import get_provider
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse
 from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
-
-_LLM_TIMEOUT_SECONDS = 60.0
 
 
 def _get_provider() -> LLMProvider:
@@ -37,15 +35,11 @@ async def post_generate(
 ) -> CVGenerateResponse:
     base_url = str(request.base_url).rstrip("/")
     try:
-        return await asyncio.wait_for(
-            generate_cv(body.job_id, db, provider, base_url, body.template),
-            timeout=_LLM_TIMEOUT_SECONDS,
-        )
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="LLM request timed out",
-        )
+        return await generate_cv(body.job_id, db, provider, base_url, body.template)
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except json.JSONDecodeError:
@@ -54,10 +48,7 @@ async def post_generate(
             detail="LLM returned invalid JSON",
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.get("/{cv_id}/html", response_class=HTMLResponse)
@@ -72,10 +63,7 @@ async def get_html(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
 @router.get("/{cv_id}/pdf")
@@ -94,7 +82,4 @@ async def get_pdf(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
