@@ -101,6 +101,7 @@ export default function ImportPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadedCompleteness, setUploadedCompleteness] = useState<number | null>(null);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   const pdfRef = useRef<HTMLInputElement>(null);
   const zipRef = useRef<HTMLInputElement>(null);
@@ -121,7 +122,7 @@ export default function ImportPage({
           body: form,
         });
       } else {
-        // LinkedIn ZIP
+        // LinkedIn ZIP or PDF
         const file = zipRef.current?.files?.[0];
         if (!file) { setError("Bitte eine LinkedIn-ZIP-Datei auswählen."); return; }
         const form = new FormData();
@@ -135,6 +136,7 @@ export default function ImportPage({
       if (!uploadRes.ok) throw new Error(await apiErrorMessage(uploadRes));
       const uploadData = await uploadRes.json();
       setUploadedCompleteness(uploadData.completeness_score ?? null);
+      setProfileSaved(true);
 
       // Trigger gap analysis then advance flow
       await proceedToGaps();
@@ -157,7 +159,14 @@ export default function ImportPage({
       const gapRes = await fetch(`${API_BASE}/api/job/${flowState.job_id}/gaps`, {
         method: "POST",
       });
-      if (!gapRes.ok) throw new Error(await apiErrorMessage(gapRes));
+      if (!gapRes.ok) {
+        const msg = await apiErrorMessage(gapRes);
+        throw new Error(
+          gapRes.status === 504
+            ? `KI-Zeitüberschreitung: ${msg}`
+            : msg
+        );
+      }
       const gapData = await gapRes.json();
 
       await advanceFlow(flowId, "gap_analysis", gapData.id);
@@ -229,9 +238,15 @@ export default function ImportPage({
           )}
           {error && <div style={s.error}>{error}</div>}
           <div style={s.row}>
-            <button style={s.btn("primary")} onClick={handleUpload} disabled={loading}>
-              {loading ? "Hochladen …" : "Hochladen & weiter"}
-            </button>
+            {profileSaved && error ? (
+              <button style={s.btn("primary")} onClick={proceedToGaps} disabled={loading}>
+                {loading ? "Analysiere …" : "Analyse wiederholen →"}
+              </button>
+            ) : (
+              <button style={s.btn("primary")} onClick={handleUpload} disabled={loading}>
+                {loading ? "Hochladen …" : "Hochladen & weiter"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -246,9 +261,15 @@ export default function ImportPage({
           <input ref={zipRef} type="file" accept=".zip,.pdf" style={s.fileInput} />
           {error && <div style={s.error}>{error}</div>}
           <div style={s.row}>
-            <button style={s.btn("primary")} onClick={handleUpload} disabled={loading}>
-              {loading ? "Importiere …" : "Importieren & weiter"}
-            </button>
+            {profileSaved && error ? (
+              <button style={s.btn("primary")} onClick={proceedToGaps} disabled={loading}>
+                {loading ? "Analysiere …" : "Analyse wiederholen →"}
+              </button>
+            ) : (
+              <button style={s.btn("primary")} onClick={handleUpload} disabled={loading}>
+                {loading ? "Importiere …" : "Importieren & weiter"}
+              </button>
+            )}
           </div>
         </div>
       )}
