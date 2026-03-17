@@ -17,12 +17,30 @@ PROJECT_ROOT = Path(__file__).parent.parent
 API_BASE = "http://localhost:8001"
 _READY_TIMEOUT = 120  # seconds
 
-# Rootless Docker uses a per-user socket; fall back to the system socket.
-_uid = os.getuid()
-_rootless_sock = Path(f"/run/user/{_uid}/docker.sock")
+# Use the host from the active Docker context so we always talk to the same
+# daemon the user's `docker` CLI uses — avoids stale Desktop sockets.
+def _active_docker_host() -> str:
+    try:
+        result = subprocess.run(
+            ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
+            capture_output=True, text=True, check=True,
+        )
+        host = result.stdout.strip()
+        if host:
+            return host
+    except Exception:
+        pass
+    # Fallbacks: rootless → system socket.
+    _uid = os.getuid()
+    for sock in (f"/run/user/{_uid}/docker.sock", "/var/run/docker.sock"):
+        if Path(sock).exists():
+            return f"unix://{sock}"
+    return "unix:///var/run/docker.sock"
+
+
 _DOCKER_ENV = {
     **os.environ,
-    "DOCKER_HOST": f"unix://{_rootless_sock}" if _rootless_sock.exists() else "unix:///var/run/docker.sock",
+    "DOCKER_HOST": _active_docker_host(),
 }
 
 

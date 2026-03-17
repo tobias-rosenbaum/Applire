@@ -194,6 +194,23 @@ export default function GapsPage({
     }
   }
 
+  async function retryGapAnalysis() {
+    if (!flowState) return;
+    setError("");
+    setLoading(true);
+    try {
+      const postRes = await fetch(`${API_BASE}/api/job/${flowState.job_id}/gaps`, {
+        method: "POST",
+      });
+      if (!postRes.ok) throw new Error(await apiErrorMessage(postRes));
+      setGaps(await postRes.json());
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Fehler beim Laden der Analyse");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (loading) return <div style={s.loading}>Analysiere Lücken …</div>;
 
   return (
@@ -272,7 +289,16 @@ export default function GapsPage({
         </>
       )}
 
-      {error && <div style={s.error}>{error}</div>}
+      {error && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={s.error}>{error}</div>
+          {!gaps && (
+            <button style={{ ...s.btn("secondary"), marginTop: 8 }} onClick={retryGapAnalysis}>
+              Analyse wiederholen
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={s.actions}>
         {/* Show "Start Interview" for new users with gaps, "Skip to CV" always available */}
