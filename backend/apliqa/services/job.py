@@ -47,6 +47,7 @@ async def analyze_jd(
         raw_text_hash=raw_hash,
         raw_text=text,
         source_url=source_url,
+        company_name=data.get("company_name") or None,
         role_title=data.get("role_title", ""),
         required_skills=data.get("required_skills", []),
         nice_to_have_skills=data.get("nice_to_have_skills", []),

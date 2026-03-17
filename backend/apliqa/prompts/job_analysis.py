@@ -1,5 +1,5 @@
-# Prompt version: v1
-# Used by: services/job.py → MistralProvider.aparse_json
+# Prompt version: v2 (iter17: added company_name)
+# Used by: services/job.py → LLMProvider.aparse_json
 
 SYSTEM_PROMPT = """\
 You are an expert HR analyst specialised in the DACH (Germany, Austria, Switzerland) job market.
@@ -8,6 +8,7 @@ Respond ONLY with a valid JSON object matching the schema below — no markdown,
 
 Schema:
 {
+  "company_name": "string or null — company name if identifiable from the JD; null if anonymised or unclear",
   "role_title": "string — exact job title from the JD",
   "required_skills": ["list of must-have technical and soft skills"],
   "nice_to_have_skills": ["list of optional / preferred skills"],

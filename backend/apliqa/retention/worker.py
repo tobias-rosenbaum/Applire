@@ -1,4 +1,20 @@
-"""GDPR retention worker — runs TTL sweeps and emits a JSON report (ADR 005)."""
+"""GDPR retention worker — runs TTL sweeps and emits a JSON report (ADR 005).
+
+Rules (ADR 005 v2 — amended iter17):
+  uploads          → hard-delete after 7 days
+  interview_sessions → hard-delete after 30 days
+  generated_cvs    → hard-delete after expires_at
+  applications     → soft-delete (deleted_at) after 730 days inactivity
+  master_profiles  → soft-delete after 730 days inactivity
+  users            → soft-delete after 730 days inactivity
+  generated_cvs (stale generation jobs) → mark failed after 10 minutes in
+                     pending/generating (stale job reaper, arc42 §5.3.4)
+
+Technical debt note: Retention Worker is architecturally isolated but co-located.
+  Extract to `apliqa-ops` when Cloud Edition requires singleton scheduling,
+  tenant-scoped deletion, or independent audit SLA.
+  Blocked by `apliqa-core` shared library extraction. | Cloud Edition scale-up |
+"""
 
 import json
 import logging
@@ -9,7 +25,8 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.db.session import AsyncSessionLocal
-from apliqa.models.cv import GeneratedCV
+from apliqa.models.application import Application
+from apliqa.models.cv import CVGenerationStatus, GeneratedCV
 from apliqa.models.profile import MasterProfile
 from apliqa.models.session import InterviewSession
 from apliqa.models.user import User
@@ -18,7 +35,8 @@ logger = logging.getLogger(__name__)
 
 _UPLOADS_TTL_DAYS = 7
 _SESSION_TTL_DAYS = 30
-_INACTIVITY_TTL_DAYS = 730  # ≈ 24 months (no month arithmetic in stdlib)
+_INACTIVITY_TTL_DAYS = 730        # ≈ 24 months
+_STALE_CV_JOB_MINUTES = 10        # pending/generating → failed after this long
 
 
 async def _purge_uploads(db: AsyncSession) -> int:
@@ -97,6 +115,56 @@ async def _tombstone_inactive_users(db: AsyncSession) -> int:
     return result.rowcount  # type: ignore[return-value]
 
 
+async def _tombstone_inactive_applications(db: AsyncSession) -> int:
+    """Soft-delete applications whose inactivity timer has expired (730 days).
+
+    The expires_at column is reset on every update (status change, notes, workflow
+    advancement). This is an inactivity timer, not a creation timer (ADR 005 v2).
+    """
+    now = datetime.now(timezone.utc)
+    try:
+        result = await db.execute(
+            update(Application)
+            .where(Application.expires_at < now)
+            .where(Application.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
+
+
+async def _reap_stale_cv_jobs(db: AsyncSession) -> int:
+    """Mark CV generation jobs stuck in pending/generating for > 10 minutes as failed.
+
+    Prevents ghost jobs when the BackgroundTasks process crashes mid-render.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=_STALE_CV_JOB_MINUTES)
+    now = datetime.now(timezone.utc)
+    try:
+        result = await db.execute(
+            update(GeneratedCV)
+            .where(
+                GeneratedCV.status.in_(
+                    [CVGenerationStatus.pending.value, CVGenerationStatus.generating.value]
+                )
+            )
+            .where(GeneratedCV.created_at < cutoff)
+            .where(GeneratedCV.deleted_at.is_(None))
+            .values(
+                status=CVGenerationStatus.failed.value,
+                error_message="Generation timed out (stale job reaper)",
+            )
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
+
+
 async def run() -> None:
     """Execute all TTL rules and emit a structured JSON report to stdout."""
     async with AsyncSessionLocal() as db:
@@ -105,6 +173,8 @@ async def run() -> None:
         cvs_deleted = await _purge_cvs(db)
         profiles_tombstoned = await _tombstone_inactive_profiles(db)
         users_tombstoned = await _tombstone_inactive_users(db)
+        applications_tombstoned = await _tombstone_inactive_applications(db)
+        stale_cv_jobs_failed = await _reap_stale_cv_jobs(db)
 
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(),
@@ -113,5 +183,7 @@ async def run() -> None:
         "generated_cvs_deleted": cvs_deleted,
         "master_profiles_tombstoned": profiles_tombstoned,
         "users_tombstoned": users_tombstoned,
+        "applications_tombstoned": applications_tombstoned,
+        "stale_cv_jobs_failed": stale_cv_jobs_failed,
     }
     print(json.dumps(report), flush=True)

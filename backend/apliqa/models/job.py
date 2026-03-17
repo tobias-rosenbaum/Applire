@@ -24,6 +24,8 @@ class JobAnalysis(Base):
     seniority_level: Mapped[str] = mapped_column(Text, nullable=False)
     company_culture_signals: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     language_requirement: Mapped[str] = mapped_column(Text, nullable=False)
+    # LLM-extracted best-effort; nullable (recruiter-anonymised JDs omit company)
+    company_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

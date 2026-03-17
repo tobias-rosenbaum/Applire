@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel
+
+from apliqa.models.cv import CVGenerationStatus
 
 CVTemplate = Literal["classic_german", "modern_swiss"]
 
@@ -13,9 +15,22 @@ class CVGenerateRequest(BaseModel):
 
 
 class CVGenerateResponse(BaseModel):
+    """Returned immediately by POST /api/cv/generate (async path)."""
     cv_id: uuid.UUID
-    html_url: str
-    pdf_url: str
+    status: CVGenerationStatus
+    expires_at: datetime
+
+
+class CVStatusResponse(BaseModel):
+    """Returned by GET /api/cv/{cv_id}/status."""
+    cv_id: uuid.UUID
+    status: CVGenerationStatus
+    html_url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    error_message: Optional[str] = None
+    expires_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class TailoredWorkEntry(BaseModel):

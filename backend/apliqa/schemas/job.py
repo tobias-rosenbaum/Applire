@@ -39,6 +39,7 @@ class JobAnalysisResponse(BaseModel):
     seniority_level: str
     company_culture_signals: list[str]
     language_requirement: str
+    company_name: Optional[str] = None
     raw_text_hash: str
     source_url: Optional[str] = None
 

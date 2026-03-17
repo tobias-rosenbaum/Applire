@@ -1,34 +1,44 @@
+"""CV service — Iteration 17 (async generation)
+
+generate_cv (17.12 / arc42 §5.3.4):
+    Create GeneratedCV record with status='pending'.
+    Enqueue _render_cv_background via FastAPI BackgroundTasks.
+    Return immediately — caller polls GET /api/cv/{cv_id}/status.
+
+get_cv_status:
+    Return CVStatusResponse with current status + urls if ready.
+
+get_cv_html / get_cv_pdf:
+    Load GeneratedCV (must be 'ready'), render template / PDF.
+    Both raise LookupError if status != 'ready' to prevent serving stale content.
+
+_render_cv_background:
+    Heavy LLM + Playwright work — runs outside the request lifecycle.
+    Updates status: pending → generating → ready | failed.
+    Creates its own DB session (original request session is closed).
 """
-CV service — Iteration 5
 
-generate_cv (5.1 / 5.6):
-    Load job + profile + latest gap analysis
-    → LLM tailoring prompt → TailoredCVData
-    → persist GeneratedCV record
-    → return CVGenerateResponse
-
-render_html (5.3 / 5.4):
-    Load GeneratedCV → render Jinja2 template → return HTML string
-
-render_pdf (5.5):
-    Accept HTML string → Playwright headless Chromium → return PDF bytes
-"""
-
+import logging
 import uuid
 from pathlib import Path
 
+from fastapi import BackgroundTasks
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from playwright.async_api import async_playwright
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.cv import GeneratedCV
+from apliqa.db.session import AsyncSessionLocal
+from apliqa.models.cv import CVGenerationStatus, GeneratedCV
 from apliqa.models.gap import GapAnalysis
 from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.prompts.cv_tailoring import SYSTEM_PROMPT, build_user_prompt
+from apliqa.providers import get_provider
 from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.cv import CVGenerateResponse, CVTemplate, TailoredCVData
+from apliqa.schemas.cv import CVGenerateResponse, CVStatusResponse, CVTemplate, TailoredCVData
+
+logger = logging.getLogger(__name__)
 
 _TEMPLATE_FILES: dict[str, str] = {
     "classic_german": "lebenslauf.html.j2",
@@ -43,7 +53,7 @@ _jinja_env = Environment(
 
 
 # ---------------------------------------------------------------------------
-# POST /api/cv/generate
+# POST /api/cv/generate — enqueue and return immediately
 # ---------------------------------------------------------------------------
 
 
@@ -51,21 +61,16 @@ async def generate_cv(
     job_id: uuid.UUID,
     db: AsyncSession,
     provider: LLMProvider,
-    base_url: str,
+    background_tasks: BackgroundTasks,
     template: CVTemplate = "classic_german",
 ) -> CVGenerateResponse:
-    # Load job analysis
-    job_result = await db.execute(
-        select(JobAnalysis).where(
-            JobAnalysis.id == job_id,
-            JobAnalysis.deleted_at.is_(None),
-        )
-    )
-    job = job_result.scalar_one_or_none()
+    """Create a pending GeneratedCV record and enqueue background rendering."""
+    # Validate job exists
+    job = await db.get(JobAnalysis, job_id)
     if job is None:
         raise LookupError(f"Job analysis {job_id} not found")
 
-    # Load latest profile
+    # Validate profile exists
     profile_result = await db.execute(
         select(MasterProfile)
         .where(MasterProfile.deleted_at.is_(None))
@@ -76,68 +81,76 @@ async def generate_cv(
     if profile is None:
         raise LookupError("No profile found — import a CV first")
 
-    # Load latest gap analysis for this job (optional — used for keyword guidance)
-    gap_result = await db.execute(
-        select(GapAnalysis)
-        .where(
-            GapAnalysis.job_analysis_id == job_id,
-            GapAnalysis.deleted_at.is_(None),
-        )
-        .order_by(GapAnalysis.created_at.desc())
-        .limit(1)
-    )
-    gap = gap_result.scalar_one_or_none()
-    keyword_gaps: list[str] = gap.keyword_gaps if gap else []
-    critical_gaps: list[str] = gap.critical_gaps if gap else []
-
-    # Build job dict for prompt
-    job_dict = {
-        "role_title": job.role_title,
-        "required_skills": job.required_skills,
-        "nice_to_have_skills": job.nice_to_have_skills,
-        "keywords": job.keywords,
-        "seniority_level": job.seniority_level,
-        "company_culture_signals": job.company_culture_signals,
-        "language_requirement": job.language_requirement,
-    }
-
-    # LLM tailoring (5.1)
-    tailored_raw: dict = await provider.aparse_json(
-        build_user_prompt(job_dict, profile.profile_json, keyword_gaps, critical_gaps),
-        system=SYSTEM_PROMPT,
-        temperature=0.3,
-        max_tokens=8192,
-    )
-
-    # Validate via Pydantic (raises ValidationError on bad LLM output)
-    tailored = TailoredCVData.model_validate(tailored_raw)
-
-    # Persist (5.2)
+    # Create pending record
     record = GeneratedCV(
-        job_analysis_id=job.id,
+        job_analysis_id=job_id,
         profile_id=profile.id,
-        tailored_data=tailored.model_dump(),
+        tailored_data={},  # populated by background task
         template=template,
+        status=CVGenerationStatus.pending.value,
     )
     db.add(record)
     await db.commit()
     await db.refresh(record)
 
-    cv_id = record.id
+    # Enqueue heavy work — runs after response is sent
+    background_tasks.add_task(
+        _render_cv_background,
+        record.id,
+        job_id,
+        profile.id,
+        template,
+    )
+
     return CVGenerateResponse(
-        cv_id=cv_id,
-        html_url=f"{base_url}/api/cv/{cv_id}/html",
-        pdf_url=f"{base_url}/api/cv/{cv_id}/pdf",
+        cv_id=record.id,
+        status=CVGenerationStatus.pending,
+        expires_at=record.expires_at,
     )
 
 
 # ---------------------------------------------------------------------------
-# GET /api/cv/{cv_id}/html  (5.4)
+# GET /api/cv/{cv_id}/status
+# ---------------------------------------------------------------------------
+
+
+async def get_cv_status(
+    cv_id: uuid.UUID,
+    db: AsyncSession,
+    base_url: str,
+) -> CVStatusResponse:
+    from datetime import timedelta
+    from datetime import datetime as _dt
+
+    record = await _load_cv(cv_id, db)
+    status = CVGenerationStatus(record.status)
+
+    # Inline staleness check: give the frontend immediate failed feedback without
+    # waiting for the daily Retention Worker run. The worker still cleans up the
+    # DB record; this is belt-and-suspenders for the polling path.
+    _STALE_MINUTES = 10
+    if status in (CVGenerationStatus.pending, CVGenerationStatus.generating):
+        cutoff = _dt.now(timezone.utc) - timedelta(minutes=_STALE_MINUTES)
+        if record.created_at < cutoff:
+            status = CVGenerationStatus.failed
+
+    return CVStatusResponse(
+        cv_id=record.id,
+        status=status,
+        html_url=f"{base_url}/api/cv/{cv_id}/html" if status == CVGenerationStatus.ready else None,
+        pdf_url=f"{base_url}/api/cv/{cv_id}/pdf" if status == CVGenerationStatus.ready else None,
+        error_message=record.error_message or ("Generation timed out" if status == CVGenerationStatus.failed and not record.error_message else None),
+        expires_at=record.expires_at,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/cv/{cv_id}/html  (requires status=ready)
 # ---------------------------------------------------------------------------
 
 
 async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
-    record = await _load_cv(cv_id, db)
+    record = await _load_cv_ready(cv_id, db)
     tailored = TailoredCVData.model_validate(record.tailored_data)
     template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
     template = _jinja_env.get_template(template_file)
@@ -145,13 +158,90 @@ async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/cv/{cv_id}/pdf  (5.5)
+# GET /api/cv/{cv_id}/pdf  (requires status=ready)
 # ---------------------------------------------------------------------------
 
 
 async def get_cv_pdf(cv_id: uuid.UUID, db: AsyncSession) -> bytes:
     html = await get_cv_html(cv_id, db)
     return await _html_to_pdf(html)
+
+
+# ---------------------------------------------------------------------------
+# Background task
+# ---------------------------------------------------------------------------
+
+
+async def _render_cv_background(
+    cv_id: uuid.UUID,
+    job_id: uuid.UUID,
+    profile_id: uuid.UUID,
+    template: CVTemplate,
+) -> None:
+    """LLM tailoring + Playwright PDF rendering — runs outside request lifecycle.
+
+    Opens its own DB session. Updates status: pending → generating → ready | failed.
+    """
+    async with AsyncSessionLocal() as db:
+        record = await db.get(GeneratedCV, cv_id)
+        if record is None:
+            logger.error("CV %s not found in background task", cv_id)
+            return
+
+        try:
+            record.status = CVGenerationStatus.generating.value
+            await db.commit()
+
+            # Load job + profile + optional gap analysis
+            job = await db.get(JobAnalysis, job_id)
+            profile = await db.get(MasterProfile, profile_id)
+
+            gap_result = await db.execute(
+                select(GapAnalysis)
+                .where(
+                    GapAnalysis.job_analysis_id == job_id,
+                    GapAnalysis.deleted_at.is_(None),
+                )
+                .order_by(GapAnalysis.created_at.desc())
+                .limit(1)
+            )
+            gap = gap_result.scalar_one_or_none()
+            keyword_gaps: list[str] = gap.keyword_gaps if gap else []
+            critical_gaps: list[str] = gap.critical_gaps if gap else []
+
+            job_dict = {
+                "role_title": job.role_title,
+                "required_skills": job.required_skills,
+                "nice_to_have_skills": job.nice_to_have_skills,
+                "keywords": job.keywords,
+                "seniority_level": job.seniority_level,
+                "company_culture_signals": job.company_culture_signals,
+                "language_requirement": job.language_requirement,
+            }
+
+            provider: LLMProvider = get_provider()
+            tailored_raw: dict = await provider.aparse_json(
+                build_user_prompt(job_dict, profile.profile_json, keyword_gaps, critical_gaps),
+                system=SYSTEM_PROMPT,
+                temperature=0.3,
+                max_tokens=8192,
+            )
+
+            tailored = TailoredCVData.model_validate(tailored_raw)
+
+            record.tailored_data = tailored.model_dump()
+            record.status = CVGenerationStatus.ready.value
+            record.error_message = None
+            await db.commit()
+
+        except Exception as exc:
+            logger.exception("CV generation failed for %s: %s", cv_id, exc)
+            try:
+                record.status = CVGenerationStatus.failed.value
+                record.error_message = str(exc)[:1000]
+                await db.commit()
+            except Exception:
+                logger.exception("Failed to persist error status for CV %s", cv_id)
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +259,16 @@ async def _load_cv(cv_id: uuid.UUID, db: AsyncSession) -> GeneratedCV:
     record = result.scalar_one_or_none()
     if record is None:
         raise LookupError(f"Generated CV {cv_id} not found")
+    return record
+
+
+async def _load_cv_ready(cv_id: uuid.UUID, db: AsyncSession) -> GeneratedCV:
+    record = await _load_cv(cv_id, db)
+    if record.status != CVGenerationStatus.ready.value:
+        raise LookupError(
+            f"CV {cv_id} is not ready (status: {record.status}). "
+            "Poll GET /api/cv/{cv_id}/status until status='ready'."
+        )
     return record
 
 

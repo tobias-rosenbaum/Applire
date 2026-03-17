@@ -63,6 +63,28 @@ async def analyze_job_description(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
+@router.get("/{job_id}", response_model=JobAnalysisResponse, status_code=status.HTTP_200_OK)
+async def get_job_analysis(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> JobAnalysisResponse:
+    """Retrieve a stored JobAnalysis without re-triggering LLM (17.11)."""
+    from sqlalchemy import select
+    from apliqa.models.job import JobAnalysis
+
+    result = await db.execute(
+        select(JobAnalysis).where(
+            JobAnalysis.id == job_id,
+            JobAnalysis.deleted_at.is_(None),
+        )
+    )
+    job = result.scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+    return JobAnalysisResponse.model_validate(job)
+
+
 @router.post(
     "/{job_id}/gaps",
     response_model=GapAnalysisResponse,

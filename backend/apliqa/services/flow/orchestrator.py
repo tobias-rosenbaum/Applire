@@ -26,6 +26,9 @@ from apliqa.models.gap import GapAnalysis
 from apliqa.models.job import JobAnalysis
 from apliqa.models.profile import MasterProfile
 from apliqa.models.session import InterviewSession
+# Imported at call-site to avoid circular imports (application service imports
+# _resolve_user_type / _compute_actions from this module).
+# from apliqa.services.application import sync_workflow_status
 from apliqa.schemas.flow import (
     AdvanceFlowRequest,
     CreateFlowRequest,
@@ -184,6 +187,23 @@ async def advance_flow(
     flow.updated_at = datetime.now(timezone.utc)
     if target == "complete":
         flow.completed_at = datetime.now(timezone.utc)
+
+    # Write-time status sync: keep Application.workflow_status consistent.
+    #
+    # WHY lazy import: apliqa.services.application imports _resolve_user_type and
+    # _compute_actions from this module at the top level. If we also import
+    # sync_workflow_status at the top level here, Python sees a circular dependency
+    # (flow.orchestrator ↔ services.application) and raises ImportError.
+    # Importing inside the function body breaks the cycle because by the time this
+    # line executes, both modules are fully loaded.
+    #
+    # DO NOT move this import to the top of the file — it will reintroduce the cycle.
+    # Long-term fix: extract sync into a lightweight callback/event that both sides
+    # can reference without importing each other. Deferred — current scale doesn't
+    # warrant the abstraction.
+    if flow.application_id is not None:
+        from apliqa.services.application import sync_workflow_status
+        await sync_workflow_status(flow.application_id, target, db)
 
     await db.commit()
     await db.refresh(flow)

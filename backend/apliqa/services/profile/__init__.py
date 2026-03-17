@@ -382,6 +382,7 @@ async def upload_cv(
     storage,  # StorageProvider — imported inline to avoid circular imports
     ocr_extractor,  # CVImageExtractor
     job_id: uuid.UUID | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> CVUploadResponse:
     """Parse an uploaded CV file and merge it into the Master Profile (ADR 014).
 
@@ -501,6 +502,7 @@ async def upload_cv(
     file_path = await storage.save(file_bytes, filename)
 
     upload_record = UploadRecord(
+        user_id=user_id,
         original_filename=filename,
         content_hash=content_hash,
         mime_type=content_type,
