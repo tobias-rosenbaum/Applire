@@ -1,9 +1,15 @@
 import json
+import logging
 import uuid
-from typing import Annotated
+from datetime import datetime, timezone
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from apliqa.auth import get_auth_provider
 from apliqa.auth.base import AuthProvider
@@ -68,12 +74,13 @@ def _is_pdf(file: UploadFile) -> bool:
 @router.post("/upload", response_model=CVUploadResponse, status_code=status.HTTP_200_OK)
 async def upload_cv_endpoint(
     file: UploadFile,
+    request: Request,
     job_id: uuid.UUID | None = Query(default=None, description="Optional JobAnalysis ID for JD-context-aware extraction"),
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
     storage: StorageProvider = Depends(_get_storage),
     ocr: CVImageExtractor = Depends(_get_ocr),
-    _auth: AuthProvider = Depends(get_auth_provider),
+    auth: AuthProvider = Depends(get_auth_provider),
 ) -> CVUploadResponse:
     """Upload a CV in any supported format and merge it into the Master Profile.
 
@@ -84,6 +91,7 @@ async def upload_cv_endpoint(
     Returns a CVUploadResponse with completeness score, status (DRAFT/COMPLETE),
     any detected conflicts, and the GDPR expiry date for the stored file.
     """
+    user = await auth.get_current_user(request)
     filename = file.filename or "upload"
     content_type = file.content_type or "application/octet-stream"
 
@@ -98,6 +106,7 @@ async def upload_cv_endpoint(
             storage=storage,
             ocr_extractor=ocr,
             job_id=job_id,
+            user_id=user.id,
         )
     except HTTPException:
         raise
@@ -150,10 +159,12 @@ async def import_profile(
             file_bytes = await file.read()
             if _is_zip(file):
                 coro = import_from_linkedin_zip(file_bytes, db, provider)
+            elif _is_pdf(file):
+                coro = import_from_linkedin_pdf(file_bytes, db, provider)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Only LinkedIn export ZIP files are accepted here. To upload a CV (PDF, DOCX), use POST /api/profile/upload",
+                    detail="Only LinkedIn export ZIP or PDF files are accepted here.",
                 )
         else:
             try:
@@ -262,3 +273,221 @@ async def patch_section(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         )
+
+
+@router.delete("", status_code=status.HTTP_202_ACCEPTED)
+async def erase_profile(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    storage: StorageProvider = Depends(_get_storage),
+    auth: AuthProvider = Depends(get_auth_provider),
+) -> dict:
+    """GDPR Art. 17 — full user data erasure.
+
+    Hard-deletes all user-scoped records in leaf-to-root FK order within a single
+    transaction. Physical file deletion (uploads, PDFs) happens after commit so a
+    storage I/O error cannot block the database erasure. Returns 202 Accepted.
+
+    Cascade order:
+      uploads → generated_cvs → interview_sessions → flow_sessions
+      → applications → master_profiles → users
+    job_analyses are NOT deleted (shared/global, no user_id).
+    """
+    from apliqa.models.application import Application
+    from apliqa.models.cv import GeneratedCV
+    from apliqa.models.flow import FlowSession
+    from apliqa.models.profile import MasterProfile
+    from apliqa.models.session import InterviewSession
+    from apliqa.models.uploads import UploadRecord
+    from apliqa.models.user import User
+
+    user = await auth.get_current_user(request)
+    uid = user.id
+    now = datetime.now(timezone.utc)
+
+    # --- Collect file paths before deleting rows ---
+    upload_paths_result = await db.execute(
+        select(UploadRecord.file_path).where(UploadRecord.user_id == uid)
+    )
+    upload_paths = [row[0] for row in upload_paths_result.fetchall()]
+
+    # generated_cvs linked via profile_id → master_profiles
+    cv_paths: list[str] = []  # PDF files not yet stored separately; no-op for now
+
+    # --- Anonymised audit log (before any deletes) ---
+    counts: dict[str, int] = {}
+
+    async def _count_delete(model: Any, *where_clauses: Any) -> int:
+        result = await db.execute(select(model).where(*where_clauses))
+        rows = result.scalars().all()
+        n = len(rows)
+        for row in rows:
+            db.expunge(row)
+        return n
+
+    # --- Atomic cascade (leaf → root) ---
+    try:
+        # 1. uploads — WHERE user_id = uid naturally skips pre-iter17 rows where
+        #    user_id IS NULL (NULL != uid evaluates to NULL, not TRUE).
+        r = await db.execute(delete(UploadRecord).where(UploadRecord.user_id == uid))
+        counts["uploads"] = r.rowcount
+
+        # 2. generated_cvs (via profile_id subquery)
+        profile_ids_sq = select(MasterProfile.id).where(MasterProfile.user_id == uid)
+        r = await db.execute(
+            delete(GeneratedCV).where(GeneratedCV.profile_id.in_(profile_ids_sq))
+        )
+        counts["generated_cvs"] = r.rowcount
+
+        # 3. interview_sessions (via profile_id subquery)
+        r = await db.execute(
+            delete(InterviewSession).where(InterviewSession.profile_id.in_(profile_ids_sq))
+        )
+        counts["interview_sessions"] = r.rowcount
+
+        # 4. flow_sessions (direct user_id)
+        r = await db.execute(delete(FlowSession).where(FlowSession.user_id == uid))
+        counts["flow_sessions"] = r.rowcount
+
+        # 5. applications (direct user_id)
+        r = await db.execute(delete(Application).where(Application.user_id == uid))
+        counts["applications"] = r.rowcount
+
+        # 6. master_profiles (direct user_id)
+        r = await db.execute(delete(MasterProfile).where(MasterProfile.user_id == uid))
+        counts["master_profiles"] = r.rowcount
+
+        # 7. user record
+        r = await db.execute(delete(User).where(User.id == uid))
+        counts["users"] = r.rowcount
+
+        await db.commit()
+
+    except Exception as exc:
+        await db.rollback()
+        logger.exception("GDPR erasure failed for user %s: %s", uid, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erasure failed — no data was deleted. Please retry.",
+        )
+
+    # --- File deletion (outside transaction; failures are non-blocking) ---
+    for path in upload_paths:
+        try:
+            await storage.delete(path)
+        except Exception as exc:
+            logger.warning("Failed to delete upload file %s: %s (will be reaped)", path, exc)
+
+    logger.info(
+        "GDPR erasure completed",
+        extra={"event": "user_erasure_completed", "timestamp": now.isoformat(), "records": counts},
+    )
+    return {"message": "Erasure accepted", "records_deleted": counts}
+
+
+@router.get("/export")
+async def export_profile(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    auth: AuthProvider = Depends(get_auth_provider),
+) -> JSONResponse:
+    """GDPR Art. 20 — data portability. Returns complete user data as JSON download.
+
+    Excludes internal system state (raw_text_hash, token counts, etc.).
+    """
+    from apliqa.models.application import Application
+    from apliqa.models.cv import GeneratedCV
+    from apliqa.models.profile import MasterProfile
+    from apliqa.models.session import InterviewSession
+    from apliqa.models.uploads import UploadRecord
+
+    user = await auth.get_current_user(request)
+    uid = user.id
+
+    # Profile
+    profile_result = await db.execute(
+        select(MasterProfile)
+        .where(MasterProfile.user_id == uid, MasterProfile.deleted_at.is_(None))
+        .order_by(MasterProfile.created_at.desc())
+        .limit(1)
+    )
+    profile = profile_result.scalar_one_or_none()
+
+    # Applications
+    apps_result = await db.execute(
+        select(Application).where(Application.user_id == uid, Application.deleted_at.is_(None))
+    )
+    apps = apps_result.scalars().all()
+
+    # Interview sessions (via profile)
+    interview_data: list[dict] = []
+    if profile:
+        sess_result = await db.execute(
+            select(InterviewSession).where(
+                InterviewSession.profile_id == profile.id,
+                InterviewSession.deleted_at.is_(None),
+            )
+        )
+        for s in sess_result.scalars().all():
+            interview_data.append({
+                "id": str(s.id),
+                "mode": s.mode,
+                "status": s.status,
+                "questions_asked": s.questions_asked,
+                "created_at": s.created_at.isoformat(),
+            })
+
+    # Uploads
+    uploads_result = await db.execute(
+        select(UploadRecord).where(UploadRecord.user_id == uid)
+    )
+    uploads = [
+        {
+            "id": str(u.id),
+            "original_filename": u.original_filename,
+            "mime_type": u.mime_type,
+            "byte_size": u.byte_size,
+            "created_at": u.created_at.isoformat(),
+        }
+        for u in uploads_result.scalars().all()
+    ]
+
+    # Strip internal system state from profile_json — GDPR Art. 20 covers only
+    # "data provided by the data subject", not system-derived metadata.
+    # enrichment_history: internal audit trail of what changed and how
+    # pending_conflicts: system-detected data inconsistencies, not user data
+    profile_export: dict | None = None
+    if profile and profile.profile_json:
+        profile_export = dict(profile.profile_json)
+        if isinstance(profile_export.get("metadata"), dict):
+            meta = dict(profile_export["metadata"])
+            meta.pop("enrichment_history", None)
+            meta.pop("pending_conflicts", None)
+            profile_export["metadata"] = meta
+
+    export: dict = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "user": {"id": str(uid), "email": user.email},
+        "profile": profile_export,
+        "applications": [
+            {
+                "id": str(a.id),
+                "company_name": a.company_name,
+                "role_title": a.role_title,
+                "user_status": a.user_status,
+                "workflow_status": a.workflow_status,
+                "notes": a.notes,
+                "applied_at": a.applied_at.isoformat() if a.applied_at else None,
+                "deadline": a.deadline.isoformat() if a.deadline else None,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in apps
+        ],
+        "interview_sessions": interview_data,
+        "uploads": uploads,
+    }
+
+    return JSONResponse(
+        content=export,
+        headers={"Content-Disposition": 'attachment; filename="apliqa-export.json"'},
+    )

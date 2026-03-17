@@ -10,7 +10,7 @@ from sqlalchemy import text
 from apliqa import __version__
 from apliqa.config import settings
 from apliqa.db.session import AsyncSessionLocal
-from apliqa.routers import cv, flow, health, job, profile, session
+from apliqa.routers import application, cv, flow, health, job, profile, session
 
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 _STUB_EMAIL = "local@apliqa.community"
@@ -51,3 +51,4 @@ app.include_router(profile.router)
 app.include_router(session.router)
 app.include_router(flow.router)
 app.include_router(cv.router)
+app.include_router(application.router)

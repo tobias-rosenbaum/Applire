@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import DateTime, Integer, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apliqa.db.session import Base
@@ -13,6 +13,10 @@ class UploadRecord(Base):
     __tablename__ = "uploads"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    # user_id added in iter17 for GDPR erasure scoping; NULL for pre-iter17 rows
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
     original_filename: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(Text, nullable=False)  # SHA-256
     mime_type: Mapped[str] = mapped_column(Text, nullable=False)
