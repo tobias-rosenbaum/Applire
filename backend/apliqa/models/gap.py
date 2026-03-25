@@ -1,9 +1,11 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer
+from sqlalchemy import DateTime, Float, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+
+_JSON = JSONB().with_variant(JSON(), "sqlite")
 
 from apliqa.db.session import Base
 
@@ -18,11 +20,14 @@ class GapAnalysis(Base):
     profile_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("master_profiles.id"), nullable=False, index=True
     )
-    match_score: Mapped[int] = mapped_column(Integer, nullable=False)
-    critical_gaps: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    minor_gaps: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    strengths: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    keyword_gaps: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    match_score: Mapped[float] = mapped_column(Float, nullable=False)
+    critical_gaps: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    minor_gaps: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    strengths: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    keyword_gaps: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    category_a: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    category_b: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    category_c: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

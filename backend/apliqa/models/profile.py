@@ -1,18 +1,21 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apliqa.db.session import Base
+
+# JSONB on PostgreSQL (binary, indexed); falls back to JSON on SQLite for unit tests.
+_ProfileJSON = JSONB().with_variant(JSON(), "sqlite")
 
 
 class MasterProfile(Base):
     __tablename__ = "master_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    profile_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    profile_json: Mapped[dict] = mapped_column(_ProfileJSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

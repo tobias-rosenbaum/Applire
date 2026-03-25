@@ -45,3 +45,5 @@ Thumbs.db
 # Claude Code
 .claude/
 claude.md
+
+docs/

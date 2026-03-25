@@ -11,6 +11,7 @@ from apliqa.db.session import Base
 # Import all models so Alembic can detect them
 import apliqa.models.user  # noqa: F401
 import apliqa.models.job  # noqa: F401
+import apliqa.models.uploads  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
