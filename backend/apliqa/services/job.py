@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apliqa.models.job import JobAnalysis
 from apliqa.prompts.job_analysis import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.base import LLMProvider
+from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.job import JobAnalysisResponse
 
 
@@ -17,7 +17,17 @@ async def analyze_jd(
     text: str,
     db: AsyncSession,
     provider: LLMProvider,
+    source_url: str | None = None,
 ) -> JobAnalysisResponse:
+    # URL-based deduplication: return existing record for the same URL.
+    if source_url:
+        result = await db.execute(
+            select(JobAnalysis).where(JobAnalysis.source_url == source_url)
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            return JobAnalysisResponse.model_validate(existing)
+
     raw_hash = _hash_text(text)
 
     result = await db.execute(
@@ -36,6 +46,8 @@ async def analyze_jd(
     record = JobAnalysis(
         raw_text_hash=raw_hash,
         raw_text=text,
+        source_url=source_url,
+        company_name=data.get("company_name") or None,
         role_title=data.get("role_title", ""),
         required_skills=data.get("required_skills", []),
         nice_to_have_skills=data.get("nice_to_have_skills", []),

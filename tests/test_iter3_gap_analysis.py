@@ -109,17 +109,20 @@ def test_gaps_response_structure(gap_body):
     assert isinstance(gap_body.get("id"), str) and len(gap_body["id"]) == 36
     assert isinstance(gap_body.get("job_analysis_id"), str) and len(gap_body["job_analysis_id"]) == 36
     assert isinstance(gap_body.get("profile_id"), str) and len(gap_body["profile_id"]) == 36
-    assert isinstance(gap_body.get("match_score"), int)
+    assert isinstance(gap_body.get("match_score"), float)
     assert isinstance(gap_body.get("critical_gaps"), list)
     assert isinstance(gap_body.get("minor_gaps"), list)
     assert isinstance(gap_body.get("strengths"), list)
     assert isinstance(gap_body.get("keyword_gaps"), list)
+    assert isinstance(gap_body.get("category_a"), list)
+    assert isinstance(gap_body.get("category_b"), list)
+    assert isinstance(gap_body.get("category_c"), list)
     assert isinstance(gap_body.get("created_at"), str)
 
 
 def test_gaps_match_score_in_range(gap_body):
     score = gap_body["match_score"]
-    assert 0 <= score <= 100, f"match_score {score} out of range"
+    assert 0.0 <= score <= 1.0, f"match_score {score} out of range [0.0, 1.0]"
 
 
 def test_gaps_lists_contain_strings(gap_body):

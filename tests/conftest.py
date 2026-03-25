@@ -17,12 +17,30 @@ PROJECT_ROOT = Path(__file__).parent.parent
 API_BASE = "http://localhost:8001"
 _READY_TIMEOUT = 120  # seconds
 
-# Rootless Docker uses a per-user socket; fall back to the system socket.
-_uid = os.getuid()
-_rootless_sock = Path(f"/run/user/{_uid}/docker.sock")
+# Use the host from the active Docker context so we always talk to the same
+# daemon the user's `docker` CLI uses — avoids stale Desktop sockets.
+def _active_docker_host() -> str:
+    try:
+        result = subprocess.run(
+            ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
+            capture_output=True, text=True, check=True,
+        )
+        host = result.stdout.strip()
+        if host:
+            return host
+    except Exception:
+        pass
+    # Fallbacks: rootless → system socket.
+    _uid = os.getuid()
+    for sock in (f"/run/user/{_uid}/docker.sock", "/var/run/docker.sock"):
+        if Path(sock).exists():
+            return f"unix://{sock}"
+    return "unix:///var/run/docker.sock"
+
+
 _DOCKER_ENV = {
     **os.environ,
-    "DOCKER_HOST": f"unix://{_rootless_sock}" if _rootless_sock.exists() else "unix:///var/run/docker.sock",
+    "DOCKER_HOST": _active_docker_host(),
 }
 
 
@@ -50,11 +68,9 @@ def _wait_for_api() -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def docker_environment():
-    # Only build and start the services the API tests need.
-    # The frontend service is excluded: npm install + next build takes several
-    # minutes and is not required for backend integration tests.
-    _docker_compose("build", "backend", "postgres")
-    _docker_compose("up", "-d", "postgres", "backend")
+    _docker_compose("down")
+    _docker_compose("build")
+    _docker_compose("up", "-d", "--force-recreate")
     _wait_for_api()
     _docker_compose("exec", "backend", "python", "-m", "alembic", "upgrade", "head")
     yield

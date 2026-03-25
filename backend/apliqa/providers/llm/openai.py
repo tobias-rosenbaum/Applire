@@ -1,0 +1,124 @@
+"""OpenAI / OpenAI-compatible provider (ADR 009).
+
+Works with OpenAI directly, or any OpenAI-compatible server (LM Studio, etc.).
+Set OPENAI_BASE_URL to redirect to a local server.
+For OpenRouter specifically, use OpenRouterProvider (openrouter.py).
+"""
+
+import asyncio
+import json
+from typing import Any
+
+import openai
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+from apliqa.config import settings
+from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
+from apliqa.providers.llm.base import LLMProvider
+
+_retry = retry(
+    retry=retry_if_exception_type(openai.RateLimitError),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=2, max=16),
+    reraise=True,
+)
+
+
+class OpenAIProvider(LLMProvider):
+    """OpenAI or OpenAI-compatible provider (ADR 009)."""
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
+        timeout: int = 30,
+    ) -> None:
+        super().__init__(timeout=timeout)
+        resolved_base_url = base_url or settings.openai_base_url or None
+        self._client = openai.AsyncOpenAI(
+            api_key=api_key or settings.openai_api_key or "local",
+            base_url=resolved_base_url,
+        )
+        self._model = model or settings.openai_model
+        self._has_custom_base = bool(resolved_base_url)
+
+    async def acomplete(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+    ) -> str:
+        messages = _build_messages(prompt, system)
+        try:
+            return await asyncio.wait_for(
+                self._complete(messages, temperature, max_tokens),
+                timeout=self._timeout,
+            )
+        except asyncio.TimeoutError:
+            raise LLMTimeoutError(f"OpenAI call timed out after {self._timeout}s")
+        except openai.RateLimitError as exc:
+            raise LLMRateLimitError("OpenAI rate limit after 3 attempts") from exc
+        except openai.APITimeoutError as exc:
+            raise LLMTimeoutError("OpenAI SDK reported timeout") from exc
+
+    async def aparse_json(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.1,
+        max_tokens: int = 4096,
+    ) -> dict[str, Any]:
+        messages = _build_messages(prompt, system)
+        try:
+            content = await asyncio.wait_for(
+                self._parse_json(messages, temperature, max_tokens),
+                timeout=self._timeout,
+            )
+        except asyncio.TimeoutError:
+            raise LLMTimeoutError(f"OpenAI call timed out after {self._timeout}s")
+        except openai.RateLimitError as exc:
+            raise LLMRateLimitError("OpenAI rate limit after 3 attempts") from exc
+        except openai.APITimeoutError as exc:
+            raise LLMTimeoutError("OpenAI SDK reported timeout") from exc
+        # Strip markdown code fences (common with local models)
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        return json.loads(content.strip())
+
+    @_retry
+    async def _complete(self, messages: list, temperature: float, max_tokens: int) -> str:
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].message.content
+
+    @_retry
+    async def _parse_json(self, messages: list, temperature: float, max_tokens: int) -> str:
+        kwargs: dict = {}
+        if not self._has_custom_base:
+            kwargs["response_format"] = {"type": "json_object"}
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        )
+        return response.choices[0].message.content
+
+
+def _build_messages(prompt: str, system: str | None) -> list:
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    return messages
