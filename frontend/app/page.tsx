@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Dropzone } from "@/components/ui/dropzone";
+import { FileChip } from "@/components/ui/file-chip";
+import { useFileUpload } from "@/lib/hooks/use-file-upload";
+import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -18,179 +25,292 @@ async function apiErrorMessage(res: Response): Promise<string> {
   }
 }
 
-const s = {
-  app: {
-    display: "flex",
-    flexDirection: "column" as const,
-    minHeight: "100vh",
-    maxWidth: 720,
-    margin: "0 auto",
-    padding: "48px 20px",
-    gap: 24,
-  },
-  header: { fontSize: 28, fontWeight: 700, color: "#1a1a2e", marginBottom: 4 },
-  subheader: { fontSize: 14, color: "#6b7280" },
-  card: {
-    background: "#fff",
-    borderRadius: 10,
-    padding: 24,
-    boxShadow: "0 1px 4px rgba(0,0,0,.08)",
-  },
-  label: { fontSize: 13, fontWeight: 600, marginBottom: 8, display: "block", color: "#374151" },
-  tabRow: { display: "flex", gap: 4, marginBottom: 14 },
-  tab: (active: boolean) => ({
-    padding: "6px 16px",
-    borderRadius: 6,
-    border: "1px solid #d1d5db",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 600,
-    background: active ? "#2563eb" : "#f9fafb",
-    color: active ? "#fff" : "#374151",
-  }),
-  urlInput: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 6,
-    border: "1px solid #d1d5db",
-    fontSize: 13,
-    fontFamily: "inherit",
-    boxSizing: "border-box" as const,
-  },
-  textarea: {
-    width: "100%",
-    minHeight: 160,
-    padding: 10,
-    borderRadius: 6,
-    border: "1px solid #d1d5db",
-    fontFamily: "inherit",
-    fontSize: 13,
-    resize: "vertical" as const,
-    boxSizing: "border-box" as const,
-  },
-  hint: { fontSize: 12, color: "#6b7280", marginTop: 8 },
-  btn: {
-    marginTop: 16,
-    padding: "10px 24px",
-    borderRadius: 6,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 14,
-    background: "#2563eb",
-    color: "#fff",
-  },
-  error: { color: "#dc2626", fontSize: 12, marginTop: 8 },
-};
+function translateError(status: number, detail?: string): string {
+  switch (status) {
+    case 504:
+      return "This is taking longer than usual. Please try again.";
+    case 503:
+      return "Service temporarily busy. Please wait a moment and retry.";
+    case 502:
+      return "Could not parse this format. Please try a different file.";
+    case 401:
+      return "Session expired. Please refresh the page.";
+    case 422:
+      return detail ?? "Invalid input. Please check your entries.";
+    default:
+      return detail ?? `An error occurred (${status}). Please try again.`;
+  }
+}
+
+type JdMode = "url" | "text";
 
 export default function Home() {
   const router = useRouter();
-  const [jdMode, setJdMode] = useState<"url" | "text">("url");
+  const { files, addFiles, removeFile, clear } = useFileUpload();
+  const [jdMode, setJdMode] = useState<JdMode>("url");
   const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function analyseJD() {
-    if (jdMode === "url" && !jdUrl.trim()) {
-      setError("Bitte eine URL eingeben.");
+  const hasFiles = files.length > 0;
+  const canSubmit = hasFiles && !loading;
+
+  async function handleSubmit() {
+    if (!hasFiles) {
+      setError("Please upload at least one CV to continue.");
       return;
     }
-    if (jdMode === "text" && !jdText.trim()) {
-      setError("Bitte Stellenbeschreibung einfügen.");
-      return;
-    }
+
     setError("");
     setLoading(true);
-    try {
-      // Step 1: analyse the JD
-      const body = jdMode === "url" ? { url: jdUrl.trim() } : { text: jdText };
-      const jdRes = await fetch(`${API_BASE}/api/job/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!jdRes.ok) throw new Error(await apiErrorMessage(jdRes));
-      const job = await jdRes.json();
 
-      // Step 2: create a flow session — resolves user_type (new/returning)
+    try {
+      let jobId: string | null = null;
+
+      // Step 1: Analyze JD if provided
+      if (jdMode === "url" && jdUrl.trim()) {
+        const jdRes = await fetch(`${API_BASE}/api/job/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: jdUrl.trim() }),
+        });
+        if (!jdRes.ok) {
+          const msg = await apiErrorMessage(jdRes);
+          throw new Error(jdRes.status === 504 ? translateError(504, msg) : msg);
+        }
+        const jdData = await jdRes.json();
+        jobId = jdData.id;
+      } else if (jdMode === "text" && jdText.trim()) {
+        const jdRes = await fetch(`${API_BASE}/api/job/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: jdText }),
+        });
+        if (!jdRes.ok) {
+          const msg = await apiErrorMessage(jdRes);
+          throw new Error(jdRes.status === 504 ? translateError(504, msg) : msg);
+        }
+        const jdData = await jdRes.json();
+        jobId = jdData.id;
+      }
+
+      // Step 2: Create flow session
       const flowRes = await fetch(`${API_BASE}/api/flow`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: job.id }),
+        body: JSON.stringify({ job_id: jobId }),
       });
-      if (!flowRes.ok) throw new Error(await apiErrorMessage(flowRes));
-      const flow = await flowRes.json();
-
-      // Step 3: route based on user_type
-      const nextStep = flow.available_actions?.next;
-      if (nextStep === "gap_analysis") {
-        // Returning user — skip import
-        router.push(`/flow/${flow.flow_id}/gaps`);
-      } else {
-        // New user — go to CV import
-        router.push(`/flow/${flow.flow_id}/import`);
+      if (!flowRes.ok) {
+        throw new Error(translateError(flowRes.status, await apiErrorMessage(flowRes)));
       }
+      const flow = await flowRes.json();
+      const flowId = flow.flow_id;
+
+      // Step 3: Upload CVs
+      for (const { file } of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const uploadRes = await fetch(`${API_BASE}/api/profile/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          throw new Error(translateError(uploadRes.status, await apiErrorMessage(uploadRes)));
+        }
+      }
+
+      // Step 4: Navigate to processing screen
+      router.push(`/flow/${flowId}/processing`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Fehler bei der Analyse");
+      setError(e instanceof Error ? e.message : "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={s.app}>
-      <div>
-        <div style={s.header}>Apliqa</div>
-        <div style={s.subheader}>
-          KI-gestütztes Lebenslauf-Tailoring für den DACH-Markt — Von der Stellenanzeige zum
-          maßgeschneiderten Lebenslauf in unter 15 Minuten.
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <h1 className="font-heading text-2xl font-bold text-neutral-dark">Apliqa</h1>
+          <p className="text-sm text-gray-500 hidden sm:block">
+            AI-Powered CV Transformation
+          </p>
         </div>
-      </div>
+      </header>
 
-      <div style={s.card}>
-        <label style={s.label}>Stellenanzeige einfügen</label>
-        <div style={s.tabRow}>
-          <button style={s.tab(jdMode === "url")} onClick={() => setJdMode("url")}>
-            URL
-          </button>
-          <button style={s.tab(jdMode === "text")} onClick={() => setJdMode("text")}>
-            Text einfügen
-          </button>
-        </div>
+      {/* Main Content */}
+      <main className="flex-1 px-4 py-8 md:py-12">
+        <div className="max-w-[900px] mx-auto">
+          {/* Two-column grid */}
+          <div className="grid grid-cols-1 md:grid-cols-[60%_40%] gap-6 md:gap-8">
+            {/* Left Column - CV Upload */}
+            <div>
+              <h2 className="font-heading text-xl font-bold text-neutral-dark mb-1">
+                Your CVs
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Upload 2-4 CVs for the richest profile. We&apos;ll merge them automatically.
+              </p>
 
-        {jdMode === "url" ? (
-          <>
-            <input
-              type="url"
-              style={s.urlInput}
-              placeholder="https://www.stepstone.de/…"
-              value={jdUrl}
-              onChange={(e) => setJdUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && analyseJD()}
-              disabled={loading}
-            />
-            <div style={s.hint}>
-              Stepstone, Indeed, XING Jobs — direkte URL funktioniert für die meisten Portale.
-              Bei LinkedIn bitte den Text manuell einfügen.
+              {/* Dropzone */}
+              <Dropzone
+                onDrop={(fileList) => addFiles(fileList)}
+                accept=".pdf,.docx,.doc"
+                multiple
+                disabled={loading}
+              />
+
+              {/* File chips */}
+              {files.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {files.map(({ id, file }) => (
+                    <FileChip
+                      key={id}
+                      filename={file.name}
+                      size={file.size}
+                      onRemove={() => removeFile(id)}
+                    />
+                  ))}
+                  {files.length < 4 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Add more files for a richer profile
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-          </>
-        ) : (
-          <textarea
-            style={s.textarea}
-            placeholder="Füge die vollständige Stellenbeschreibung hier ein …"
-            value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
-            disabled={loading}
-          />
-        )}
 
-        {error && <div style={s.error}>{error}</div>}
+            {/* Right Column - JD Input */}
+            <div>
+              <h2 className="font-heading text-xl font-bold text-neutral-dark mb-1">
+                Job Description
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Paste a JD so we can tailor your profile immediately.
+              </p>
 
-        <button style={s.btn} onClick={analyseJD} disabled={loading}>
-          {loading ? "Analysiere …" : "Jetzt analysieren →"}
-        </button>
-      </div>
+              <Card className="p-4">
+                {/* Tab toggle */}
+                <div className="flex gap-1 mb-4 border-b border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setJdMode("url")}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium transition-colors relative",
+                      jdMode === "url"
+                        ? "text-teal"
+                        : "text-gray-500 hover:text-neutral-dark"
+                    )}
+                  >
+                    URL
+                    {jdMode === "url" && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJdMode("text")}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium transition-colors relative",
+                      jdMode === "text"
+                        ? "text-teal"
+                        : "text-gray-500 hover:text-neutral-dark"
+                    )}
+                  >
+                    Paste Text
+                    {jdMode === "text" && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Tab content */}
+                {jdMode === "url" ? (
+                  <Input
+                    type="url"
+                    placeholder="https://www.stepstone.de/..."
+                    value={jdUrl}
+                    onChange={(e) => setJdUrl(e.target.value)}
+                    disabled={loading}
+                  />
+                ) : (
+                  <textarea
+                    className="flex min-h-[180px] w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-neutral-dark placeholder:text-gray-400 transition-colors focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                    placeholder="Paste the full job description here..."
+                    value={jdText}
+                    onChange={(e) => setJdText(e.target.value)}
+                    disabled={loading}
+                  />
+                )}
+
+                <p className="text-xs italic text-gray-400 mt-3">
+                  (Optional — you can add this later)
+                </p>
+              </Card>
+            </div>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="mt-6 p-4 rounded-lg bg-critical/10 border border-critical/20">
+              <p className="text-sm text-critical">{error}</p>
+            </div>
+          )}
+
+          {/* CTA Section */}
+          <div className="mt-8 flex flex-col items-center">
+            <Button
+              size="lg"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+              className="min-w-[240px]"
+            >
+              {loading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Processing...
+                </>
+              ) : (
+                "Analyze & Build Profile"
+              )}
+            </Button>
+            <p className="text-xs text-gray-500 mt-3">
+              This usually takes about 30 seconds
+            </p>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 px-4 py-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-sm text-gray-500">
+            Precise. Confident. Future-Ready.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

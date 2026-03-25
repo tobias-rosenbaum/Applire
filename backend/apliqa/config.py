@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./data/uploads"
     storage_backend: str = "local"
     ocr_backend: str = "mistral_vision"
+    cors_origins: str = "http://localhost:3000"
 
     @property
     def is_community(self) -> bool:
