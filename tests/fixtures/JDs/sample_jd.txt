@@ -1,0 +1,49 @@
+Senior Full-Stack Developer
+===========================
+
+Company: TechCorp GmbH
+Location: Berlin, Germany (Hybrid)
+Employment Type: Full-time
+
+About the Role
+---------------
+We are seeking an experienced Senior Full-Stack Developer to join our growing engineering team. You will be responsible for designing, developing, and maintaining scalable web applications using modern technologies.
+
+Requirements
+------------
+- 5+ years of professional software development experience
+- Strong proficiency in Python (Django/FastAPI) or Node.js
+- Experience with React, Vue.js, or similar frontend frameworks
+- Solid understanding of SQL and NoSQL databases
+- Experience with cloud platforms (AWS, GCP, or Azure)
+- Familiarity with containerization (Docker, Kubernetes)
+- Strong problem-solving and communication skills
+- Experience with CI/CD pipelines
+
+Nice to Have
+------------
+- Experience with TypeScript
+- Knowledge of microservices architecture
+- Experience with event-driven systems
+- Background in fintech or healthcare
+
+Responsibilities
+----------------
+- Design and implement new features across the full stack
+- Write clean, maintainable, and well-tested code
+- Participate in code reviews and mentor junior developers
+- Collaborate with product and design teams
+- Optimize application performance and scalability
+
+Benefits
+--------
+- Competitive salary (€80,000 - €100,000)
+- Flexible working hours
+- 30 days vacation
+- Professional development budget
+- Health insurance contribution
+- Modern office in Berlin Mitte
+
+How to Apply
+------------
+Submit your CV and a brief cover letter explaining your interest in the role.
