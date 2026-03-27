@@ -1,0 +1,70 @@
+%PDF-1.4
+1 0 obj
+<</Type /Catalog /Pages 2 0 R>>
+endobj
+2 0 obj
+<</Type /Pages /Kids [3 0 R] /Count 1>>
+endobj
+3 0 obj
+<</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]
+  /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>>>>
+endobj
+4 0 obj
+<</Length 1050>>
+stream
+BT
+/F1 14 Tf
+50 780 Td
+(Max Mustermann) Tj
+0 -20 Td
+/F1 11 Tf
+(max.mustermann@example.com  |  +49 89 123456  |  Munich, Germany) Tj
+0 -30 Td
+(BERUFSERFAHRUNG) Tj
+0 -18 Td
+(Senior Software Engineer  --  Beispiel GmbH, Munich  |  2020 - heute) Tj
+0 -14 Td
+(  - Entwicklung von Backend-Services mit Python/FastAPI und PostgreSQL) Tj
+0 -14 Td
+(  - Aufbau von CI/CD-Pipelines mit GitHub Actions und Docker) Tj
+0 -14 Td
+(  - Code Reviews und Mentoring von Junioren) Tj
+0 -20 Td
+(Software Engineer  --  Tech AG, Berlin  |  2017 - 2020) Tj
+0 -14 Td
+(  - Implementierung von REST-APIs in Python und Go) Tj
+0 -14 Td
+(  - Datenbankoptimierung und Performance-Tuning) Tj
+0 -30 Td
+(AUSBILDUNG) Tj
+0 -18 Td
+(M.Sc. Informatik  --  Technische Universitaet Muenchen  |  2015 - 2017) Tj
+0 -14 Td
+(B.Sc. Informatik  --  Ludwig-Maximilians-Universitaet Muenchen  |  2012 - 2015) Tj
+0 -30 Td
+(KENNTNISSE) Tj
+0 -18 Td
+(Python, Go, FastAPI, SQLAlchemy, PostgreSQL, Docker, Kubernetes, AWS) Tj
+0 -30 Td
+(SPRACHEN) Tj
+0 -18 Td
+(Deutsch: Muttersprache  |  Englisch: C1) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000266 00000 n 
+0000000600 00000 n 
+trailer
+<</Size 6 /Root 1 0 R>>
+startxref
+666
+%%EOF

@@ -25,8 +25,8 @@ class FlowSession(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id"), nullable=False, index=True
     )
-    job_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("job_analyses.id"), nullable=False, index=True
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("job_analyses.id"), nullable=True, index=True
     )
     # Linear step: jd_analysis | cv_import | gap_analysis | interview | cv_generation | complete
     current_step: Mapped[str] = mapped_column(

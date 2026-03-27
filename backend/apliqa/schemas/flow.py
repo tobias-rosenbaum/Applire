@@ -50,7 +50,7 @@ class CVSummary(BaseModel):
 
 
 class CreateFlowRequest(BaseModel):
-    job_id: uuid.UUID
+    job_id: uuid.UUID | None = None
 
 
 class CreateFlowResponse(BaseModel):
@@ -58,7 +58,7 @@ class CreateFlowResponse(BaseModel):
     user_type: Literal["new", "returning"]
     current_step: FlowStep
     available_actions: dict[str, str]
-    job_summary: JobAnalysisSummary
+    job_summary: JobAnalysisSummary | None = None
 
 
 class AdvanceFlowRequest(BaseModel):
@@ -72,7 +72,7 @@ class AdvanceFlowRequest(BaseModel):
 
 class FlowStateResponse(BaseModel):
     flow_id: uuid.UUID
-    job_id: uuid.UUID
+    job_id: uuid.UUID | None = None
     user_type: Literal["new", "returning"]
     current_step: FlowStep
     available_actions: dict[str, str]
