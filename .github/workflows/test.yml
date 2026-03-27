@@ -6,12 +6,15 @@ on:
   pull_request:
     branches: [ main, develop, sprint-4 ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
-    permissions:
-      checks: write
 
     steps:
       - name: Checkout code
@@ -71,8 +74,6 @@ jobs:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      checks: write
 
     steps:
       - name: Checkout code
@@ -201,8 +202,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-unit-tests, backend-integration-tests, e2e-tests]
     if: always()
-    permissions:
-      pull-requests: write
 
     steps:
       - name: Generate test summary
