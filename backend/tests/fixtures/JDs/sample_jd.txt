@@ -1,0 +1,64 @@
+Senior Software Engineer - AI/ML Applications
+
+Company: TechVision GmbH
+Location: Mainz, Germany (Hybrid)
+Type: Full-time
+
+About the Role:
+
+We are seeking an experienced Senior Software Engineer to join our rapidly growing AI/ML applications team. You will be responsible for designing, developing, and deploying intelligent software solutions that leverage cutting-edge language models and machine learning technologies to solve real-world business problems.
+
+As a senior member of the team, you will work closely with product managers, designers, and other engineers to build scalable, production-ready applications that delight our users.
+
+Key Responsibilities:
+
+- Design and implement robust backend services using Python and FastAPI
+- Build responsive, user-friendly frontend interfaces with React/Next.js and TypeScript
+- Integrate and optimize Large Language Model (LLM) APIs from providers like OpenAI, Mistral, and others
+- Develop and maintain RESTful APIs and microservices architectures
+- Write comprehensive unit, integration, and end-to-end tests
+- Collaborate with cross-functional teams in an agile environment
+- Mentor junior engineers and contribute to team knowledge sharing
+- Participate in code reviews and maintain high code quality standards
+- Deploy and monitor applications using Docker, CI/CD pipelines, and cloud infrastructure
+- Optimize application performance, scalability, and reliability
+
+Required Qualifications:
+
+- 5+ years of professional software engineering experience
+- Strong proficiency in Python (FastAPI, SQLAlchemy, Pydantic)
+- Solid experience with TypeScript and modern frontend frameworks (React, Next.js, Vue)
+- Deep understanding of RESTful API design and microservices architecture
+- Experience with relational databases (PostgreSQL preferred) and ORMs
+- Proficiency with Git version control and collaborative development workflows
+- Strong problem-solving skills and attention to detail
+- Excellent written and verbal communication skills in English
+- Bachelor's degree in Computer Science, Engineering, or equivalent practical experience
+
+Nice to Have:
+
+- Experience integrating LLMs (OpenAI GPT, Anthropic Claude, Mistral, etc.)
+- Familiarity with Docker, Kubernetes, and containerization
+- Knowledge of CI/CD practices and tools (GitHub Actions, GitLab CI)
+- Experience with test automation frameworks (pytest, Playwright, Jest)
+- Understanding of prompt engineering and AI application patterns
+- Background in NLP, computer vision, or machine learning
+- Experience with Tailwind CSS and modern UI/UX practices
+- Contributions to open-source projects
+- Familiarity with GxP-regulated or pharmaceutical industry software
+
+What We Offer:
+
+- Competitive salary and equity package
+- Flexible hybrid work arrangement (3 days remote, 2 days in office)
+- Professional development budget for courses, conferences, and certifications
+- Modern tech stack and tools
+- Collaborative, innovation-driven culture
+- Health and wellness benefits
+- 30 days of paid vacation
+
+How to Apply:
+
+Please submit your CV and a brief cover letter explaining why you're interested in this role and what makes you a great fit for our team.
+
+We are an equal opportunity employer and value diversity. All qualified applicants will receive consideration for employment without regard to race, color, religion, sex, sexual orientation, gender identity, national origin, disability, or veteran status.

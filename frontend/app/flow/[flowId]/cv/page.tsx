@@ -183,7 +183,7 @@ export default function CVPage({
 
   if (generating && !cv) {
     return (
-      <div style={s.loading}>
+      <div data-testid="cv-loading" style={s.loading}>
         <div>Erstelle Lebenslauf …</div>
         <div style={{ fontSize: 12, color: "#9ca3af" }}>
           Das kann 20–40 Sekunden dauern.
@@ -193,7 +193,7 @@ export default function CVPage({
   }
 
   return (
-    <div>
+    <div data-testid="cv-page">
       <div style={s.heading}>Dein maßgeschneiderter Lebenslauf</div>
       <div style={s.sub}>Vorschau, herunterladen oder mit anderer Vorlage neu generieren.</div>
 
@@ -215,7 +215,12 @@ export default function CVPage({
 
         <div style={s.actionsRow}>
           {cv && (
-            <a href={`${API_BASE}${cv.pdf_url}`} download style={s.btn("success")}>
+            <a 
+              href={`${API_BASE}${cv.pdf_url}`} 
+              download 
+              style={s.btn("success")}
+              data-testid="download-button"
+            >
               PDF herunterladen
             </a>
           )}
@@ -239,7 +244,11 @@ export default function CVPage({
       )}
 
       <div style={s.doneRow}>
-        <button style={s.btn("primary")} onClick={markDone}>
+        <button 
+          style={s.btn("primary")} 
+          onClick={markDone}
+          data-testid="done-button"
+        >
           Fertig — zurück zur Startseite
         </button>
       </div>

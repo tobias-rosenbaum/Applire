@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -9,129 +8,41 @@ import { Dropzone } from "@/components/ui/dropzone";
 import { FileChip } from "@/components/ui/file-chip";
 import { useFileUpload } from "@/lib/hooks/use-file-upload";
 import { cn } from "@/lib/utils";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
-
-async function apiErrorMessage(res: Response): Promise<string> {
-  try {
-    const body = await res.json();
-    const detail = body.detail;
-    if (typeof detail === "string") return detail;
-    if (Array.isArray(detail))
-      return detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join("; ");
-    return res.statusText || `HTTP ${res.status}`;
-  } catch {
-    return res.statusText || `HTTP ${res.status}`;
-  }
-}
-
-function translateError(status: number, detail?: string): string {
-  switch (status) {
-    case 504:
-      return "This is taking longer than usual. Please try again.";
-    case 503:
-      return "Service temporarily busy. Please wait a moment and retry.";
-    case 502:
-      return "Could not parse this format. Please try a different file.";
-    case 401:
-      return "Session expired. Please refresh the page.";
-    case 422:
-      return detail ?? "Invalid input. Please check your entries.";
-    default:
-      return detail ?? `An error occurred (${status}). Please try again.`;
-  }
-}
+import { ProcessingOverlay } from "@/components/processing-overlay";
 
 type JdMode = "url" | "text";
 
 export default function Home() {
-  const router = useRouter();
-  const { files, addFiles, removeFile, clear } = useFileUpload();
+  const { files, addFiles, removeFile } = useFileUpload();
   const [jdMode, setJdMode] = useState<JdMode>("url");
   const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showOverlay, setShowOverlay] = useState(false);
 
   const hasFiles = files.length > 0;
-  const canSubmit = hasFiles && !loading;
+  const canSubmit = hasFiles && !showOverlay;
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!hasFiles) {
       setError("Please upload at least one CV to continue.");
       return;
     }
-
     setError("");
-    setLoading(true);
-
-    try {
-      let jobId: string | null = null;
-
-      // Step 1: Analyze JD if provided
-      if (jdMode === "url" && jdUrl.trim()) {
-        const jdRes = await fetch(`${API_BASE}/api/job/analyze`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: jdUrl.trim() }),
-        });
-        if (!jdRes.ok) {
-          const msg = await apiErrorMessage(jdRes);
-          throw new Error(jdRes.status === 504 ? translateError(504, msg) : msg);
-        }
-        const jdData = await jdRes.json();
-        jobId = jdData.id;
-      } else if (jdMode === "text" && jdText.trim()) {
-        const jdRes = await fetch(`${API_BASE}/api/job/analyze`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: jdText }),
-        });
-        if (!jdRes.ok) {
-          const msg = await apiErrorMessage(jdRes);
-          throw new Error(jdRes.status === 504 ? translateError(504, msg) : msg);
-        }
-        const jdData = await jdRes.json();
-        jobId = jdData.id;
-      }
-
-      // Step 2: Create flow session
-      const flowRes = await fetch(`${API_BASE}/api/flow`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId }),
-      });
-      if (!flowRes.ok) {
-        throw new Error(translateError(flowRes.status, await apiErrorMessage(flowRes)));
-      }
-      const flow = await flowRes.json();
-      const flowId = flow.flow_id;
-
-      // Step 3: Upload CVs
-      for (const { file } of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        
-        const uploadRes = await fetch(`${API_BASE}/api/profile/upload`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!uploadRes.ok) {
-          throw new Error(translateError(uploadRes.status, await apiErrorMessage(uploadRes)));
-        }
-      }
-
-      // Step 4: Navigate to processing screen
-      router.push(`/flow/${flowId}/processing`);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setShowOverlay(true);
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-surface-dim">
+      {showOverlay && (
+        <ProcessingOverlay
+          files={files.map(({ file }) => file)}
+          jdMode={jdMode}
+          jdUrl={jdUrl}
+          jdText={jdText}
+          onCancel={() => setShowOverlay(false)}
+        />
+      )}
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -158,10 +69,11 @@ export default function Home() {
 
               {/* Dropzone */}
               <Dropzone
+                data-testid="upload-area"
                 onDrop={(fileList) => addFiles(fileList)}
                 accept=".pdf,.docx,.doc"
                 multiple
-                disabled={loading}
+                disabled={showOverlay}
               />
 
               {/* File chips */}
@@ -235,7 +147,7 @@ export default function Home() {
                     placeholder="https://www.stepstone.de/..."
                     value={jdUrl}
                     onChange={(e) => setJdUrl(e.target.value)}
-                    disabled={loading}
+                    disabled={showOverlay}
                   />
                 ) : (
                   <textarea
@@ -243,7 +155,7 @@ export default function Home() {
                     placeholder="Paste the full job description here..."
                     value={jdText}
                     onChange={(e) => setJdText(e.target.value)}
-                    disabled={loading}
+                    disabled={showOverlay}
                   />
                 )}
 
@@ -256,7 +168,7 @@ export default function Home() {
 
           {/* Error message */}
           {error && (
-            <div className="mt-6 p-4 rounded-lg bg-critical/10 border border-critical/20">
+            <div data-testid="error-message" className="mt-6 p-4 rounded-lg bg-critical/10 border border-critical/20">
               <p className="text-sm text-critical">{error}</p>
             </div>
           )}
@@ -268,34 +180,15 @@ export default function Home() {
               disabled={!canSubmit}
               onClick={handleSubmit}
               className="min-w-[240px]"
+              data-testid="submit-button"
             >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                "Analyze & Build Profile"
-              )}
+              Analyze & Build Profile
             </Button>
+            {!canSubmit && !showOverlay && (
+              <p className="text-xs text-amber-600 mt-2">
+                Upload at least one CV to continue
+              </p>
+            )}
             <p className="text-xs text-gray-500 mt-3">
               This usually takes about 30 seconds
             </p>

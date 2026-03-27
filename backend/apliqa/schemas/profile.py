@@ -70,7 +70,7 @@ class EducationEntry(BaseModel):
 
 class Certification(BaseModel):
     name: str
-    issuing_organization: str
+    issuing_organization: str | None = None
     date_obtained: date | None = None
     expiry_date: date | None = None  # None means doesn't expire
     credential_id: str | None = None

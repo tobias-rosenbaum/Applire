@@ -79,6 +79,7 @@ const Dropzone = React.forwardRef<HTMLInputElement, DropzoneProps>(
           multiple={multiple}
           disabled={disabled}
           onChange={handleFileChange}
+          data-testid="file-input"
           className="hidden"
         />
         

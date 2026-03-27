@@ -1,6 +1,52 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
 
+@theme {
+  /* Brand Colors */
+  --color-primary: #1B4F72;
+  --color-primary-container: #D4E6F1;
+  
+  /* Teal - Main accent */
+  --color-teal: #2A8F9D;
+  --color-teal-dim: #003a41;
+  --color-teal-container: #e3effe;
+  --color-teal-container-light: #f7f9ff;
+  
+  /* Gold - Secondary accent */
+  --color-gold: #C9A84C;
+  --color-gold-dim: #755b00;
+  --color-gold-container: #ffeec5;
+  
+  /* Semantic Colors */
+  --color-success: #2D9F6F;
+  --color-success-container: #c8f7e0;
+  --color-warning: #E5A832;
+  --color-warning-container: #fef3c7;
+  --color-critical: #D94F4F;
+  --color-critical-container: #fde8e8;
+  
+  /* Neutral */
+  --color-neutral-light: #F5F7FA;
+  --color-neutral-dark: #2C3E50;
+  
+  /* Surface System (Material 3 style) */
+  --color-surface-dim: #f7f9ff;
+  --color-surface-bright: #ffffff;
+  --color-surface-container: #f0f4f9;
+  --color-surface-container-high: #e3effe;
+  --color-surface-container-highest: #d9e4f4;
+  
+  /* Fonts */
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+  
+  /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-card: 0 4px 16px rgba(0,0,0,0.12);
+  
+  /* Border radius */
+  --radius-lg: 12px;
+}
 @layer base {
   html {
     font-family: "Inter", system-ui, sans-serif;
