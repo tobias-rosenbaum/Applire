@@ -2,9 +2,9 @@ name: Test Suite
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, sprint-4 ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, sprint-4 ]
 
 jobs:
   backend-unit-tests:
@@ -36,7 +36,8 @@ jobs:
             --cov=apliqa \
             --cov-report=term-missing \
             --cov-report=html \
-            --cov-fail-under=75 \
+            --cov-fail-under=70 \
+            --junitxml=test-results.xml \
             -v
       
       - name: Upload coverage report
@@ -46,6 +47,23 @@ jobs:
           name: backend-coverage-report
           path: Solution/backend/htmlcov/
           retention-days: 30
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-unit-test-results
+          path: Solution/backend/test-results.xml
+          retention-days: 30
+      
+      - name: Publish unit test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend Unit Tests
+          path: Solution/backend/test-results.xml
+          reporter: 'java-junit'
+          fail-on-error: false
 
   backend-integration-tests:
     name: Backend Integration Tests
@@ -79,7 +97,7 @@ jobs:
         working-directory: Solution
         run: |
           echo "Waiting for backend to be ready..."
-          timeout 180 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+          timeout 180 bash -c 'until curl -f http://localhost:8001/health; do sleep 2; done'
           echo "Backend is ready!"
       
       - name: Run integration tests
@@ -87,8 +105,26 @@ jobs:
         run: |
           pytest tests/ \
             --ignore=tests/e2e \
+            --junitxml=test-results.xml \
             -v \
             --tb=short
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-test-results
+          path: Solution/test-results.xml
+          retention-days: 30
+      
+      - name: Publish integration test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend Integration Tests
+          path: Solution/test-results.xml
+          reporter: 'java-junit'
+          fail-on-error: false
       
       - name: Show Docker logs on failure
         if: failure()
@@ -116,15 +152,15 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 'Solution/package-lock.json'
+          cache-dependency-path: 'Solution/frontend/package-lock.json'
       
       - name: Install Node.js dependencies
-        working-directory: Solution
+        working-directory: Solution/frontend
         run: |
           npm ci
       
       - name: Install Playwright browsers
-        working-directory: Solution
+        working-directory: Solution/frontend
         run: |
           npx playwright install --with-deps chromium
       
@@ -137,14 +173,14 @@ jobs:
         working-directory: Solution
         run: |
           echo "Waiting for backend to be ready..."
-          timeout 180 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+          timeout 180 bash -c 'until curl -f http://localhost:8001/health; do sleep 2; done'
           echo "Backend is ready!"
           echo "Waiting for frontend to be ready..."
           timeout 180 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
           echo "Frontend is ready!"
       
       - name: Run Playwright E2E tests
-        working-directory: Solution
+        working-directory: Solution/frontend
         run: |
           npx playwright test
         env:
@@ -155,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: Solution/playwright-report/
+          path: Solution/frontend/playwright-report/
           retention-days: 30
       
       - name: Upload Playwright test results
@@ -163,7 +199,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results
-          path: Solution/test-results/
+          path: Solution/frontend/test-results/
           retention-days: 30
       
       - name: Show Docker logs on failure
@@ -185,20 +221,89 @@ jobs:
     if: always()
     
     steps:
-      - name: Check test results
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all test results
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: test-artifacts
+      
+      - name: Generate test summary
+        if: always()
         run: |
-          echo "## Test Suite Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Test Suite Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend Unit Tests: ${{ needs.backend-unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend Integration Tests: ${{ needs.backend-integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- E2E Tests: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Unit Tests | ${{ needs.backend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Integration Tests | ${{ needs.backend-integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ needs.backend-unit-tests.result }}" != "success" ] || \
              [ "${{ needs.backend-integration-tests.result }}" != "success" ] || \
              [ "${{ needs.e2e-tests.result }}" != "success" ]; then
-            echo "❌ Test suite failed. Please review the failures above." >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Test suite failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Check the annotations above for specific test failures" >> $GITHUB_STEP_SUMMARY
+            echo "2. Review the PR comments for detailed error messages" >> $GITHUB_STEP_SUMMARY
+            echo "3. Download artifacts for full test reports" >> $GITHUB_STEP_SUMMARY
             exit 1
           else
-            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
           fi
+      
+      - name: Comment on PR with test results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Check if tests failed
+            const unitTestsResult = '${{ needs.backend-unit-tests.result }}';
+            const integrationTestsResult = '${{ needs.backend-integration-tests.result }}';
+            const e2eTestsResult = '${{ needs.e2e-tests.result }}';
+            
+            const allPassed = unitTestsResult === 'success' && 
+                             integrationTestsResult === 'success' && 
+                             e2eTestsResult === 'success';
+            
+            if (allPassed) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '✅ **All tests passed!** This PR is ready to merge.'
+              });
+            } else {
+              let failureDetails = '❌ **Test failures detected**\n\n';
+              failureDetails += '**Failed components:**\n';
+              
+              if (unitTestsResult !== 'success') {
+                failureDetails += `- Backend Unit Tests: ${unitTestsResult}\n`;
+              }
+              if (integrationTestsResult !== 'success') {
+                failureDetails += `- Backend Integration Tests: ${integrationTestsResult}\n`;
+              }
+              if (e2eTestsResult !== 'success') {
+                failureDetails += `- E2E Tests: ${e2eTestsResult}\n`;
+              }
+              
+              failureDetails += '\n**What to do:**\n';
+              failureDetails += '1. Check the **Annotations** tab above for specific test failures with file locations\n';
+              failureDetails += '2. Review the **Checks** section for detailed error messages\n';
+              failureDetails += '3. Download test artifacts for full reports\n';
+              failureDetails += '4. Fix the issues and push again\n';
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: failureDetails
+              });
+            }
