@@ -129,29 +129,54 @@ export default function GapsPage({
     setError("");
     setActionLoading(true);
     try {
-      const advRes = await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step: target }),
-      });
-      if (!advRes.ok) {
-        const errData = await advRes.json();
-        throw new Error(
-          errData.detail?.allowed_transitions
-            ? `Invalid step. Allowed: ${errData.detail.allowed_transitions.join(", ")}`
-            : typeof errData.detail === "string"
-            ? errData.detail
-            : "Error"
-        );
+      // For interview, we need to create an interview session first
+      if (target === "interview") {
+        const sessionRes = await fetch(`${API_BASE}/api/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            job_id: flowState?.job_id,
+            mode: "quick",
+          }),
+        });
+        if (!sessionRes.ok) {
+          const errData = await sessionRes.json();
+          throw new Error(
+            typeof errData.detail === "string"
+              ? errData.detail
+              : "Failed to create interview session"
+          );
+        }
+        const sessionData = await sessionRes.json();
+        const sessionId = sessionData.id || sessionData.session_id;
+        
+        // Now advance with the session ID
+        const advRes = await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: target, artifact_id: sessionId }),
+        });
+        if (!advRes.ok) {
+          const errData = await advRes.json();
+          throw new Error(
+            errData.detail?.allowed_transitions
+              ? `Invalid step. Allowed: ${errData.detail.allowed_transitions.join(", ")}`
+              : typeof errData.detail === "string"
+              ? errData.detail
+              : "Error"
+          );
+        }
+        router.push(`/flow/${flowId}/interview`);
+      } else {
+        // cv_generation: the CV page generates the artifact and advances the flow itself
+        router.push(`/flow/${flowId}/cv`);
       }
-      router.push(target === "interview" ? `/flow/${flowId}/interview` : `/flow/${flowId}/cv`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
       setActionLoading(false);
     }
   }
-
   async function retryGapAnalysis() {
     if (!flowState) return;
     setError("");
@@ -171,7 +196,7 @@ export default function GapsPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div data-testid="loading-indicator" className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-teal border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-sm text-gray-500">Analyzing your profile...</p>
@@ -185,7 +210,7 @@ export default function GapsPage({
   const gapCount = gaps?.category_c?.length ?? 0;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div data-testid="gap-analysis-page" className="max-w-4xl mx-auto">
       {/* Section 1: Master Profile Summary */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
@@ -244,7 +269,7 @@ export default function GapsPage({
 
       {/* Section 3: Gaps */}
       {gapCount > 0 && (
-        <div className="mb-8">
+        <div data-testid="gaps-section" className="mb-8">
           <h3 className="font-heading text-lg font-bold text-neutral-dark mb-4">
             {gapCount} gap{gapCount !== 1 ? "s" : ""} identified:
           </h3>
@@ -317,7 +342,7 @@ export default function GapsPage({
 
       {/* Error state */}
       {error && (
-        <div className="mb-6 p-4 rounded-lg bg-critical/10 border border-critical/20">
+        <div data-testid="error-message" className="mb-6 p-4 rounded-lg bg-critical/10 border border-critical/20">
           <p className="text-sm text-critical">{error}</p>
           {!gaps && (
             <Button variant="outline" size="sm" onClick={retryGapAnalysis} className="mt-2">
@@ -336,6 +361,7 @@ export default function GapsPage({
               onClick={() => advance("interview")}
               disabled={actionLoading}
               className="min-w-[240px]"
+              data-testid="interview-button"
             >
               Quick Interview (3 min)
             </Button>
@@ -351,6 +377,7 @@ export default function GapsPage({
           onClick={() => advance("cv_generation")}
           disabled={actionLoading}
           className="min-w-[200px]"
+          data-testid="generate-cv-button"
         >
           Generate CV Now
         </Button>

@@ -13,107 +13,64 @@ Apliqa has a comprehensive three-tier testing strategy:
 ## Unit Tests
 
 ### Location
-`Solution/backend/tests/unit/`
-
-### Current Status
-- **Total**: 51 tests
-- **Passing**: 47 ✅
-- **Errors**: 4 ⚠️ (SQLite persistence setup issues)
-- **Coverage**: ~70%
+`Solution/tests/unit/`
 
 ### Running Locally
 ```bash
-cd Solution/backend
+cd Solution
 pytest tests/unit/ -v --cov=apliqa --cov-report=html
 ```
 
-### Test Categories
+### Test Files
 
-#### TestSchemaModels (4 tests)
-- Profile schema validation
-- Default value handling
-- Field type checking
+| File | Coverage |
+|------|----------|
+| `test_iter6_llm_providers.py` | LLM provider abstraction |
+| `test_iter7_mcp_tools.py` | MCP server tools |
+| `test_iter7_mcp_resources.py` | MCP server resources |
+| `test_iter8_scraper.py` | JD URL scraping |
+| `test_iter9_linkedin_parser.py` | LinkedIn JD parsing |
+| `test_iter10_auth.py` | NoAuthProvider |
+| `test_iter10_retention.py` | GDPR retention worker |
+| `test_iter11_profile.py` | Master Profile: schema, merge, conflicts |
+| `test_iter12_upload.py` | CV upload handling |
+| `test_iter13_gap.py` | Gap detection logic |
+| `test_iter15_flow_orchestrator.py` | Flow state machine |
+| `test_iter16_llm_provider.py` | LLM provider integration |
+| `test_iter17_application.py` | Application service |
+| `test_iter17_retention.py` | Retention service |
 
-#### TestLegacyMigration (4 tests)
-- Data migration from old format
-- Field mapping validation
-- Backward compatibility
+### Notes
 
-#### TestCompletenessScore (5 tests)
-- Profile completeness calculation
-- Weight distribution
-- Rounding behavior
-
-#### TestDateHelpers (7 tests)
-- Date overlap detection
-- Contradiction detection
-- Date range handling
-
-#### TestMergeWorkExperience (9 tests)
-- Work history merging logic
-- Conflict detection
-- Deduplication
-
-#### TestMergeSkills (6 tests)
-- Skill proficiency merging
-- Experience years handling
-- Case-insensitive dedup
-
-#### TestMergeProfiles (8 tests)
-- Profile merging logic
-- Enrichment tracking
-- Conflict flagging
-
-#### TestConflictSchema (3 tests)
-- Conflict UUID generation
-- Resolution request validation
-
-### Known Issues
-
-**SQLite Persistence Tests (4 errors)**
-- Foreign key constraint: `uploads.user_id` → `users.id`
-- Occurs during in-memory SQLite setup
-- **Fix**: Mock the foreign key constraint or use PostgreSQL for these tests
+- Unit tests run without Docker — `tests/unit/conftest.py` overrides the Docker fixture and adds `backend/` to `sys.path`.
+- `backend/tests/conftest.py` is an in-container variant used by CI (connects to `backend:8000` instead of `localhost:8001`).
 
 ---
 
 ## Integration Tests
 
 ### Location
-`Solution/tests/integration/`
-
-### Current Status
-- **Total**: 7 tests
-- **Passing**: 6 ✅
-- **Skipped**: 1 ⏭️ (requires `INTEGRATION_LLM=1`)
+`Solution/tests/` (API tests) and `Solution/tests/integration/` (full-stack LLM tests)
 
 ### Running Locally
 ```bash
+# API tests (no LLM required) — spins up Docker stack automatically
 cd Solution
-docker-compose up -d
-docker-compose exec -T backend python -m pytest tests/ --ignore=tests/e2e -v
+pytest tests/test_iter*.py -v
+
+# Full happy-path test (requires real LLM key)
+INTEGRATION_LLM=1 pytest tests/integration/test_happy_path.py -v
 ```
 
 ### Test Coverage
 
-#### test_iter0_skeleton.py (2 tests)
-- ✅ `test_health_returns_200` - API health endpoint
-- ✅ `test_health_body` - Health response structure
+#### API tests (`tests/test_iter*.py`)
+Per-iteration endpoint tests covering: health, JD analysis, profile import, gap analysis, interview, CV generation, LLM providers, MCP server, JD URL intake, LinkedIn parsing, auth/retention, CV upload, gap detection, flow orchestrator, application service.
 
-#### test_iter1_jd_analysis.py (4 tests)
-- ✅ `test_analyze_returns_200` - JD analysis endpoint
-- ✅ `test_analyze_response_structure` - Response format validation
-- ✅ `test_analyze_deduplication` - Skill deduplication
-- ✅ `test_analyze_rejects_empty_text` - Input validation
+Each test file corresponds to its iteration and uses the Docker-managed API at `localhost:8001`.
 
-#### test_happy_path.py (1 test)
-- ⏭️ `test_happy_path_new_user` - Full user flow (requires LLM)
-
-### Running with LLM
-```bash
-cd Solution
-INTEGRATION_LLM=1 docker-compose exec -T backend python -m pytest tests/integration/ -v
-```
+#### `tests/integration/test_happy_path.py` (1 test — Sprint 4 task 18.12)
+- ⏭️ `test_happy_path_new_user` — CV upload → JD analysis → flow creation → gap analysis → state verification. Skipped unless `INTEGRATION_LLM=1`.
 
 ---
 
@@ -123,16 +80,21 @@ INTEGRATION_LLM=1 docker-compose exec -T backend python -m pytest tests/integrat
 `Solution/tests/e2e/`
 
 ### Current Status
-- **Total**: 1 test file
+- **Total**: 1 test file, 8 test cases
 - **Status**: ✅ Ready to run
 - **Framework**: Playwright (TypeScript)
 
 ### Test Files
 
-#### marcus-persona.spec.ts
-- User journey testing
-- UI interaction validation
-- Full application flow
+#### marcus-persona.spec.ts (8 tests)
+- Landing page and upload area visibility
+- CV upload enabling submit button
+- Progress bar and step text during processing
+- Full flow: upload → processing overlay → gaps page
+- Match score and gaps display
+- Generate CV navigation to CV page and download
+- Error state graceful handling
+- Submit disabled without CV
 
 ### Running Locally
 ```bash
@@ -301,11 +263,17 @@ npx playwright test marcus-persona.spec.ts --debug
 ### Test Organization
 ```
 tests/
-├── unit/              # Fast, isolated tests
-├── integration/       # API and service tests
-├── e2e/              # Full user journey tests
-├── fixtures/         # Test data and files
-└── conftest.py       # Shared fixtures
+├── unit/              # Fast, isolated tests (no Docker)
+│   └── conftest.py    # Overrides Docker fixture; adds backend/ to sys.path
+├── integration/       # Full-stack LLM tests (INTEGRATION_LLM=1)
+├── e2e/               # Playwright E2E tests
+├── fixtures/          # Test data (CVs, JDs, downloads)
+├── files/             # Files used by integration tests (cv.pdf, jd.txt)
+├── test_iter*.py      # Per-iteration API tests
+└── conftest.py        # Session fixture: starts Docker stack, waits for API
+
+backend/tests/
+└── conftest.py        # In-container CI variant (connects to backend:8000)
 ```
 
 ### Naming Convention
@@ -320,10 +288,10 @@ tests/
 ### Test Execution Time
 | Level | Time | Count |
 |-------|------|-------|
-| Unit | ~1.3s | 51 |
-| Integration | ~2.6s | 6 |
-| E2E | ~5-10s | 1 |
-| **Total** | **~10-15s** | **58** |
+| Unit | ~2-5s | ~60+ (14 files) |
+| API integration | ~5-15s | 16 files |
+| E2E | ~5-10s | 8 |
+| LLM integration | ~2-5min | 1 (INTEGRATION_LLM=1) |
 
 ### Optimization Tips
 - Run unit tests first (fastest feedback)

@@ -13,7 +13,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 
 export default defineConfig({
-  testDir: './Solution/tests/e2e',
+  testDir: './tests/e2e',
   
   /**
    * Test execution settings

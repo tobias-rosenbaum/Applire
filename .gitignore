@@ -33,6 +33,9 @@ frontend/node_modules/
 # Docker
 postgres-data/
 
+# Uploaded files — never commit user data
+backend/data/uploads/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -44,6 +47,7 @@ Thumbs.db
 
 # Claude Code
 .claude/
+CLAUDE.md
 claude.md
 
 docs/
