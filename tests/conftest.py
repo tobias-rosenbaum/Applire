@@ -68,6 +68,11 @@ def _wait_for_api() -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def docker_environment():
+    if os.getenv("CI"):
+        # In CI the workflow manages Docker; just wait for the API.
+        _wait_for_api()
+        yield
+        return
     _docker_compose("down")
     _docker_compose("build")
     _docker_compose("up", "-d", "--force-recreate")
