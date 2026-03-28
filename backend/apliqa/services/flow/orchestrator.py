@@ -97,23 +97,26 @@ async def create_flow(
     db: AsyncSession,
     base_url: str = "http://localhost:8001",
 ) -> CreateFlowResponse:
-    """Create or resume a flow session for (user_id, job_id).
+    """Create or resume a flow session.
 
-    Idempotent: if a flow already exists for this (user_id, job_id), returns it.
+    job_id is optional — omit it for a CV-only upload with no linked job.
+    Idempotent when job_id is provided: returns the existing flow for (user_id, job_id).
     """
-    job = await db.get(JobAnalysis, request.job_id)
-    if job is None:
-        raise LookupError(f"Job {request.job_id} not found")
+    job = None
+    if request.job_id is not None:
+        job = await db.get(JobAnalysis, request.job_id)
+        if job is None:
+            raise LookupError(f"Job {request.job_id} not found")
 
-    existing = await _get_existing_flow(user_id, request.job_id, db)
-    if existing is not None:
-        return CreateFlowResponse(
-            flow_id=existing.id,
-            user_type=existing.user_type,
-            current_step=existing.current_step,
-            available_actions=existing.available_actions,
-            job_summary=JobAnalysisSummary(job_id=job.id, role_title=job.role_title),
-        )
+        existing = await _get_existing_flow(user_id, request.job_id, db)
+        if existing is not None:
+            return CreateFlowResponse(
+                flow_id=existing.id,
+                user_type=existing.user_type,
+                current_step=existing.current_step,
+                available_actions=existing.available_actions,
+                job_summary=JobAnalysisSummary(job_id=job.id, role_title=job.role_title),
+            )
 
     user_type = await _resolve_user_type(db)
     available_actions = _compute_actions("jd_analysis", user_type)
@@ -129,20 +132,25 @@ async def create_flow(
     try:
         await db.commit()
     except IntegrityError:
-        # Race: another request created the flow between our check and insert
+        # Race: another request created the flow for the same (user_id, job_id)
         await db.rollback()
+        if request.job_id is None:
+            raise
         existing = await _get_existing_flow(user_id, request.job_id, db)
         if existing is None:
             raise
         flow = existing
 
     await db.refresh(flow)
+    job_summary = (
+        JobAnalysisSummary(job_id=job.id, role_title=job.role_title) if job else None
+    )
     return CreateFlowResponse(
         flow_id=flow.id,
         user_type=flow.user_type,
         current_step=flow.current_step,
         available_actions=flow.available_actions,
-        job_summary=JobAnalysisSummary(job_id=job.id, role_title=job.role_title),
+        job_summary=job_summary,
     )
 
 
