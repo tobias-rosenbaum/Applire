@@ -1,0 +1,34 @@
+Acme GmbH is a mid-sized B2B software company headquartered in Munich, serving clients across the DACH region.
+
+We are looking for a Senior Software Engineer (m/w/d) to join our backend platform team.
+
+The Role
+
+As a Senior Software Engineer you will design and implement scalable backend services, collaborate with product and data teams, and mentor junior engineers. You will take technical ownership of core platform components and help define our engineering standards.
+
+What You'll Do
+
+    Design and build robust, well-tested REST and gRPC services in Python and Go
+    Lead technical discussions, write architecture decision records, and review code
+    Collaborate with Product Management and UX to refine requirements and acceptance criteria
+    Contribute to CI/CD pipelines, observability, and infrastructure-as-code (Terraform, Kubernetes)
+    Mentor junior and mid-level engineers through code reviews and pair programming
+
+Requirements
+
+    5+ years of professional software engineering experience
+    Strong proficiency in Python (FastAPI, SQLAlchemy) and at least one statically typed language (Go, Java, or Kotlin)
+    Solid understanding of relational databases (PostgreSQL) and message brokers (Kafka or RabbitMQ)
+    Experience building and operating distributed systems in a cloud environment (AWS or GCP)
+    Fluent written and spoken German (B2 or above); English at professional working level
+
+Nice to Have
+
+    Experience with LLM integration or AI-assisted product features
+    Background in platform engineering or internal developer tooling
+    Contributions to open-source projects
+    Familiarity with the DACH hiring market and German labour law basics
+
+We offer a competitive salary, flexible remote/hybrid working, 30 days holiday, and a clear path to Staff Engineer or Engineering Lead.
+
+Acme GmbH is an equal-opportunity employer committed to building a diverse and inclusive team.

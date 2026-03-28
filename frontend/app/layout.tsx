@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import "./globals.css";
+import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: "Apliqa — DACH CV Tailoring",
@@ -12,8 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif", background: "#f5f5f5" }}>
-        {children}
+      <body className="font-body bg-neutral-light text-neutral-dark antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
