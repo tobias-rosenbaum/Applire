@@ -2,9 +2,9 @@ name: Test Suite
 
 on:
   push:
-    branches: [ main, develop, sprint-4 ]
+    branches: [ main, develop, sprint-4, sprint-5 ]
   pull_request:
-    branches: [ main, develop, sprint-4 ]
+    branches: [ main, develop, sprint-4, sprint-5 ]
 
 jobs:
   backend-unit-tests:
@@ -91,14 +91,14 @@ jobs:
       - name: Start Docker services
         working-directory: Solution
         run: |
-          docker-compose up -d --build
-      
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for backend to be ready..."
           timeout 180 bash -c 'until curl -f http://localhost:8001/health; do sleep 2; done'
           echo "Backend is ready!"
-      
+
       - name: Run integration tests
         working-directory: Solution
         run: |
@@ -166,8 +166,8 @@ jobs:
       - name: Start Docker services
         working-directory: Solution
         run: |
-          docker-compose up -d --build
-      
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+
       - name: Wait for application to be ready
         run: |
           echo "Waiting for backend to be ready..."
@@ -176,11 +176,11 @@ jobs:
           echo "Waiting for frontend to be ready..."
           timeout 180 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
           echo "Frontend is ready!"
-      
+
       - name: Run Playwright E2E tests
-        working-directory: Solution/frontend
+        working-directory: Solution
         run: |
-          npx playwright test
+          npx playwright test tests/e2e/
         env:
           CI: true
       
