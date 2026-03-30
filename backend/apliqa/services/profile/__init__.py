@@ -1,6 +1,9 @@
 import hashlib
 import json
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -397,8 +400,23 @@ async def upload_cv(
     from apliqa.models.job import JobAnalysis
     from apliqa.services.cv_parser import extract_text
 
-    # 1. Text extraction
+    # 1. Text extraction — each CV is analysed individually; never concatenated.
+    #    Hard cap prevents token overflow on verbose files (LinkedIn PDFs can be
+    #    30K+ chars due to endorsements/courses/recommendations).  We cut at the
+    #    last newline before the limit so the LLM always receives complete lines.
+    _MAX_CV_TEXT_CHARS = 25_000
     raw_text = await extract_text(file_bytes, filename, content_type, ocr_extractor)
+    if len(raw_text) > _MAX_CV_TEXT_CHARS:
+        cut = raw_text.rfind("\n", 0, _MAX_CV_TEXT_CHARS)
+        if cut == -1:
+            cut = _MAX_CV_TEXT_CHARS
+        logger.warning(
+            "CV text truncated for LLM extraction: %d → %d chars (file: %s)",
+            len(raw_text),
+            cut,
+            filename,
+        )
+        raw_text = raw_text[:cut]
 
     # 2. JD context (optional)
     job_analysis_dict: dict | None = None
@@ -428,7 +446,7 @@ async def upload_cv(
         prompt = build_generic_prompt(raw_text)
         system = GENERIC_CV_EXTRACTION_PROMPT
 
-    data: dict = await provider.aparse_json(prompt, system=system, temperature=0.1)
+    data: dict = await provider.aparse_json(prompt, system=system, temperature=0.1, max_tokens=8192)
     incoming = MasterProfileData.model_validate(data)
     now = datetime.now(timezone.utc)
 

@@ -14,6 +14,8 @@ class SessionCreateRequest(BaseModel):
     job_id: uuid.UUID
     # None = auto-detect based on profile completeness_score vs MODE_B_COMPLETENESS_THRESHOLD
     mode: Literal["targeted", "guided"] | None = None
+    # When set with mode="targeted": scopes to a 1-question micro-session for Gap-Click mode
+    target_gap: str | None = None
 
 
 class SessionMessageRequest(BaseModel):
@@ -37,6 +39,14 @@ class SessionCreateResponse(BaseModel):
     resumed: bool = False  # True if an existing active session was returned
 
 
+class ConflictSummary(BaseModel):
+    """A detected merge conflict surfaced during the interview (19.10)."""
+    conflict_id: str  # stable identifier: "{field}:{old_value}" hash
+    field: str
+    old_value: str
+    new_value: str
+
+
 class SessionMessageResponse(BaseModel):
     complete: bool
     question: str | None = None
@@ -47,6 +57,8 @@ class SessionMessageResponse(BaseModel):
     gaps_resolved: int | None = None
     gaps_unresolved: list[str] | None = None
     completeness_score: float | None = None
+    # Populated when ProfileUpdater detects a merge conflict (19.10)
+    pending_conflicts: list[ConflictSummary] | None = None
 
 
 class SessionStateResponse(BaseModel):

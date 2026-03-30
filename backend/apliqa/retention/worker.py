@@ -64,27 +64,35 @@ async def _purge_uploads(db: AsyncSession) -> int:
 async def _purge_sessions(db: AsyncSession) -> int:
     """Hard-delete interview sessions inactive for more than 30 days."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=_SESSION_TTL_DAYS)
-    result = await db.execute(
-        text(
-            "DELETE FROM interview_sessions WHERE updated_at < :cutoff"
-        ),
-        {"cutoff": cutoff},
-    )
-    await db.commit()
-    return result.rowcount  # type: ignore[return-value]
+    try:
+        result = await db.execute(
+            text(
+                "DELETE FROM interview_sessions WHERE updated_at < :cutoff"
+            ),
+            {"cutoff": cutoff},
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
 
 
 async def _purge_cvs(db: AsyncSession) -> int:
     """Hard-delete generated CVs whose expires_at is in the past."""
     now = datetime.now(timezone.utc)
-    result = await db.execute(
-        text(
-            "DELETE FROM generated_cvs WHERE expires_at < :now AND deleted_at IS NULL"
-        ),
-        {"now": now},
-    )
-    await db.commit()
-    return result.rowcount  # type: ignore[return-value]
+    try:
+        result = await db.execute(
+            text(
+                "DELETE FROM generated_cvs WHERE expires_at < :now AND deleted_at IS NULL"
+            ),
+            {"now": now},
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
 
 
 async def _tombstone_inactive_profiles(db: AsyncSession) -> int:

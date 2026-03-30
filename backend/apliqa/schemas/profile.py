@@ -35,9 +35,9 @@ Contact = PersonalInfo
 
 class WorkEntry(BaseModel):
     company: str = ""
-    role: str
+    role: str = ""
 
-    @field_validator("company", mode="before")
+    @field_validator("company", "role", mode="before")
     @classmethod
     def coerce_company(cls, v: object) -> str:
         return v if isinstance(v, str) else ""
@@ -61,6 +61,11 @@ class EducationEntry(BaseModel):
     institution: str
     degree: str
     field: str = ""
+
+    @field_validator("institution", "degree", "field", mode="before")
+    @classmethod
+    def coerce_str_fields(cls, v: object) -> str:
+        return v if isinstance(v, str) else ""
     start_date: str | None = None
     end_date: str | None = None
     grade: str | None = None
@@ -78,6 +83,7 @@ class Certification(BaseModel):
 
 
 _PROFICIENCY_ALIASES: dict[str, str] = {
+    # Generic aliases
     "beginner": "basic",
     "novice": "basic",
     "junior": "basic",
@@ -88,6 +94,16 @@ _PROFICIENCY_ALIASES: dict[str, str] = {
     "native": "expert",
     "expert": "expert",
     "master": "expert",
+    # LinkedIn language proficiency levels
+    "elementary proficiency": "basic",
+    "limited working proficiency": "basic",
+    "professional working proficiency": "intermediate",
+    "professional working": "intermediate",
+    "full professional proficiency": "advanced",
+    "full professional": "advanced",
+    "native or bilingual proficiency": "expert",
+    "native or bilingual": "expert",
+    "bilingual": "expert",
 }
 
 
@@ -106,6 +122,11 @@ class Skill(BaseModel):
             normalized = _PROFICIENCY_ALIASES.get(v.lower())
             if normalized:
                 return normalized
+            # Unknown proficiency string — default to intermediate rather than
+            # raising a validation error (e.g. future LinkedIn/Xing terminology).
+            _valid = {"basic", "intermediate", "advanced", "expert"}
+            if v.lower() not in _valid:
+                return "intermediate"
         return v
 
 

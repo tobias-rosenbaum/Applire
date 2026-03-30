@@ -31,6 +31,10 @@ def get_provider() -> LLMProvider:
         from apliqa.providers.llm.ollama import OllamaProvider
         return OllamaProvider()
 
+    if provider == "mock":
+        from apliqa.providers.llm.mock import MockLLMProvider
+        return MockLLMProvider()
+
     raise ValueError(
         f"Unknown LLM_PROVIDER '{settings.llm_provider}'. "
         "Valid values: mistral, openrouter, openai, ollama"

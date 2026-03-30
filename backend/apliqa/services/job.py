@@ -54,7 +54,7 @@ async def analyze_jd(
         keywords=data.get("keywords", []),
         seniority_level=data.get("seniority_level", ""),
         company_culture_signals=data.get("company_culture_signals", []),
-        language_requirement=data.get("language_requirement", ""),
+        language_requirement=data.get("language_requirement") or "",
     )
     db.add(record)
     await db.commit()

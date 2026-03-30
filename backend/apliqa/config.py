@@ -4,7 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    apliqa_edition: str = "community"
     database_url: str
     llm_provider: str = "mistral"
     mistral_api_key: str = ""
@@ -25,9 +24,13 @@ class Settings(BaseSettings):
     ocr_backend: str = "mistral_vision"
     cors_origins: str = "http://localhost:3000"
 
-    @property
-    def is_community(self) -> bool:
-        return self.apliqa_edition == "community"
-
 
 settings = Settings()
+
+# Edition detection: presence of the apliqa.cloud package IS the gate (ADR 012).
+# APLIQA_EDITION env var has been removed — do not re-add it.
+try:
+    import apliqa.cloud  # type: ignore[import-not-found]
+    HAS_CLOUD = True
+except ImportError:
+    HAS_CLOUD = False
