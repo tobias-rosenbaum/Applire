@@ -17,6 +17,8 @@ MODE B (Guided Build):
 State is persisted as JSONB in interview_sessions.state between HTTP calls.
 """
 
+import hashlib
+
 from apliqa.models.gap import GapAnalysis
 from apliqa.models.job import JobAnalysis
 from apliqa.prompts.interview import (
@@ -28,7 +30,7 @@ from apliqa.prompts.interview import (
     build_response_parser_prompt,
 )
 from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.session import InterviewState
+from apliqa.schemas.session import ConflictSummary, InterviewState
 
 # Sections included in a MODE B guided build, in default priority order.
 # JD-relevance weighting is applied in gap_detector_mode_b() at session creation.
@@ -227,17 +229,22 @@ async def response_parser(
 # ---------------------------------------------------------------------------
 
 
-def profile_updater(current_profile: dict, patch: dict) -> dict:
+def profile_updater(
+    current_profile: dict, patch: dict
+) -> tuple[dict, list[ConflictSummary]]:
     """Merge extracted data into the MasterProfile using intelligent merge rules.
+
+    Returns (updated_profile, conflicts) — conflicts are surfaced when a
+    work-experience entry for the same (company, role) carries contradicting dates.
 
     Rules (ADR 013):
     - skills: union — add new skills, never remove existing ones
-    - work_experience: append entries whose (company, role) pair is not already present
+    - work_experience: append entries whose (company, role) pair is not already present;
+      date contradictions on matching entries are reported as ConflictSummary records
     - No field is ever overwritten if it already has a non-empty value
-    - Conflicts (same company, different dates) are appended as new entries
-      so the user can review them manually
     """
     profile = dict(current_profile)
+    conflicts: list[ConflictSummary] = []
 
     # --- Skills: union merge ---
     existing_skills = {_skill_name(s).lower() for s in profile.get("skills", [])}
@@ -247,21 +254,40 @@ def profile_updater(current_profile: dict, patch: dict) -> dict:
     if new_skills:
         profile["skills"] = list(profile.get("skills", [])) + new_skills
 
-    # --- Work experience: append-only, deduplicate by (company, role) ---
+    # --- Work experience: append-only, detect date conflicts on matching entries ---
     existing_work = profile.get("work_experience", [])
-    existing_keys = {
-        (_norm(e.get("company")), _norm(e.get("role"))) for e in existing_work
+    existing_by_key: dict[tuple[str, str], dict] = {
+        (_norm(e.get("company")), _norm(e.get("role"))): e for e in existing_work
     }
     additions = []
     for entry in patch.get("work_history_to_add", []):
         key = (_norm(entry.get("company")), _norm(entry.get("role")))
-        if key not in existing_keys and (key[0] or key[1]):
+        if not key[1]:
+            continue
+        if key in existing_by_key:
+            existing_entry = existing_by_key[key]
+            # Detect contradicting start_date
+            old_start = existing_entry.get("start_date") or ""
+            new_start = entry.get("start_date") or ""
+            if old_start and new_start and (old_start + "-01")[:7] != (new_start + "-01")[:7]:
+                field = f"{key[0]} / {key[1]} start_date"
+                conflict_id = hashlib.md5(f"{field}:{old_start}".encode()).hexdigest()[:12]
+                conflicts.append(
+                    ConflictSummary(
+                        conflict_id=conflict_id,
+                        field=field,
+                        old_value=old_start,
+                        new_value=new_start,
+                    )
+                )
+        else:
             additions.append(entry)
-            existing_keys.add(key)
+            existing_by_key[key] = entry
+
     if additions:
         profile["work_experience"] = list(existing_work) + additions
 
-    return profile
+    return profile, conflicts
 
 
 def _skill_name(s: str | dict) -> str:

@@ -214,7 +214,7 @@ Rules:
 - Only include data EXPLICITLY stated in the answer — do not infer or fabricate
 - gap_addressed: true if the answer provides meaningful, concrete information about the gap
 - If the answer is vague, off-topic, or empty: return empty arrays and gap_addressed: false
-- Omit work_history_to_add entries where both company and role are null"""
+- Omit work_history_to_add entries where role is null or empty"""
 
 
 def build_response_parser_prompt(gap: str, question: str, answer: str) -> str:

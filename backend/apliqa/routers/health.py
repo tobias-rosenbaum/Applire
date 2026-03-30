@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from apliqa import __version__
-from apliqa.config import settings
+from apliqa.config import HAS_CLOUD
 
 router = APIRouter()
 
@@ -15,4 +15,8 @@ class HealthResponse(BaseModel):
 
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    return HealthResponse(status="ok", edition=settings.apliqa_edition, version=__version__)
+    return HealthResponse(
+        status="ok",
+        edition="cloud" if HAS_CLOUD else "community",
+        version=__version__,
+    )

@@ -35,6 +35,7 @@ from apliqa.models.session import InterviewSession
 from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.profile import MasterProfileData
 from apliqa.schemas.session import (
+    ConflictSummary,
     InterviewState,
     SessionCreateRequest,
     SessionCreateResponse,
@@ -91,6 +92,10 @@ async def create_session(
         resolved_mode = request.mode
     else:
         resolved_mode = _auto_detect_mode(profile_record)
+
+    # --- Micro-session: target_gap scopes to a single gap (Gap-Click mode, 19.9) ---
+    if request.target_gap and resolved_mode == "targeted":
+        return await _create_micro_session(job_id, job, profile_record, request.target_gap, db, provider)
 
     # --- Idempotency: return existing active session if one exists for this job ---
     existing = await _get_active_session(job_id, db)
@@ -295,6 +300,94 @@ async def _create_guided_session(
     )
 
 
+async def _create_micro_session(
+    job_id: uuid.UUID,
+    job: JobAnalysis,
+    profile_record: MasterProfile | None,
+    target_gap: str,
+    db: AsyncSession,
+    provider: LLMProvider,
+) -> SessionCreateResponse:
+    """Create a 1-question micro-session scoped to a single gap (Gap-Click mode, 19.9).
+
+    Hard ceiling = 1: completes after a single user answer.
+    Does NOT check for existing active sessions — micro-sessions are independent.
+    """
+    if profile_record is None:
+        raise LookupError(
+            "No profile found — upload a CV first before using Gap-Click mode"
+        )
+
+    # Determine gap category from the latest gap analysis (best-effort)
+    gap_category: str | None = None
+    gap_result = await db.execute(
+        select(GapAnalysis)
+        .where(
+            GapAnalysis.job_analysis_id == job_id,
+            GapAnalysis.deleted_at.is_(None),
+        )
+        .order_by(GapAnalysis.created_at.desc())
+        .limit(1)
+    )
+    gap_analysis = gap_result.scalar_one_or_none()
+    if gap_analysis is not None:
+        if target_gap in (gap_analysis.category_b or []):
+            gap_category = "B"
+        elif target_gap in (gap_analysis.category_c or []):
+            gap_category = "C"
+
+    _MICRO_CEILING = 1
+    state: InterviewState = _build_state(
+        mode="targeted",
+        job_id=job_id,
+        gap_analysis_id=gap_analysis.id if gap_analysis else None,
+        profile_id=profile_record.id,
+        critical_gaps=[target_gap],
+        gap_categories={target_gap: gap_category or "C"},
+        current_question="",
+        hard_ceiling=_MICRO_CEILING,
+    )
+    first_question = await question_generator_with_profile(
+        state, profile_record.profile_json, provider, gap_category=gap_category
+    )
+    state["current_question"] = first_question
+    state["messages"].append({"role": "assistant", "content": first_question})
+    state["questions_asked"] = 1
+
+    # Close any existing active session for this job before inserting the new
+    # micro-session — the uq_active_session_per_job partial unique index
+    # (status='active') covers all session types, including micro-sessions.
+    existing_active = await _get_active_session(job_id, db)
+    if existing_active is not None:
+        existing_active.status = "complete"
+        existing_active.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+
+    record = _make_session_record(
+        job_id=job_id,
+        gap_analysis_id=gap_analysis.id if gap_analysis else None,
+        profile_id=profile_record.id,
+        mode="targeted",
+        status="active",
+        state=state,
+        hard_ceiling=_MICRO_CEILING,
+        questions_asked=1,
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+
+    return SessionCreateResponse(
+        session_id=record.id,
+        mode="targeted",
+        first_question=first_question,
+        question=first_question,
+        estimated_questions=1,
+        gaps_total=1,
+        gaps_remaining=1,
+    )
+
+
 # ---------------------------------------------------------------------------
 # POST /api/session/{session_id}/message
 # ---------------------------------------------------------------------------
@@ -334,7 +427,7 @@ async def send_message(
 
     # --- ProfileUpdater ---
     profile_record = await _load_profile(state["profile_id"], db)
-    updated_profile = profile_updater(profile_record.profile_json, patch)
+    updated_profile, merge_conflicts = profile_updater(profile_record.profile_json, patch)
     profile_record.profile_json = updated_profile
     profile_record.updated_at = datetime.now(timezone.utc)
 
@@ -382,6 +475,7 @@ async def send_message(
         complete=False,
         question=next_question,
         gaps_remaining=gaps_remaining,
+        pending_conflicts=merge_conflicts if merge_conflicts else None,
     )
 
 

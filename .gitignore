@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 !.env.*.example
+!.env.ci
 
 # Python
 __pycache__/
@@ -49,5 +50,11 @@ Thumbs.db
 .claude/
 CLAUDE.md
 claude.md
+
+# Test results and reports
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
 
 docs/
