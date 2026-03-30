@@ -60,6 +60,12 @@
   .text-balance {
     text-wrap: balance;
   }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out both;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.35s ease-out both;
+  }
 }
 
 /* Custom animations */

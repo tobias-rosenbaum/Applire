@@ -86,6 +86,39 @@ async def get_job_analysis(
 
 
 @router.post(
+    "/{job_id}/gaps/refresh",
+    response_model=GapAnalysisResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def refresh_gap_analysis(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> GapAnalysisResponse:
+    """Re-run gap analysis against the current profile (19.11).
+
+    Always creates a new GapAnalysis record — reflects any profile enrichment
+    from interview answers. Required for the animated score update in Gap-Click mode.
+    """
+    try:
+        return await analyze_gaps(job_id, db, provider)
+    except LLMTimeoutError as exc:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
+    except LLMRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="LLM returned invalid JSON",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@router.post(
     "/{job_id}/gaps",
     response_model=GapAnalysisResponse,
     status_code=status.HTTP_200_OK,

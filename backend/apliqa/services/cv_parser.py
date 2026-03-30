@@ -1,19 +1,22 @@
 """CV parsing layer — format detection, text extraction (ADR 014, iter 12).
 
 Supported formats: PDF (text + OCR fallback), DOCX, image (JPEG/PNG/TIFF), plain text.
-PDF extraction uses pymupdf for higher fidelity than pypdf; falls back to OCR if no
-text layer is present (scanned documents).
+PDF text extraction uses pypdf, which produces compact logical-order text similar to
+pdftotext — avoiding the spatial whitespace that pymupdf adds for multi-column layouts
+(e.g. FlowCV, LinkedIn PDF exports).  pymupdf is retained solely for the OCR fallback
+path where it renders scanned pages to PNG for the OCR extractor.
 """
 
 from __future__ import annotations
 
+from io import BytesIO
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from apliqa.ocr.base import CVImageExtractor
 
 try:
-    import fitz  # pymupdf — module-level so tests can patch apliqa.services.cv_parser.fitz
+    import fitz  # pymupdf — used only for OCR page rendering; tests can patch this
 except ImportError:
     fitz = None  # type: ignore[assignment]
 
@@ -56,19 +59,19 @@ def detect_format(filename: str, content_type: str) -> CVFormat:
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from a PDF using pymupdf.
+    """Extract text from a PDF using pypdf.
+
+    pypdf produces compact, logical-order text (similar to pdftotext) without the
+    spatial whitespace padding that pymupdf adds for multi-column layouts.  This keeps
+    token counts low for the LLM extraction step.
 
     Returns an empty string if the PDF has no text layer (scanned).
     Caller is responsible for invoking OCR fallback when the result is empty.
     """
-    if fitz is None:
-        raise RuntimeError("PDF extraction requires 'pymupdf'. Add it to requirements.txt.")
+    from pypdf import PdfReader
 
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
-    pages: list[str] = []
-    for page in doc:
-        pages.append(page.get_text())
-    doc.close()
+    reader = PdfReader(BytesIO(file_bytes))
+    pages = [page.extract_text() or "" for page in reader.pages]
     return "\n".join(pages).strip()
 
 
