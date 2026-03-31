@@ -19,7 +19,9 @@ _render_cv_background:
 """
 
 import logging
+import re
 import uuid
+from datetime import timezone
 from pathlib import Path
 
 from fastapi import BackgroundTasks
@@ -39,6 +41,16 @@ from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateResponse, CVStatusResponse, CVTemplate, TailoredCVData
 
 logger = logging.getLogger(__name__)
+
+
+def _slugify(text: str) -> str:
+    """Convert a role title to a URL-safe slug for use in filenames."""
+    text = text.lower()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_]+", "-", text)
+    text = re.sub(r"-+", "-", text)
+    return text.strip("-")
+
 
 _TEMPLATE_FILES: dict[str, str] = {
     "classic_german": "lebenslauf.html.j2",
@@ -142,6 +154,56 @@ async def get_cv_status(
         error_message=record.error_message or ("Generation timed out" if status == CVGenerationStatus.failed and not record.error_message else None),
         expires_at=record.expires_at,
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/jobs/{job_id}/cvs — list all CVs for a job
+# ---------------------------------------------------------------------------
+
+
+async def list_cvs_for_job(
+    job_id: uuid.UUID,
+    db: AsyncSession,
+    base_url: str,
+) -> list[CVStatusResponse]:
+    """Return all non-deleted CVs for a job, newest first."""
+    result = await db.execute(
+        select(GeneratedCV)
+        .where(
+            GeneratedCV.job_analysis_id == job_id,
+            GeneratedCV.deleted_at.is_(None),
+        )
+        .order_by(GeneratedCV.created_at.desc())
+    )
+    records = result.scalars().all()
+    return [
+        CVStatusResponse(
+            cv_id=r.id,
+            status=CVGenerationStatus(r.status),
+            html_url=f"{base_url}/api/cv/{r.id}/html" if r.status == CVGenerationStatus.ready.value else None,
+            pdf_url=f"{base_url}/api/cv/{r.id}/pdf" if r.status == CVGenerationStatus.ready.value else None,
+            error_message=r.error_message,
+            expires_at=r.expires_at,
+        )
+        for r in records
+    ]
+
+
+# ---------------------------------------------------------------------------
+# PDF filename helper
+# ---------------------------------------------------------------------------
+
+
+async def get_pdf_filename(cv_id: uuid.UUID, db: AsyncSession) -> str:
+    """Build the Content-Disposition filename for a CV PDF.
+
+    Format: lebenslauf-{role_title_slug}-{cv_id[:8]}.pdf
+    Falls back to lebenslauf-cv-{cv_id[:8]}.pdf if job not found.
+    """
+    record = await _load_cv_ready(cv_id, db)
+    job = await db.get(JobAnalysis, record.job_analysis_id)
+    role_slug = _slugify(job.role_title) if job and job.role_title else "cv"
+    return f"lebenslauf-{role_slug}-{str(cv_id)[:8]}.pdf"
 
 
 # ---------------------------------------------------------------------------
