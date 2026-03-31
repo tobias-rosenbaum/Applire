@@ -34,8 +34,9 @@ frontend/node_modules/
 # Docker
 postgres-data/
 
-# Uploaded files — never commit user data
+# Uploaded files and generated assets — never commit user data or build artefacts
 backend/data/uploads/
+backend/data/static/
 
 # OS
 .DS_Store
