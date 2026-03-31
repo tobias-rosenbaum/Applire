@@ -2,9 +2,7 @@ name: Test Suite
 
 on:
   push:
-    branches: [ main, develop, sprint-4, sprint-5, sprint-6 ]
   pull_request:
-    branches: [ main, develop, sprint-4, sprint-5, sprint-6 ]
 
 jobs:
   backend-unit-tests:
