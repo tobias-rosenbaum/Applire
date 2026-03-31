@@ -12,7 +12,7 @@ from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
 from apliqa.providers import get_provider
 from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse, CVStatusResponse
-from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf, get_cv_status
+from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf, get_cv_status, get_pdf_filename, list_cvs_for_job
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -68,7 +68,13 @@ async def get_html(
 ) -> HTMLResponse:
     try:
         html = await get_cv_html(cv_id, db)
-        return HTMLResponse(content=html)
+        return HTMLResponse(
+            content=html,
+            headers={
+                "X-Frame-Options": "SAMEORIGIN",
+                "Content-Security-Policy": "frame-ancestors 'self'",
+            },
+        )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
@@ -83,11 +89,29 @@ async def get_pdf(
 ) -> Response:
     try:
         pdf_bytes = await get_cv_pdf(cv_id, db)
+        filename = await get_pdf_filename(cv_id, db)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="lebenslauf-{cv_id}.pdf"'},
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@router.get("", response_model=list[CVStatusResponse])
+async def get_cvs_for_job(
+    job_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> list[CVStatusResponse]:
+    """List all CVs for a given job (20.11)."""
+    base_url = str(request.base_url).rstrip("/")
+    try:
+        return await list_cvs_for_job(job_id, db, base_url)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
