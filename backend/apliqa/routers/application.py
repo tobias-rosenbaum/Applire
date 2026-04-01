@@ -42,12 +42,13 @@ async def list_pipeline(
     request: Request,
     workflow_status: WorkflowStatus | None = Query(default=None),
     user_status: UserStatus | None = Query(default=None),
+    q: str | None = Query(default=None, description="Search role_title, company_name, notes"),
     db: AsyncSession = Depends(get_db),
     auth: AuthProvider = Depends(get_auth_provider),
 ) -> ApplicationListResponse:
     """List all applications for the current user, sorted updated_at DESC."""
     user = await auth.get_current_user(request)
-    return await list_applications(user.id, db, workflow_status, user_status)
+    return await list_applications(user.id, db, workflow_status, user_status, q)
 
 
 @router.post("", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)

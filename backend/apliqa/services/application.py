@@ -98,6 +98,7 @@ async def list_applications(
     db: AsyncSession,
     workflow_status: WorkflowStatus | None = None,
     user_status: UserStatus | None = None,
+    q: str | None = None,
 ) -> ApplicationListResponse:
     stmt = (
         select(Application)
@@ -111,10 +112,38 @@ async def list_applications(
         stmt = stmt.where(Application.workflow_status == workflow_status.value)
     if user_status is not None:
         stmt = stmt.where(Application.user_status == user_status.value)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            (Application.role_title.ilike(like))
+            | (Application.company_name.ilike(like))
+            | (Application.notes.ilike(like))
+        )
 
     result = await db.execute(stmt)
     apps = result.scalars().all()
-    items = [ApplicationResponse.model_validate(a) for a in apps]
+
+    # Batch-load FlowSessions to avoid N+1 — Application has no ORM relationship,
+    # only the FK column flow_session_id.
+    flow_ids = [app.flow_session_id for app in apps if app.flow_session_id is not None]
+    if flow_ids:
+        flow_result = await db.execute(
+            select(FlowSession).where(FlowSession.id.in_(flow_ids))
+        )
+        flow_map: dict[uuid.UUID, FlowSession] = {
+            f.id: f for f in flow_result.scalars().all()
+        }
+    else:
+        flow_map = {}
+
+    items = []
+    for app in apps:
+        data = ApplicationResponse.model_validate(app)
+        if app.flow_session_id is not None:
+            flow = flow_map.get(app.flow_session_id)
+            if flow is not None:
+                data.flow_current_step = flow.current_step
+        items.append(data)
     return ApplicationListResponse(items=items, total=len(items))
 
 
@@ -234,22 +263,43 @@ async def _start_workflow(
 ) -> None:
     """Shared logic for create(start_workflow=True) and start_application_workflow().
 
-    Creates a FlowSession, links it to the Application, and sets workflow_status
-    to 'analyzing'. The caller is responsible for db.commit().
-    """
-    user_type = await _resolve_user_type(db)
-    available_actions = _compute_actions("jd_analysis", user_type)
+    Creates a FlowSession (or reactivates a soft-deleted one), links it to the
+    Application, and sets workflow_status to 'analyzing'.
+    The caller is responsible for db.commit().
 
-    flow = FlowSession(
-        user_id=user_id,
-        job_id=app.job_analysis_id,
-        current_step="jd_analysis",
-        user_type=user_type,
-        available_actions=available_actions,
-        application_id=app.id,
+    uq_flow_session_user_job enforces one session per (user_id, job_id).  If a
+    session already exists (e.g. from a previously deleted application for the
+    same job), we reuse it rather than attempting a duplicate INSERT.
+    """
+    # Check for any existing session for this (user_id, job_id) — including
+    # soft-deleted ones, which still occupy the unique constraint slot.
+    existing_result = await db.execute(
+        select(FlowSession).where(
+            FlowSession.user_id == user_id,
+            FlowSession.job_id == app.job_analysis_id,
+        )
     )
-    db.add(flow)
-    await db.flush()  # populate flow.id
+    existing = existing_result.scalar_one_or_none()
+
+    if existing is not None:
+        # Reactivate and relink the existing session.
+        existing.deleted_at = None
+        existing.application_id = app.id
+        existing.updated_at = datetime.now(timezone.utc)
+        flow = existing
+    else:
+        user_type = await _resolve_user_type(db)
+        available_actions = _compute_actions("jd_analysis", user_type)
+        flow = FlowSession(
+            user_id=user_id,
+            job_id=app.job_analysis_id,
+            current_step="jd_analysis",
+            user_type=user_type,
+            available_actions=available_actions,
+            application_id=app.id,
+        )
+        db.add(flow)
+        await db.flush()  # populate flow.id
 
     app.flow_session_id = flow.id
     app.workflow_status = WorkflowStatus.analyzing.value

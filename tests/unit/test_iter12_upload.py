@@ -121,47 +121,34 @@ class TestDetectFormat:
 
 
 class TestExtractTextFromPdf:
-    def _make_mock_doc(self, page_texts: list[str]) -> MagicMock:
+    def _make_mock_reader(self, page_texts: list[str]) -> MagicMock:
         pages = []
         for text in page_texts:
             page = MagicMock()
-            page.get_text.return_value = text
+            page.extract_text.return_value = text
             pages.append(page)
-        doc = MagicMock()
-        doc.__iter__ = MagicMock(return_value=iter(pages))
-        doc.close = MagicMock()
-        return doc
+        reader = MagicMock()
+        reader.pages = pages
+        return reader
 
     def test_returns_text_from_pages(self):
-        import apliqa.services.cv_parser as parser
+        from apliqa.services.cv_parser import extract_text_from_pdf
 
-        mock_doc = self._make_mock_doc(["Max Mustermann\nSoftware Engineer"])
-        mock_fitz = MagicMock()
-        mock_fitz.open.return_value = mock_doc
+        mock_reader = self._make_mock_reader(["Max Mustermann\nSoftware Engineer"])
 
-        original = parser.fitz
-        parser.fitz = mock_fitz
-        try:
-            result = parser.extract_text_from_pdf(b"fake-pdf-bytes")
-        finally:
-            parser.fitz = original
+        with patch("pypdf.PdfReader", return_value=mock_reader):
+            result = extract_text_from_pdf(b"fake-pdf-bytes")
 
         assert "Max Mustermann" in result
         assert "Software Engineer" in result
 
     def test_empty_pdf_returns_empty_string(self):
-        import apliqa.services.cv_parser as parser
+        from apliqa.services.cv_parser import extract_text_from_pdf
 
-        mock_doc = self._make_mock_doc([""])
-        mock_fitz = MagicMock()
-        mock_fitz.open.return_value = mock_doc
+        mock_reader = self._make_mock_reader([""])
 
-        original = parser.fitz
-        parser.fitz = mock_fitz
-        try:
-            result = parser.extract_text_from_pdf(b"scanned-pdf")
-        finally:
-            parser.fitz = original
+        with patch("pypdf.PdfReader", return_value=mock_reader):
+            result = extract_text_from_pdf(b"scanned-pdf")
 
         assert result == ""
 

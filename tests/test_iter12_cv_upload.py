@@ -148,12 +148,12 @@ def test_upload_empty_file_returns_422():
 
 
 @pytest.mark.integration
-def test_import_rejects_pdf_with_helpful_error():
-    with open(_PDF_FILE, "rb") as f:
-        resp = requests.post(
-            _IMPORT_URL,
-            files={"file": ("cv.pdf", f, "application/pdf")},
-            timeout=30,
-        )
+def test_import_rejects_unsupported_format_with_helpful_error():
+    """Non-ZIP, non-PDF files sent to /import must return 422 with a redirect hint."""
+    resp = requests.post(
+        _IMPORT_URL,
+        files={"file": ("cv.txt", b"plain text content", "text/plain")},
+        timeout=30,
+    )
     assert resp.status_code == 422
     assert "upload" in resp.json().get("detail", "").lower()

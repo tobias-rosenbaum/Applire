@@ -1,0 +1,88 @@
+"use client";
+
+import { use, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
+// Mirrors STEP_ROUTE in layout.tsx
+const STEP_ROUTE: Record<string, string> = {
+  cv_import: "import",
+  gap_analysis: "gaps",
+  interview: "interview",
+  cv_generation: "cv",
+  complete: "cv",
+};
+
+/**
+ * Entry-point page for /flow/[flowId].
+ *
+ * The layout handles redirect for mid-flow steps (gap_analysis → /gaps, etc.).
+ * This page handles the jd_analysis step: JD has already been analysed by the
+ * time the user lands here, so we immediately advance to the next step and
+ * redirect.  If the layout already redirected (non-jd_analysis step), this
+ * page never mounts.
+ */
+export default function FlowIndexPage({
+  params,
+}: {
+  params: Promise<{ flowId: string }>;
+}) {
+  const { flowId } = use(params);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function advanceAndRedirect() {
+      try {
+        const stateRes = await fetch(`${API_BASE}/api/flow/${flowId}/state`);
+        if (!stateRes.ok) {
+          router.replace("/");
+          return;
+        }
+        const state = await stateRes.json();
+
+        // Determine the target step from available_actions
+        const nextStep: string | undefined = state.available_actions?.next;
+        if (!nextStep) {
+          router.replace("/");
+          return;
+        }
+
+        const advRes = await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: nextStep }),
+        });
+
+        if (advRes.ok) {
+          const newState = await advRes.json();
+          const segment = STEP_ROUTE[newState.current_step];
+          if (segment) {
+            router.replace(`/flow/${flowId}/${segment}`);
+            return;
+          }
+        }
+      } catch {
+        // network error — fall through to dashboard
+      }
+      router.replace("/");
+    }
+
+    void advanceAndRedirect();
+  }, [flowId, router]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "40vh",
+        color: "#6b7280",
+        fontSize: 14,
+      }}
+    >
+      Starte Analyse …
+    </div>
+  );
+}

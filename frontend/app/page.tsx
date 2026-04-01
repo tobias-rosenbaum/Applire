@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Dashboard } from "@/components/dashboard/Dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -10,18 +12,42 @@ import { useFileUpload } from "@/lib/hooks/use-file-upload";
 import { cn } from "@/lib/utils";
 import { ProcessingOverlay } from "@/components/processing-overlay";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
 type JdMode = "url" | "text";
 
 export default function Home() {
+  const router = useRouter();
   const { files, addFiles, removeFile } = useFileUpload();
   const [jdMode, setJdMode] = useState<JdMode>("url");
   const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
   const [error, setError] = useState("");
   const [showOverlay, setShowOverlay] = useState(false);
+  const [isReturningUser, setIsReturningUser] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const hasFiles = files.length > 0;
   const canSubmit = hasFiles && !showOverlay;
+
+  useEffect(() => {
+    async function checkProfile() {
+      try {
+        const res = await fetch(`${API_BASE}/api/profile/exists`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsReturningUser(data.exists);
+        } else {
+          setIsReturningUser(false);
+        }
+      } catch {
+        setIsReturningUser(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+    checkProfile();
+  }, []);
 
   function handleSubmit() {
     if (!hasFiles) {
@@ -32,6 +58,20 @@ export default function Home() {
     setShowOverlay(true);
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  // Returning user → Dashboard
+  if (isReturningUser) {
+    return <Dashboard />;
+  }
+
+  // New user → Screen 1 (CV upload + JD input)
   return (
     <div className="min-h-screen flex flex-col bg-surface-dim">
       {showOverlay && (
@@ -64,7 +104,7 @@ export default function Home() {
                 Your CVs
               </h2>
               <p className="text-sm text-gray-500 mb-4">
-                Upload 2-4 CVs for the richest profile. We&apos;ll merge them automatically.
+                Upload 2-4 CVs for the richest profile. We'll merge them automatically.
               </p>
 
               {/* Dropzone */}

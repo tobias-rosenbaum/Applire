@@ -33,8 +33,10 @@ from apliqa.mcp.errors import internal, invalid_input, not_found
 from apliqa.models.cv import GeneratedCV
 from apliqa.models.job import JobAnalysis
 from apliqa.providers import get_provider
+from apliqa.schemas.application import ApplicationListResponse, ApplicationResponse
 from apliqa.schemas.cv import GeneratedCVResponse
 from apliqa.schemas.job import JobAnalysisResponse
+from apliqa.services import application as app_svc
 from apliqa.services import cv as cv_svc
 from apliqa.services import gap as gap_svc
 from apliqa.services import job as job_svc
@@ -171,6 +173,57 @@ async def generate_cv(job_id: str) -> dict:
     async with get_db() as db:
         try:
             result = await cv_svc.generate_cv(jid, db, provider, settings.apliqa_base_url)
+        except LookupError as exc:
+            raise not_found(str(exc))
+        except Exception as exc:
+            raise internal(str(exc))
+    return result.model_dump(mode="json")
+
+
+@mcp.tool(
+    description=(
+        "List the user's application pipeline. "
+        "Optional status_filter: tracking, applied, rejected, offer."
+    )
+)
+async def list_applications(status_filter: str | None = None) -> list[dict]:
+    from apliqa.models.application import UserStatus
+
+    user_status = None
+    if status_filter:
+        try:
+            user_status = UserStatus(status_filter)
+        except ValueError:
+            raise invalid_input(
+                f"Invalid status_filter: {status_filter!r}. "
+                f"Must be one of: tracking, applied, rejected, offer."
+            )
+    # Retrieve the single user from the DB (MCP runs in single-user context).
+    from apliqa.models.user import User
+    from sqlalchemy import select as _select
+    async with get_db() as db:
+        user_result = await db.execute(_select(User).limit(1))
+        user = user_result.scalar_one_or_none()
+        if user is None:
+            raise not_found("No user found — create a user first")
+        try:
+            result = await app_svc.list_applications(
+                user_id=user.id,
+                db=db,
+                workflow_status=None,
+                user_status=user_status,
+            )
+        except Exception as exc:
+            raise internal(str(exc))
+    return [item.model_dump(mode="json") for item in result.items]
+
+
+@mcp.tool(description="Get details for a specific application by ID.")
+async def get_application(application_id: str) -> dict:
+    aid = _parse_uuid(application_id, "application_id")
+    async with get_db() as db:
+        try:
+            result = await app_svc.get_application(aid, db)
         except LookupError as exc:
             raise not_found(str(exc))
         except Exception as exc:

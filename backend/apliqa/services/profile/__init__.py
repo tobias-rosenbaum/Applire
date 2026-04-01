@@ -220,6 +220,18 @@ async def get_profile(db: AsyncSession) -> MasterProfileResponse | None:
     return _to_response(record)
 
 
+async def profile_exists(db: AsyncSession) -> dict:
+    """Lightweight check: returns exists + completeness_score without full profile payload."""
+    record = await _get_latest(db)
+    if not record:
+        return {"exists": False, "completeness_score": 0.0}
+    profile_data = MasterProfileData.model_validate(record.profile_json)
+    return {
+        "exists": True,
+        "completeness_score": profile_data.calculate_completeness(),
+    }
+
+
 async def patch_profile_section(
     section: str,
     value: object,
