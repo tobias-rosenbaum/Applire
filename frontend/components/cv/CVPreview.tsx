@@ -165,7 +165,13 @@ export function CVPreview({
         </div>
       </div>
 
-      {/* Right preview panel (60%) */}
+      {/*
+       * Right preview panel (60%).
+       * The iframe uses sandbox="allow-same-origin" so injected CV HTML can resolve
+       * relative resources. Scripts are intentionally blocked (no allow-scripts).
+       * Do NOT add allow-scripts without a security review — allow-same-origin +
+       * allow-scripts would expose the parent DOM to the injected content.
+       */}
       <div className="flex-1 bg-white rounded-xl shadow-soft overflow-hidden">
         {previewError ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
