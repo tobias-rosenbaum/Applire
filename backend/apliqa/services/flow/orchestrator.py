@@ -58,7 +58,9 @@ VALID_TRANSITIONS: dict[str, list[str]] = {
 _ARTIFACT_FIELD: dict[str, str] = {
     "gap_analysis":   "gap_analysis_id",
     "interview":      "interview_session_id",
-    "cv_generation":  "generated_cv_id",
+    # cv_generation does NOT require an artifact — the CV is generated asynchronously
+    # from the CV page.  The artifact is recorded when advancing to "complete".
+    "complete":       "generated_cv_id",
 }
 
 

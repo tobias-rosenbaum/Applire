@@ -46,6 +46,7 @@ class ApplicationResponse(BaseModel):
     applied_at: datetime | None
     deadline: datetime | None
     flow_session_id: uuid.UUID | None
+    flow_current_step: str | None = None
     created_at: datetime
     updated_at: datetime
     expires_at: datetime

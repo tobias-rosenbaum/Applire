@@ -298,8 +298,8 @@ async def test_advance_flow_sets_completed_at(db, user_and_job):
     # Drive to cv_generation step
     await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
     await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="complete"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="complete", artifact_id=uuid.uuid4()), db)
 
     result = await db.execute(select(FlowSession).where(FlowSession.id == flow_id))
     flow = result.scalar_one()
@@ -341,8 +341,8 @@ async def test_advance_flow_from_complete_raises(db, user_and_job):
     # Reach complete
     await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
     await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="complete"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="complete", artifact_id=uuid.uuid4()), db)
 
     with pytest.raises(InvalidTransitionError) as exc_info:
         await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)

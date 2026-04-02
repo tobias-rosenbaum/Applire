@@ -34,6 +34,7 @@ from apliqa.services.profile import (
     import_from_linkedin_zip,
     import_from_pdf,
     patch_profile_section,
+    profile_exists,
     resolve_conflict,
     upload_cv,
 )
@@ -201,6 +202,15 @@ async def import_profile(
         )
 
 
+@router.get("/exists")
+async def check_profile_exists(
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> dict:
+    """Lightweight check: returns exists + completeness_score (no full profile payload)."""
+    return await profile_exists(db)
+
+
 @router.get("", response_model=MasterProfileResponse, status_code=status.HTTP_200_OK)
 async def get_current_profile(
     db: AsyncSession = Depends(get_db),
@@ -333,7 +343,9 @@ async def erase_profile(
         counts["uploads"] = r.rowcount
 
         # 2. generated_cvs (via profile_id subquery)
-        profile_ids_sq = select(MasterProfile.id).where(MasterProfile.user_id == uid)
+        # MasterProfile has no user_id column — in single-user deployments all
+        # profiles belong to the authenticating user, so no user filter is needed.
+        profile_ids_sq = select(MasterProfile.id)
         r = await db.execute(
             delete(GeneratedCV).where(GeneratedCV.profile_id.in_(profile_ids_sq))
         )
@@ -353,8 +365,8 @@ async def erase_profile(
         r = await db.execute(delete(Application).where(Application.user_id == uid))
         counts["applications"] = r.rowcount
 
-        # 6. master_profiles (direct user_id)
-        r = await db.execute(delete(MasterProfile).where(MasterProfile.user_id == uid))
+        # 6. master_profiles — no user_id column; delete all (single-user deployment)
+        r = await db.execute(delete(MasterProfile))
         counts["master_profiles"] = r.rowcount
 
         # 7. user record
@@ -404,10 +416,10 @@ async def export_profile(
     user = await auth.get_current_user(request)
     uid = user.id
 
-    # Profile
+    # Profile — MasterProfile has no user_id column; use the same _get_latest pattern
     profile_result = await db.execute(
         select(MasterProfile)
-        .where(MasterProfile.user_id == uid, MasterProfile.deleted_at.is_(None))
+        .where(MasterProfile.deleted_at.is_(None))
         .order_by(MasterProfile.created_at.desc())
         .limit(1)
     )

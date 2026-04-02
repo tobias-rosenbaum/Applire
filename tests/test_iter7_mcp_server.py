@@ -35,6 +35,9 @@ _EXPECTED_TOOLS = {
     "run_interview",
     "send_message",
     "generate_cv",
+    # Added in sprint 7 (Task 21.14)
+    "list_applications",
+    "get_application",
 }
 
 _EXPECTED_STATIC_RESOURCE_URIS = {
@@ -176,8 +179,8 @@ def test_mcp_sse_transport_rejected_with_exit_code_1():
 # ---------------------------------------------------------------------------
 
 
-def test_mcp_tools_list_returns_all_seven_tools():
-    """tools/list must advertise exactly the 7 core Community tools."""
+def test_mcp_tools_list_returns_all_tools():
+    """tools/list must advertise all registered Community tools."""
     _, responses = _run_mcp(_INIT + _INITIALIZED + _TOOLS_LIST)
     resp = _find(responses, 2)
     assert resp is not None, f"No response to tools/list. Responses: {responses}"
