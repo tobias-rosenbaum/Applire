@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ScoreCircle } from "@/components/ui/score-circle";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
@@ -55,6 +55,28 @@ export function CVPreview({
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setContainerSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // CV templates use width: 210mm ≈ 794px at 96 dpi
+  const CV_WIDTH = 794;
+  const scale =
+    containerSize.width > 0 ? Math.min(1, containerSize.width / CV_WIDTH) : 1;
+  const needsScaling = scale < 1;
 
   useEffect(() => {
     let cancelled = false;
@@ -102,9 +124,9 @@ export function CVPreview({
   }
 
   return (
-    <div className="flex gap-6 h-[75vh] animate-fade-in">
-      {/* Left metadata panel (40%) */}
-      <div className="w-2/5 flex flex-col gap-4 bg-neutral-light rounded-xl p-5 overflow-y-auto shrink-0">
+    <div className="flex flex-col md:flex-row gap-4 md:gap-6 animate-fade-in">
+      {/* Left metadata panel — 256px fixed on desktop, full-width on mobile */}
+      <div className="w-full md:w-64 md:h-[75vh] flex flex-col gap-4 bg-neutral-light rounded-xl p-5 overflow-y-auto shrink-0">
         {jobSummary && (
           <h2 className="text-lg font-heading font-bold text-neutral-dark leading-snug">
             {jobSummary.role_title}
@@ -166,13 +188,30 @@ export function CVPreview({
       </div>
 
       {/*
-       * Right preview panel (60%).
+       * Right preview panel.
        * The iframe uses sandbox="allow-same-origin" so injected CV HTML can resolve
        * relative resources. Scripts are intentionally blocked (no allow-scripts).
        * Do NOT add allow-scripts without a security review — allow-same-origin +
        * allow-scripts would expose the parent DOM to the injected content.
+       *
+       * On narrow screens the CV (794px wide) is scaled down to fit via CSS transform.
+       * The zoom toggle lets users switch to full-size 1:1 view with scroll.
        */}
-      <div className="flex-1 bg-white rounded-xl shadow-soft overflow-hidden">
+      <div
+        ref={previewRef}
+        className="flex-1 h-[60vh] md:h-[75vh] bg-white rounded-xl shadow-soft overflow-hidden relative"
+      >
+        {/* Zoom toggle — only shown on narrow screens where scaling is active */}
+        {needsScaling && htmlContent && !previewError && (
+          <button
+            type="button"
+            onClick={() => setIsZoomed((z) => !z)}
+            className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm border border-gray-200 text-xs text-gray-600 px-2 py-1 rounded shadow-sm hover:bg-white transition-colors"
+          >
+            {isZoomed ? "Einpassen" : "Vergrößern"}
+          </button>
+        )}
+
         {previewError ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <p className="text-sm text-gray-500">
@@ -190,13 +229,39 @@ export function CVPreview({
             </button>
           </div>
         ) : htmlContent ? (
-          <iframe
-            srcDoc={htmlContent}
-            sandbox="allow-same-origin"
-            title="Lebenslauf Vorschau"
-            className="w-full h-full border-0"
-            data-testid="cv-iframe"
-          />
+          needsScaling && !isZoomed ? (
+            // Fit-to-width: scale the 794px CV down to the container width
+            <iframe
+              srcDoc={htmlContent}
+              sandbox="allow-same-origin"
+              title="Lebenslauf Vorschau"
+              style={{
+                width: CV_WIDTH,
+                height: containerSize.height / scale,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                border: "none",
+                display: "block",
+              }}
+              data-testid="cv-iframe"
+            />
+          ) : (
+            // Full-size: 1:1 view, scroll to navigate (zoomed on mobile, normal on desktop)
+            <div className={`h-full ${needsScaling ? "overflow-auto" : ""}`}>
+              <iframe
+                srcDoc={htmlContent}
+                sandbox="allow-same-origin"
+                title="Lebenslauf Vorschau"
+                style={
+                  needsScaling
+                    ? { width: CV_WIDTH, minHeight: "100%", border: "none", display: "block" }
+                    : {}
+                }
+                className={needsScaling ? "" : "w-full h-full border-0"}
+                data-testid="cv-iframe"
+              />
+            </div>
+          )
         ) : (
           <div className="w-full h-full animate-pulse bg-gray-100 rounded" />
         )}
