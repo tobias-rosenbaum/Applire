@@ -56,11 +56,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    // Uncomment to add Firefox and WebKit testing in the future
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+
+    // Uncomment to add WebKit testing in the future
     // {
     //   name: 'webkit',
     //   use: { ...devices['Desktop Safari'] },
