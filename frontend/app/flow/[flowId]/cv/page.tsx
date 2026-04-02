@@ -73,8 +73,15 @@ export default function CVPage({
 
   function handleReady(readyCvId: string) {
     setCvId(readyCvId);
-    // Refresh flow state so cv_summary is populated for CVPreview
-    fetch(`${API_BASE}/api/flow/${flowId}/state`)
+    // Advance flow to "complete", recording the generated_cv_id as the artifact.
+    // Then refresh flow state so cv_summary (pdf_url, expires_at) is populated
+    // for CVPreview.
+    fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "complete", artifact_id: readyCvId }),
+    })
+      .then(() => fetch(`${API_BASE}/api/flow/${flowId}/state`))
       .then((r) => r.json())
       .then((fs: FlowState) => setFlowState(fs))
       .catch(() => {});

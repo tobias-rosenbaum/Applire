@@ -338,6 +338,20 @@ export default function GapsPage({
         }
         router.push(`/flow/${flowId}/interview`);
       } else {
+        // cv_generation does not require an artifact_id — the CV is generated
+        // from the CV page.  Advance the flow first so the layout guard allows
+        // the navigation (otherwise it snaps back to /gaps).
+        const advRes = await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "cv_generation" }),
+        });
+        if (!advRes.ok) {
+          const errData = await advRes.json().catch(() => ({}));
+          throw new Error(
+            typeof errData.detail === "string" ? errData.detail : "Failed to advance to CV"
+          );
+        }
         router.push(`/flow/${flowId}/cv`);
       }
     } catch (e: unknown) {

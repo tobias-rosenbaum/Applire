@@ -41,17 +41,36 @@ export default function FlowIndexPage({
         }
         const state = await stateRes.json();
 
-        // Determine the target step from available_actions
         const nextStep: string | undefined = state.available_actions?.next;
         if (!nextStep) {
           router.replace("/");
           return;
         }
 
+        // gap_analysis requires an artifact_id (the gap analysis result).
+        // Run the analysis here — before advancing — so the flow stores the
+        // gap_analysis_id.  This ensures the gaps page always reads a cached
+        // result instead of re-running the LLM on every load.
+        let artifactId: string | undefined;
+        if (nextStep === "gap_analysis" && state.job_id) {
+          const gapRes = await fetch(`${API_BASE}/api/job/${state.job_id}/gaps`, {
+            method: "POST",
+          });
+          if (!gapRes.ok) {
+            router.replace("/");
+            return;
+          }
+          const gapData = await gapRes.json();
+          artifactId = gapData.id;
+        }
+
         const advRes = await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ step: nextStep }),
+          body: JSON.stringify({
+            step: nextStep,
+            ...(artifactId ? { artifact_id: artifactId } : {}),
+          }),
         });
 
         if (advRes.ok) {
