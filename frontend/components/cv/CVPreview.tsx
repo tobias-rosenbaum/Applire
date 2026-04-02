@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { ScoreCircle } from "@/components/ui/score-circle";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
@@ -51,6 +52,32 @@ export function CVPreview({
   onRegenerateSame,
   onNext,
 }: CVPreviewProps) {
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHtmlContent(null);
+    setPreviewError(false);
+
+    fetch(`${API_BASE}/api/cv/${cvId}/html`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load preview");
+        return res.text();
+      })
+      .then((html) => {
+        if (!cancelled) setHtmlContent(html);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cvId, retryCount]);
+
   const isExpired = cvSummary
     ? new Date(cvSummary.expires_at) < new Date()
     : false;
@@ -138,14 +165,35 @@ export function CVPreview({
         </div>
       </div>
 
-      {/* Right iframe panel (60%) */}
+      {/* Right preview panel (60%) */}
       <div className="flex-1 bg-white rounded-xl shadow-soft overflow-hidden">
-        <iframe
-          src={`${API_BASE}/api/cv/${cvId}/html`}
-          title="Lebenslauf Vorschau"
-          className="w-full h-full border-0"
-          data-testid="cv-iframe"
-        />
+        {previewError ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <p className="text-sm text-gray-500">
+              Vorschau konnte nicht geladen werden.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setPreviewError(false);
+                setRetryCount((c) => c + 1);
+              }}
+              className="text-sm text-teal underline hover:opacity-80"
+            >
+              Erneut versuchen
+            </button>
+          </div>
+        ) : htmlContent ? (
+          <iframe
+            srcDoc={htmlContent}
+            sandbox="allow-same-origin"
+            title="Lebenslauf Vorschau"
+            className="w-full h-full border-0"
+            data-testid="cv-iframe"
+          />
+        ) : (
+          <div className="w-full h-full animate-pulse bg-gray-100 rounded" />
+        )}
       </div>
     </div>
   );
