@@ -5,11 +5,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
+  css: { postcss: { plugins: [] } },
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: [],
-    passWithNoTests: true,
+    setupFiles: ["./vitest.setup.ts"],
   },
   resolve: {
     alias: {
