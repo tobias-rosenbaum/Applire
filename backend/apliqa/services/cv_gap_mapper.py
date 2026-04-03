@@ -1,9 +1,10 @@
 """Keyword-based gap-to-section mapper (no LLM, ~5ms).
 
 For each gap label, tokenise it and count how many of its tokens appear
-in each section's content. The section with the highest score gets the
-gap assigned to it. Ties: first section wins. Zero-score gaps fall into
-the __general__ bucket.
+in each section's content. A gap is assigned to every section whose content
+contains at least one matching token — the same gap can appear under multiple
+sections if it is relevant to each. Gaps with zero matches in any section fall
+into the __general__ bucket.
 """
 import re
 
