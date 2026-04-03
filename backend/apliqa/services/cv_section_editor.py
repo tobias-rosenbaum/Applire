@@ -8,7 +8,6 @@ Responsibilities:
 - apply_overrides_to_tailored: merge section_overrides on top of TailoredCVData (used by get_cv_html)
 """
 import uuid
-from copy import deepcopy
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -231,7 +230,6 @@ async def patch_cv_section(
     Returns updated HTML and list of all applied overrides.
     """
     from apliqa.services.cv import _jinja_env, _TEMPLATE_FILES
-    from apliqa.schemas.cv import TailoredCVData
 
     record = await _load_cv(cv_id, db)
 
@@ -277,7 +275,12 @@ async def _save_section_to_profile(
     record: GeneratedCV,
     db: AsyncSession,
 ) -> None:
-    """Additively merge the edited section content into the Master Profile (ADR-013)."""
+    """Merge the edited section content into the Master Profile (ADR-013).
+
+    introduction: replaces professional_summary.de (user intent is replacement here)
+    skills: additive — only appends skills not already present
+    position::{uuid}: replaces responsibilities on the first matching work_experience entry
+    """
     from apliqa.schemas.profile import MasterProfileData
 
     profile = await db.get(MasterProfile, record.profile_id)
@@ -287,9 +290,6 @@ async def _save_section_to_profile(
     profile_data = MasterProfileData.model_validate(profile.profile_json)
 
     if section_id == "introduction":
-        if profile_data.professional_summary is None:
-            from apliqa.schemas.profile import ProfessionalSummary
-            profile_data.professional_summary = ProfessionalSummary()
         profile_data.professional_summary.de = content
 
     elif section_id == "skills":
