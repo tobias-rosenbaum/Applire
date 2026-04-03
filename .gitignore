@@ -63,3 +63,4 @@ playwright-report/
 
 docs/
 .superpowers/
+.worktrees/
