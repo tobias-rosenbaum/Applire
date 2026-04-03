@@ -212,8 +212,12 @@ async def get_pdf_filename(cv_id: uuid.UUID, db: AsyncSession) -> str:
 
 
 async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
+    from apliqa.services.cv_section_editor import apply_overrides_to_tailored
     record = await _load_cv_ready(cv_id, db)
     tailored = TailoredCVData.model_validate(record.tailored_data)
+    tailored = apply_overrides_to_tailored(
+        tailored, record.content_snapshot, record.section_overrides
+    )
     template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
     template = _jinja_env.get_template(template_file)
     return template.render(cv=tailored)
@@ -290,6 +294,9 @@ async def _render_cv_background(
             )
 
             tailored = TailoredCVData.model_validate(tailored_raw)
+
+            from apliqa.services.cv_section_editor import build_content_snapshot
+            record.content_snapshot = build_content_snapshot(tailored)
 
             record.tailored_data = tailored.model_dump()
             record.status = CVGenerationStatus.ready.value
