@@ -1,7 +1,7 @@
 // frontend/components/cv/SectionEditor.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GapHint } from "./GapHint";
 import { SaveScopePrompt } from "./SaveScopePrompt";
 
@@ -23,11 +23,12 @@ interface SectionItem {
 interface SectionEditorProps {
   cvId: string;
   section: SectionItem;
-  onSaved: (updatedHtml: string, savedContent: string) => void;
+  onSaved: (updatedHtml: string, savedContent: string, resolvedGaps: string[]) => void;
   onUnsavedChange: (hasUnsaved: boolean) => void;
 }
 
 export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: SectionEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(section.content);
   const [savedContent, setSavedContent] = useState(section.content);
   const [visibleGaps, setVisibleGaps] = useState<GapHintItem[]>(section.gaps);
@@ -58,7 +59,6 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
   }
 
   function handleSaveClick() {
-    // Check for a remembered session scope
     const remembered = sessionStorage.getItem("finetune_save_scope");
     if (remembered !== null) {
       void executeSave(remembered === "profile");
@@ -87,10 +87,16 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
         throw new Error(`Save failed: ${res.status}`);
       }
 
-      const data: { html: string; overrides_applied: string[] } = await res.json();
+      const data: { html: string; overrides_applied: string[]; resolved_gaps: string[] } =
+        await res.json();
       setSavedContent(content);
       onUnsavedChange(false);
-      onSaved(data.html, content);
+      // Remove resolved gaps from the visible list
+      if (data.resolved_gaps?.length) {
+        const resolvedSet = new Set(data.resolved_gaps);
+        setVisibleGaps((prev) => prev.filter((g) => !resolvedSet.has(g.id)));
+      }
+      onSaved(data.html, content, data.resolved_gaps ?? []);
     } catch {
       setSaveError("Speichern fehlgeschlagen. Bitte erneut versuchen.");
       setShowPreviewStale(true);
@@ -101,6 +107,14 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
 
   function handleDismissGap(gapId: string) {
     setVisibleGaps((prev) => prev.filter((g) => g.id !== gapId));
+  }
+
+  function handleAcceptSuggestion(suggestion: string, focus: boolean) {
+    setContent(suggestion);
+    onUnsavedChange(suggestion !== savedContent);
+    if (focus) {
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    }
   }
 
   const hasUnsaved = content !== savedContent;
@@ -117,6 +131,7 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
       <p className="text-xs font-semibold text-neutral-dark">{section.label}</p>
 
       <textarea
+        ref={textareaRef}
         value={content}
         onChange={(e) => handleContentChange(e.target.value)}
         data-testid="section-textarea"
@@ -152,12 +167,18 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
         </button>
       </div>
 
-      {/* Gap hints */}
       {visibleGaps.length > 0 && (
         <div className="mt-1">
           <p className="text-xs text-gray-500 mb-1">Lücken in diesem Abschnitt:</p>
           {visibleGaps.map((gap) => (
-            <GapHint key={gap.id} gap={gap} onDismiss={handleDismissGap} />
+            <GapHint
+              key={gap.id}
+              gap={gap}
+              cvId={cvId}
+              sectionId={section.section_id}
+              onDismiss={handleDismissGap}
+              onAcceptSuggestion={handleAcceptSuggestion}
+            />
           ))}
         </div>
       )}
