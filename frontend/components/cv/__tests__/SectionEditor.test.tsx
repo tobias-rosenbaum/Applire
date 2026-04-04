@@ -1,0 +1,124 @@
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi, describe, it, expect, afterEach } from "vitest";
+import { SectionEditor } from "../SectionEditor";
+
+const MOCK_SECTION = {
+  section_id: "introduction",
+  label: "Introduction",
+  content: "Original content",
+  has_override: false,
+  gaps: [{ id: "Python", label: "Python" }],
+};
+
+const BASE_PROPS = {
+  cvId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  section: MOCK_SECTION,
+  onSaved: vi.fn(),
+  onUnsavedChange: vi.fn(),
+};
+
+describe("SectionEditor", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    sessionStorage.clear();
+  });
+
+  it("pre-fills textarea with section content", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    const textarea = screen.getByTestId("section-textarea") as HTMLTextAreaElement;
+    expect(textarea.value).toBe("Original content");
+  });
+
+  it("disables Save and Cancel when content is unchanged", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    expect((screen.getByTestId("section-save") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId("section-cancel") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("enables Save and Cancel when content changes", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "New content" },
+    });
+    expect((screen.getByTestId("section-save") as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId("section-cancel") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("Cancel reverts textarea to original content", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "New content" },
+    });
+    fireEvent.click(screen.getByTestId("section-cancel"));
+    const textarea = screen.getByTestId("section-textarea") as HTMLTextAreaElement;
+    expect(textarea.value).toBe("Original content");
+  });
+
+  it("Save shows scope prompt when no remembered choice", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "New content" },
+    });
+    fireEvent.click(screen.getByTestId("section-save"));
+    expect(screen.getByTestId("save-cv-only-btn")).toBeTruthy();
+    expect(screen.getByTestId("save-to-profile-btn")).toBeTruthy();
+  });
+
+  it("Save calls PATCH with correct payload after scope selection", async () => {
+    const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        html: "<html>updated</html>",
+        overrides_applied: ["introduction"],
+      }),
+    } as Response);
+
+    render(<SectionEditor {...BASE_PROPS} />);
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "New content" },
+    });
+    fireEvent.click(screen.getByTestId("section-save"));
+    fireEvent.click(screen.getByTestId("save-cv-only-btn"));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/sections/introduction"),
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ content: "New content", save_to_profile: false }),
+        })
+      );
+    });
+  });
+
+  it("shows error message when PATCH fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
+    sessionStorage.setItem("finetune_save_scope", "cv");
+
+    render(<SectionEditor {...BASE_PROPS} />);
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "New content" },
+    });
+    fireEvent.click(screen.getByTestId("section-save"));
+
+    await screen.findByText("Speichern fehlgeschlagen. Bitte erneut versuchen.");
+  });
+
+  it("renders gap hints", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    expect(screen.getByText("Python")).toBeTruthy();
+    expect(screen.getByTestId("write-myself-btn")).toBeTruthy();
+    expect(screen.getByTestId("kaile-help-btn")).toBeTruthy();
+  });
+
+  it("'Kaile hilft' button is disabled", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    expect((screen.getByTestId("kaile-help-btn") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("dismissing a gap removes it from the list", () => {
+    render(<SectionEditor {...BASE_PROPS} />);
+    fireEvent.click(screen.getByTestId("write-myself-btn"));
+    expect(screen.queryByText("Python")).toBeNull();
+  });
+});
