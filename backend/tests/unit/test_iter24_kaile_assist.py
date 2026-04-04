@@ -66,6 +66,7 @@ def test_post_assist_422_on_invalid_gap_id(client):
             json={"gap_id": "NonExistentGap"},
         )
     assert r.status_code == 422
+    assert "gap_id" in str(r.json().get("detail", "")).lower()
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +89,7 @@ def test_patch_assist_suggestion_returned(client):
             json={"session_id": "s1", "answer": "5 Jahre"},
         )
     assert r.status_code == 200
-    assert "Python" in r.json()["suggestion"]
+    assert r.json()["suggestion"] == "Erfahrener Python-Entwickler mit 5 Jahren."
 
 
 def test_patch_assist_422_on_invalid_session_id(client):
@@ -102,6 +103,7 @@ def test_patch_assist_422_on_invalid_session_id(client):
             json={"session_id": "bad-id", "answer": "anything"},
         )
     assert r.status_code == 422
+    assert "session" in str(r.json().get("detail", "")).lower()
 
 
 # ---------------------------------------------------------------------------
