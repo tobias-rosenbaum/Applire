@@ -49,3 +49,22 @@ class SectionPatchRequest(BaseModel):
 class SectionPatchResponse(BaseModel):
     html: str
     overrides_applied: list[str]
+    resolved_gaps: list[str] = []
+
+
+class AssistStartRequest(BaseModel):
+    gap_id: str
+
+
+class AssistStartResponse(BaseModel):
+    session_id: str
+    question: str
+
+
+class AssistAnswerRequest(BaseModel):
+    session_id: str
+    answer: str
+
+
+class AssistAnswerResponse(BaseModel):
+    suggestion: str
