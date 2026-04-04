@@ -12,7 +12,9 @@ from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
 from apliqa.providers import get_provider
 from apliqa.providers.llm.base import LLMProvider
 from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse, CVStatusResponse
+from apliqa.schemas.cv_sections import CVSectionsResponse, SectionPatchRequest, SectionPatchResponse
 from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf, get_cv_status, get_pdf_filename, list_cvs_for_job
+from apliqa.services.cv_section_editor import get_cv_sections, patch_cv_section
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -106,6 +108,49 @@ async def get_cvs_for_job(
     base_url = str(request.base_url).rstrip("/")
     try:
         return await list_cvs_for_job(job_id, db, base_url)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@router.get("/{cv_id}/sections", response_model=CVSectionsResponse)
+async def get_sections(
+    cv_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> CVSectionsResponse:
+    """Return structured sections with gap hints (23.3). Empty sections if no snapshot yet."""
+    try:
+        return await get_cv_sections(cv_id, db)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@router.patch(
+    "/{cv_id}/sections/{section_id:path}",
+    response_model=SectionPatchResponse,
+)
+async def patch_section(
+    cv_id: uuid.UUID,
+    section_id: str,
+    body: SectionPatchRequest,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> SectionPatchResponse:
+    """Write section override and re-render CV HTML (23.4).
+
+    Returns updated HTML and the full list of applied overrides.
+    422 if section_id is unknown or content > 10,000 chars.
+    """
+    try:
+        return await patch_cv_section(
+            cv_id, section_id, body.content, body.save_to_profile, db
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
