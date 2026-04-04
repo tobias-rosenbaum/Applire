@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { ScoreCircle } from "@/components/ui/score-circle";
+import { FineTunePanel } from "./FineTunePanel";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -54,6 +55,7 @@ export function CVPreview({
 }: CVPreviewProps) {
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
+  const [fineTuneOpen, setFineTuneOpen] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -165,107 +167,131 @@ export function CVPreview({
           </button>
           <button
             type="button"
-            onClick={onRegenerateSame}
-            className="w-full border border-teal text-teal font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
+            onClick={() => setFineTuneOpen((o) => !o)}
+            data-testid="finetune-toggle"
+            className={`w-full font-semibold py-2.5 rounded-lg text-sm transition-opacity hover:opacity-90 ${
+              fineTuneOpen
+                ? "bg-teal text-white"
+                : "border border-teal text-teal"
+            }`}
           >
-            Neu generieren
+            {fineTuneOpen ? "Fine-tune schließen" : "Fine-tune"}
           </button>
-          <button
-            type="button"
-            onClick={onRegenerateDifferent}
-            className="w-full border border-teal text-teal font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
-          >
-            Andere Vorlage
-          </button>
-          <button
-            type="button"
-            onClick={onNext}
-            className="w-full bg-teal text-white font-semibold py-3 rounded-lg text-sm hover:opacity-90 transition-colors"
-          >
-            Was nun? →
-          </button>
+          {!fineTuneOpen && (
+            <>
+              <button
+                type="button"
+                onClick={onRegenerateSame}
+                className="w-full border border-teal text-teal font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
+              >
+                Neu generieren
+              </button>
+              <button
+                type="button"
+                onClick={onRegenerateDifferent}
+                className="w-full border border-teal text-teal font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
+              >
+                Andere Vorlage
+              </button>
+              <button
+                type="button"
+                onClick={onNext}
+                className="w-full bg-teal text-white font-semibold py-3 rounded-lg text-sm hover:opacity-90 transition-colors"
+              >
+                Was nun? →
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/*
-       * Right preview panel.
-       * The iframe uses sandbox="allow-same-origin" so injected CV HTML can resolve
-       * relative resources. Scripts are intentionally blocked (no allow-scripts).
-       * Do NOT add allow-scripts without a security review — allow-same-origin +
-       * allow-scripts would expose the parent DOM to the injected content.
-       *
-       * On narrow screens the CV (794px wide) is scaled down to fit via CSS transform.
-       * The zoom toggle lets users switch to full-size 1:1 view with scroll.
-       */}
-      <div
-        ref={previewRef}
-        className="flex-1 h-[60vh] md:h-[75vh] bg-white rounded-xl shadow-soft overflow-hidden relative"
-      >
-        {/* Zoom toggle — only shown on narrow screens where scaling is active */}
-        {needsScaling && htmlContent && !previewError && (
-          <button
-            type="button"
-            onClick={() => setIsZoomed((z) => !z)}
-            className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm border border-gray-200 text-xs text-gray-600 px-2 py-1 rounded shadow-sm hover:bg-white transition-colors"
-          >
-            {isZoomed ? "Einpassen" : "Vergrößern"}
-          </button>
-        )}
-
-        {previewError ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <p className="text-sm text-gray-500">
-              Vorschau konnte nicht geladen werden.
-            </p>
+      {fineTuneOpen ? (
+        <FineTunePanel
+          cvId={cvId}
+          initialHtml={htmlContent}
+          onClose={() => setFineTuneOpen(false)}
+        />
+      ) : (
+        /*
+         * Right preview panel.
+         * The iframe uses sandbox="allow-same-origin" so injected CV HTML can resolve
+         * relative resources. Scripts are intentionally blocked (no allow-scripts).
+         * Do NOT add allow-scripts without a security review — allow-same-origin +
+         * allow-scripts would expose the parent DOM to the injected content.
+         *
+         * On narrow screens the CV (794px wide) is scaled down to fit via CSS transform.
+         * The zoom toggle lets users switch to full-size 1:1 view with scroll.
+         */
+        <div
+          ref={previewRef}
+          className="flex-1 h-[60vh] md:h-[75vh] bg-white rounded-xl shadow-soft overflow-hidden relative"
+        >
+          {/* Zoom toggle — only shown on narrow screens where scaling is active */}
+          {needsScaling && htmlContent && !previewError && (
             <button
               type="button"
-              onClick={() => {
-                setPreviewError(false);
-                setRetryCount((c) => c + 1);
-              }}
-              className="text-sm text-teal underline hover:opacity-80"
+              onClick={() => setIsZoomed((z) => !z)}
+              className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm border border-gray-200 text-xs text-gray-600 px-2 py-1 rounded shadow-sm hover:bg-white transition-colors"
             >
-              Erneut versuchen
+              {isZoomed ? "Einpassen" : "Vergrößern"}
             </button>
-          </div>
-        ) : htmlContent ? (
-          needsScaling && !isZoomed ? (
-            // Fit-to-width: scale the 794px CV down to the container width
-            <iframe
-              srcDoc={htmlContent}
-              sandbox="allow-same-origin"
-              title="Lebenslauf Vorschau"
-              style={{
-                width: CV_WIDTH,
-                height: containerSize.height / scale,
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-                border: "none",
-                display: "block",
-              }}
-              data-testid="cv-iframe"
-            />
-          ) : (
-            // Full-size: 1:1 view, scroll to navigate (zoomed on mobile, normal on desktop)
-            <div className={`h-full ${needsScaling ? "overflow-auto" : ""}`}>
+          )}
+
+          {previewError ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3">
+              <p className="text-sm text-gray-500">
+                Vorschau konnte nicht geladen werden.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewError(false);
+                  setRetryCount((c) => c + 1);
+                }}
+                className="text-sm text-teal underline hover:opacity-80"
+              >
+                Erneut versuchen
+              </button>
+            </div>
+          ) : htmlContent ? (
+            needsScaling && !isZoomed ? (
+              // Fit-to-width: scale the 794px CV down to the container width
               <iframe
                 srcDoc={htmlContent}
                 sandbox="allow-same-origin"
                 title="Lebenslauf Vorschau"
-                style={
-                  needsScaling
-                    ? { width: CV_WIDTH, minHeight: "100%", border: "none", display: "block" }
-                    : {}
-                }
-                className={needsScaling ? "" : "w-full h-full border-0"}
+                style={{
+                  width: CV_WIDTH,
+                  height: containerSize.height / scale,
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                  border: "none",
+                  display: "block",
+                }}
                 data-testid="cv-iframe"
               />
-            </div>
-          )
-        ) : (
-          <div className="w-full h-full animate-pulse bg-gray-100 rounded" />
-        )}
-      </div>
+            ) : (
+              // Full-size: 1:1 view, scroll to navigate (zoomed on mobile, normal on desktop)
+              <div className={`h-full ${needsScaling ? "overflow-auto" : ""}`}>
+                <iframe
+                  srcDoc={htmlContent}
+                  sandbox="allow-same-origin"
+                  title="Lebenslauf Vorschau"
+                  style={
+                    needsScaling
+                      ? { width: CV_WIDTH, minHeight: "100%", border: "none", display: "block" }
+                      : {}
+                  }
+                  className={needsScaling ? "" : "w-full h-full border-0"}
+                  data-testid="cv-iframe"
+                />
+              </div>
+            )
+          ) : (
+            <div className="w-full h-full animate-pulse bg-gray-100 rounded" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
