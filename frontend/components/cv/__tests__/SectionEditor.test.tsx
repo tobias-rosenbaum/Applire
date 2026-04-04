@@ -70,6 +70,7 @@ describe("SectionEditor", () => {
       json: async () => ({
         html: "<html>updated</html>",
         overrides_applied: ["introduction"],
+        resolved_gaps: [],
       }),
     } as Response);
 
@@ -111,14 +112,62 @@ describe("SectionEditor", () => {
     expect(screen.getByTestId("kaile-help-btn")).toBeTruthy();
   });
 
-  it("'Kaile hilft' button is disabled", () => {
+  it("'Kaile hilft' button is enabled", () => {
     render(<SectionEditor {...BASE_PROPS} />);
-    expect((screen.getByTestId("kaile-help-btn") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId("kaile-help-btn") as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("dismissing a gap removes it from the list", () => {
     render(<SectionEditor {...BASE_PROPS} />);
     fireEvent.click(screen.getByTestId("write-myself-btn"));
     expect(screen.queryByText("Python")).toBeNull();
+  });
+
+  it("Save invokes onSaved with html, content, and resolvedGaps", async () => {
+    const onSaved = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        html: "<html>updated</html>",
+        overrides_applied: ["introduction"],
+        resolved_gaps: ["Python"],
+      }),
+    } as Response);
+
+    sessionStorage.setItem("finetune_save_scope", "cv");
+
+    render(<SectionEditor {...BASE_PROPS} onSaved={onSaved} />);
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "Updated content" },
+    });
+    fireEvent.click(screen.getByTestId("section-save"));
+
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith("<html>updated</html>", "Updated content", ["Python"]);
+    });
+  });
+
+  it("resolved_gaps from save removes gap from visible list", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        html: "<html/>",
+        overrides_applied: ["introduction"],
+        resolved_gaps: ["Python"],
+      }),
+    } as Response);
+    sessionStorage.setItem("finetune_save_scope", "cv");
+
+    render(<SectionEditor {...BASE_PROPS} />);
+    expect(screen.queryAllByTestId("write-myself-btn").length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByTestId("section-textarea"), {
+      target: { value: "Python developer" },
+    });
+    fireEvent.click(screen.getByTestId("section-save"));
+
+    await waitFor(() => {
+      expect(screen.queryAllByTestId("write-myself-btn").length).toBe(0);
+    });
   });
 });
