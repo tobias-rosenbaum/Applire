@@ -4,7 +4,7 @@
 Responsibilities:
 - build_content_snapshot: extract structured snapshot from TailoredCVData at generation time
 - get_cv_sections: return merged snapshot+overrides+gap hints for GET /api/cv/{id}/sections
-- patch_cv_section: write override, re-render, optionally save to profile
+- patch_cv_section: write override, re-render, optionally save to profile and auto-resolve gaps
 - apply_overrides_to_tailored: merge section_overrides on top of TailoredCVData (used by get_cv_html)
 """
 import uuid
@@ -227,7 +227,8 @@ async def patch_cv_section(
     """Write a section override and re-render the CV HTML.
 
     Validates section_id against snapshot. Optionally saves to profile.
-    Returns updated HTML and list of all applied overrides.
+    Auto-resolves gaps whose keywords are now present in the new content.
+    Returns updated HTML, list of all applied overrides, and resolved gap IDs.
     """
     from apliqa.services.cv import _jinja_env, _TEMPLATE_FILES
 
