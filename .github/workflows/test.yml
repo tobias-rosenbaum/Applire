@@ -28,15 +28,15 @@ jobs:
           pip install pytest pytest-cov pytest-asyncio pytest-mock requests
 
       - name: Run unit tests with coverage
-        working-directory: backend
         run: |
-          pytest tests/unit/ \
+          PYTHONPATH=backend pytest tests/unit/ backend/tests/unit/ \
             --ignore=tests/conftest.py \
+            --ignore=backend/tests/conftest.py \
             --cov=applire \
             --cov-report=term-missing \
-            --cov-report=html \
+            --cov-report=html:backend/htmlcov \
             --cov-fail-under=70 \
-            --junitxml=test-results.xml \
+            --junitxml=backend/test-results.xml \
             -v
 
       - name: Upload coverage report
