@@ -89,7 +89,7 @@ async def user_and_job(db):
 
     user = User(
         id=_STUB_USER_ID,
-        email="local@apliqa.community",
+        email="local@applire.community",
         created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     job = JobAnalysis(

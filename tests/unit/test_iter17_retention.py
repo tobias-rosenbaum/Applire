@@ -80,7 +80,7 @@ async def user_and_job(db):
 
     user = User(
         id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
-        email="retention17@apliqa.community",
+        email="retention17@applire.community",
         created_at=_now(),
     )
     job = JobAnalysis(

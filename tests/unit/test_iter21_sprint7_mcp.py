@@ -24,7 +24,7 @@ from mcp.shared.exceptions import McpError
 
 
 def _mock_db():
-    """Return a context-manager mock for apliqa.mcp.deps.get_db."""
+    """Return a context-manager mock for applire.mcp.deps.get_db."""
     mock_session = AsyncMock()
     cm = MagicMock()
     cm.__aenter__ = AsyncMock(return_value=mock_session)

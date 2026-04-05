@@ -8,8 +8,8 @@ Coverage:
   - LLMRateLimitError raised after retries exhausted (Mistral, OpenAI, Ollama, OpenRouter)
   - LLMTimeoutError raised when asyncio.wait_for fires
   - Config: openrouter_api_key / openrouter_model / openrouter_base_url fields present
-  - Backward compat: apliqa.providers.base still exports LLMProvider
-  - Backward compat: apliqa.providers still exports get_provider
+  - Backward compat: applire.providers.base still exports LLMProvider
+  - Backward compat: applire.providers still exports get_provider
 """
 
 import asyncio
@@ -118,8 +118,8 @@ def test_openrouter_headers_and_default_model(monkeypatch):
         p = OpenRouterProvider()
 
     headers = captured_kwargs.get("default_headers", {})
-    assert headers.get("HTTP-Referer") == "https://apliqa.community"
-    assert headers.get("X-Title") == "Apliqa"
+    assert headers.get("HTTP-Referer") == "https://applire.community"
+    assert headers.get("X-Title") == "Applire"
     assert p._model == "mistralai/mistral-large-latest"
 
 

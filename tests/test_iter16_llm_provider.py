@@ -17,7 +17,7 @@ import pytest
 import requests
 
 _JD_TEXT = (
-    "Senior Python Engineer (m/w/d) — Apliqa GmbH, Berlin. "
+    "Senior Python Engineer (m/w/d) — Applire GmbH, Berlin. "
     "You will build production-grade FastAPI services. "
     "Required: Python, FastAPI, PostgreSQL, Docker, 5+ years experience. "
     "Nice to have: Kubernetes, Redis. "

@@ -1,5 +1,5 @@
 """
-Shared fixtures for Apliqa integration tests.
+Shared fixtures for Applire integration tests.
 
 Setup: docker compose build + up, wait for API readiness, run migrations.
 Teardown: containers are left running so the developer can inspect state.

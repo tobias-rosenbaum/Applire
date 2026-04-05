@@ -1,7 +1,7 @@
 """
 Iteration 9 — LinkedIn parser unit tests (ZIP + PDF)
 
-Tests apliqa/services/linkedin.py without any network or database calls.
+Tests applire/services/linkedin.py without any network or database calls.
 ZIP fixtures are constructed inline using Python's stdlib zipfile + io.
 PDF happy-path tests mock PdfReader so no real PDF generation is needed.
 

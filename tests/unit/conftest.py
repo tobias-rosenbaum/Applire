@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-# Make the apliqa package importable when running pytest tests/ without PYTHONPATH.
+# Make the applire package importable when running pytest tests/ without PYTHONPATH.
 _backend = Path(__file__).parent.parent.parent / "backend"
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
