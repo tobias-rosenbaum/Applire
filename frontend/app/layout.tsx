@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Apliqa — DACH CV Tailoring",
+  title: "Applire — DACH CV Tailoring",
   description: "AI-powered Lebenslauf tailoring for the DACH market",
 };
 
