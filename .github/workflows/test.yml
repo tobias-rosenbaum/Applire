@@ -32,7 +32,7 @@ jobs:
         run: |
           pytest tests/unit/ \
             --ignore=tests/conftest.py \
-            --cov=apliqa \
+            --cov=applire \
             --cov-report=term-missing \
             --cov-report=html \
             --cov-fail-under=70 \
@@ -89,6 +89,18 @@ jobs:
 
       - name: Create .env.dev from CI template
         run: cp .env.ci .env.dev
+
+      - name: Start Docker services
+        run: docker compose up -d --build
+
+      - name: Wait for backend to be ready
+        run: |
+          echo "Waiting for backend..."
+          timeout 180 bash -c 'until curl -sf http://localhost:8001/health; do sleep 2; done'
+          echo "Backend ready."
+
+      - name: Run database migrations
+        run: docker compose exec backend python -m alembic upgrade head
 
       - name: Run integration tests
         run: |
