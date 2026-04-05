@@ -11,9 +11,9 @@ Rules (ADR 005 v2 — amended iter17):
                      pending/generating (stale job reaper, arc42 §5.3.4)
 
 Technical debt note: Retention Worker is architecturally isolated but co-located.
-  Extract to `apliqa-ops` when Cloud Edition requires singleton scheduling,
+  Extract to `applire-ops` when Cloud Edition requires singleton scheduling,
   tenant-scoped deletion, or independent audit SLA.
-  Blocked by `apliqa-core` shared library extraction. | Cloud Edition scale-up |
+  Blocked by `applire-core` shared library extraction. | Cloud Edition scale-up |
 """
 
 import json

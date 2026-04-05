@@ -1,4 +1,4 @@
-# backend/apliqa/schemas/cv_sections.py
+# backend/applire/schemas/cv_sections.py
 """Pydantic schemas for the CV Section Editor API (Sprint 9, ADR-019)."""
 import uuid
 from typing import Optional

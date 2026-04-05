@@ -1,4 +1,4 @@
-# backend/apliqa/services/thumbnails.py
+# backend/applire/services/thumbnails.py
 """Generate static PNG preview thumbnails for CV templates.
 
 Called from lifespan() at startup. Skips any thumbnail that already exists.

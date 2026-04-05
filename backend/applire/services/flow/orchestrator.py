@@ -200,7 +200,7 @@ async def advance_flow(
 
     # Write-time status sync: keep Application.workflow_status consistent.
     #
-    # WHY lazy import: apliqa.services.application imports _resolve_user_type and
+    # WHY lazy import: applire.services.application imports _resolve_user_type and
     # _compute_actions from this module at the top level. If we also import
     # sync_workflow_status at the top level here, Python sees a circular dependency
     # (flow.orchestrator ↔ services.application) and raises ImportError.

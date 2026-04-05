@@ -501,5 +501,5 @@ async def export_profile(
 
     return JSONResponse(
         content=export,
-        headers={"Content-Disposition": 'attachment; filename="apliqa-export.json"'},
+        headers={"Content-Disposition": 'attachment; filename="applire-export.json"'},
     )

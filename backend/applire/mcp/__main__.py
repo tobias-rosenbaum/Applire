@@ -1,12 +1,12 @@
 """
-Entry point: python -m apliqa.mcp
+Entry point: python -m applire.mcp
 
-Starts the Apliqa MCP server.  Only stdio transport is supported in the
+Starts the Applire MCP server.  Only stdio transport is supported in the
 Community Edition.  SSE transport is reserved for the Cloud Edition.
 
 Usage:
     cd backend
-    python -m apliqa.mcp
+    python -m applire.mcp
 """
 import os
 import sys

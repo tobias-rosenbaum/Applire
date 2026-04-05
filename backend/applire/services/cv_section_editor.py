@@ -1,4 +1,4 @@
-# backend/apliqa/services/cv_section_editor.py
+# backend/applire/services/cv_section_editor.py
 """CV Section Editor service (Sprint 9, ADR-019).
 
 Responsibilities:

@@ -1,5 +1,5 @@
 """
-Apliqa MCP Server (Iteration 7, ADR 010)
+Applire MCP Server (Iteration 7, ADR 010)
 
 Exposes the full JD → profile → gap-fill → CV tailoring workflow as MCP tools
 and resources so AI agents can drive the process autonomously.
@@ -43,7 +43,7 @@ from applire.services import job as job_svc
 from applire.services import profile as profile_svc
 from applire.services import session as session_svc
 
-mcp = FastMCP("Apliqa")
+mcp = FastMCP("Applire")
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@ async def send_message(session_id: str, message: str) -> dict:
     description=(
         "Generate a tailored CV for the given job. "
         "Returns cv_id, html_url, and pdf_url. "
-        "The URLs point to the FastAPI backend (APLIQA_BASE_URL)."
+        "The URLs point to the FastAPI backend (APPLIRE_BASE_URL)."
     )
 )
 async def generate_cv(job_id: str) -> dict:
@@ -172,7 +172,7 @@ async def generate_cv(job_id: str) -> dict:
     provider = get_provider()
     async with get_db() as db:
         try:
-            result = await cv_svc.generate_cv(jid, db, provider, settings.apliqa_base_url)
+            result = await cv_svc.generate_cv(jid, db, provider, settings.applire_base_url)
         except LookupError as exc:
             raise not_found(str(exc))
         except Exception as exc:

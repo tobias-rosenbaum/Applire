@@ -13,5 +13,5 @@ def get_storage() -> StorageProvider:
     raise ValueError(
         f"Unknown STORAGE_BACKEND '{backend}'. "
         "Community Edition supports: local. "
-        "S3StorageProvider is available in Apliqa Cloud."
+        "S3StorageProvider is available in Applire Cloud."
     )

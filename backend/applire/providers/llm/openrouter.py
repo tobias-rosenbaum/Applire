@@ -9,7 +9,7 @@ Default model: mistralai/mistral-large-latest
   Rationale: keeps model parity with the direct Mistral provider so our prompts
   behave identically. Switch OPENROUTER_MODEL once the plumbing is validated.
 
-Env vars consumed (see apliqa/config.py):
+Env vars consumed (see applire/config.py):
   OPENROUTER_API_KEY   — required
   OPENROUTER_MODEL     — optional, defaults to mistralai/mistral-large-latest
   OPENROUTER_BASE_URL  — optional override (default: https://openrouter.ai/api/v1)
@@ -27,8 +27,8 @@ from applire.exceptions import LLMRateLimitError, LLMTimeoutError
 from applire.providers.llm.base import LLMProvider
 
 _DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
-_HTTP_REFERER = "https://apliqa.community"
-_X_TITLE = "Apliqa"
+_HTTP_REFERER = "https://applire.community"
+_X_TITLE = "Applire"
 
 _retry = retry(
     retry=retry_if_exception_type(openai.RateLimitError),

@@ -1,4 +1,4 @@
-# backend/apliqa/services/cv_assist.py
+# backend/applire/services/cv_assist.py
 """Kaile micro-session assist service (Sprint 10, ADR-004 micro-session concept).
 
 Two-step LLM interaction:

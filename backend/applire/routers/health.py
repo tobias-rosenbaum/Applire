@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from apliqa import __version__
+from applire import __version__
 from applire.config import HAS_CLOUD
 
 router = APIRouter()

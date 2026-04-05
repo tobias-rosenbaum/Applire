@@ -102,7 +102,7 @@ async def _fetch_tier1(url: str) -> str | None:
         async with httpx.AsyncClient(
             follow_redirects=True,
             timeout=15.0,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; Apliqa/1.0)"},
+            headers={"User-Agent": "Mozilla/5.0 (compatible; Applire/1.0)"},
         ) as client:
             response = await client.get(url)
             response.raise_for_status()

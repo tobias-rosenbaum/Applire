@@ -10,14 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from apliqa import __version__
+from applire import __version__
 from applire.config import settings
 from applire.db.session import AsyncSessionLocal
 from applire.routers import application, cv, flow, health, job, profile, session
 from applire.services.thumbnails import ensure_thumbnails
 
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-_STUB_EMAIL = "local@apliqa.community"
+_STUB_EMAIL = "local@applire.community"
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", "./data/static"))
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Apliqa API",
+    title="Applire API",
     description="AI-powered DACH CV tailoring — Community Edition",
     version=__version__,
     lifespan=lifespan,
