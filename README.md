@@ -2,128 +2,230 @@
 
 <div align="center">
 
-![Applire - AI-Powered CV Optimization](https://cdn.simtheory.ai/image/upload/v1775325052/user_7324/ai-document-processing_492199c1.png)
+![Applire - AI-Powered CV Intelligence Platform](https://cdn.simtheory.ai/image/upload/v1775325052/user_7324/ai-document-processing_492199c1.png)
 
-**Precise. Confident. Future-Ready.**
+# Applire
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Django](https://img.shields.io/badge/django-5.x-green.svg)](https://www.djangoproject.com/)
-[![React](https://img.shields.io/badge/react-18.x-61dafb.svg)](https://reactjs.org/)
+**Open-Source Career Intelligence Platform for the DACH Market**
+
+*Transform hours of CV tailoring into seconds. Upload your CVs, paste a job description, and let AI guide you through an intelligent interview to create perfectly matched application documents.*
+
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![GitHub Stars](https://img.shields.io/github/stars/applire/applire?style=social)](https://github.com/applire/applire)
+
+[ Quick Start](#-installation) • [ Documentation](docs/) • [ Community](#-community--support) • [ Report Bug](https://github.com/applire/applire/issues)
 
 </div>
 
 ---
 
-## 🎯 What is Applire?
+##  What is Applire?
 
-**Applire** is an AI-powered CV optimization platform that transforms the job application process. Upload your CVs, paste a job description, and let AI create perfectly tailored application documents in seconds.
+**Applire** is an open-source AI platform that combines deep career intelligence with DACH-specific cultural expertise to automate high-quality CV tailoring.
 
-### The Problem
+Built for **all job seekers in the DACH market**, with unmatched depth in regulated industries (Pharma, GxP, Medtech) — a specialization that proves our precision for every user.
 
-Job seekers waste **hours** manually adapting CVs for each application:
-- 🕐 **Time-consuming**: Rewriting CVs for every role
-- 😰 **Stressful**: Uncertainty about what to include/exclude
-- 🎯 **Inefficient**: Missing key requirements in job descriptions
-- 🌍 **Cultural barriers**: Adapting CVs across different market conventions
+Unlike generic CV builders, Applire:
+- 易 **Learns from you**: Builds a persistent Master Profile that gets smarter with every CV you upload
+-  **Interviews you intelligently**: Asks targeted questions to fill gaps between your experience and job requirements
+-  **Tailors with precision**: Generates culturally appropriate CVs optimized for DACH recruiters and ATS systems
+- 烙 **Agent-first design**: Accessible to AI assistants via the Model Context Protocol (MCP)
+-  **Privacy by design**: GDPR-compliant, self-hosted, full data sovereignty
 
-### The Solution
-
-Applire uses advanced AI to:
-- ✨ **Merge multiple CVs** into a comprehensive master profile
-- 🎯 **Analyze job descriptions** and detect skill gaps
-- 📊 **Calculate match scores** with transparent gap analysis
-- 🚀 **Generate tailored CVs** optimized for ATS systems
-- 🌍 **Adapt cultural conventions** (e.g., Indian → DACH pharma standards)
-- 🔒 **Privacy-first approach** - your data stays yours
+**In 3 simple steps:**
+1.  Upload 2-4 versions of your CV
+2.  Paste the job description
+3.  Answer a few intelligent questions → ✨ Get a perfectly tailored CV
 
 ---
 
-## 🚀 Key Features
+##  Who is Applire for?
 
-### For Job Seekers
+Applire serves diverse personas across the DACH job market:
 
-- **🔄 Multi-CV Consolidation**: Upload 2-4 CVs and automatically merge them into a rich master profile
-- **🎯 Smart Gap Detection**: AI identifies missing requirements and suggests improvements
-- **📈 Match Scoring**: Get transparent 0-100% match scores with detailed explanations
-- **💬 Conversational Interview**: Answer a few questions to close gaps and boost your score
-- **🌍 Cultural Adaptation**: Automatic detection and adaptation of CV conventions across markets
-- **📄 One-Click Generation**: Create perfectly tailored CVs in seconds
+###  **Marcus - The Expert**
+Experienced professional with deep domain expertise who needs precision tailoring for demanding roles. Values efficiency and quality over hand-holding.
 
-### For Recruiters (B2B)
+###  **Priya - The Relocator**
+International candidate moving to DACH who needs cultural "translation" of their career history to meet local CV conventions and recruiter expectations.
 
-- **📊 Batch Match Matrix**: Analyze multiple candidates against multiple job descriptions
-- **🎯 Kandidatenprofile**: Generate standardized candidate profiles for client submissions
-- **📋 Pipeline Management**: Kanban-style tracking of submissions and placements
-- **⚡ Efficiency Gains**: Reduce time-to-submission from hours to minutes
+###  **Jason - The Recruiter**
+Professional headhunter who needs to efficiently generate high-quality, tailored CVs for clients across various industries.
+
+### ✏️ **Felix - The Finetuner**
+Any user who wants surgical, section-level control over their CV. Trusts AI to draft but wants to fine-tune the output to sound authentic and personal.
+
+### 烙 **Kaile - The AI Agent**
+AI assistant (Claude, ChatGPT, custom agents) calling Applire on behalf of human users via MCP or REST API for seamless career intelligence integration.
 
 ---
 
-## 🏗️ Tech Stack
+##  Key Features
+
+### 易 Intelligent Master Profile
+
+- **Multi-CV Consolidation**: Upload multiple CVs and automatically merge them into a rich, conflict-aware Master Profile
+- **Additive Enrichment**: Every CV upload, interview session, and edit enriches your profile — it never overwrites, only accumulates
+- **Source Tracking**: Full audit trail of where every piece of information came from
+- **Conflict Resolution**: Smart detection of factual contradictions (dates, degrees) with user-controlled resolution
+
+###  Job-First Analysis & Gap Detection
+
+- **Deep JD Analysis**: Extracts requirements, skills, cultural signals, and industry context from job descriptions
+- **Transparent Gap Scoring**: 0-100% match score with detailed explanations of what's missing
+- **Categorized Gaps**: 
+  - **Category A** (Hard blockers): Must-have requirements you don't meet
+  - **Category B** (Confirmation needed): You likely have this, but it's not stated clearly
+  - **Category C** (Exploratory): Soft requirements worth discussing
+
+###  Conversational Interview Orchestrator
+
+- **Two Modes**:
+  - **Targeted Mode** (for experienced users): Focuses on filling specific gaps identified in your profile
+  - **Guided Mode** (for new users): Systematically builds your profile section by section
+- **Stateful Backend**: Pause and resume anytime — your progress is saved server-side
+- **Smart Completion**: Automatically detects when you're done or when all gaps are resolved
+- **Profile Updates**: Every answer enriches your Master Profile in real-time
+
+###  CV Generation & Fine-Tuning
+
+- **ATS-Optimized PDFs**: Generated via Playwright/Chromium with CSS-based themes
+- **Live Browser Preview**: See exactly what your CV will look like before downloading
+- **Section-Level Editing**: Fine-tune individual sections (introduction, positions, skills) with live re-rendering
+- **Dual Save Path**: Save edits to your Master Profile (permanent) or just to this CV (one-time)
+- **AI-Assisted Editing**: Optional "Let Kaile help" for targeted gap completion within the editor
+- **Cultural Adaptation**: Automatic detection and formatting for German, Austrian, and Swiss CV conventions
+
+###  DACH Cultural Intelligence
+
+- **Market-Specific Formatting**: Lebenslauf vs. international CV formats
+- **Cultural Signal Detection**: Identifies when a CV needs adaptation (e.g., Indian → German pharma standards)
+- **Multilingual Support**: German, English, with French and Spanish planned
+- **Regulatory Industry Depth**: Specialized knowledge for Pharma, GxP, Medtech roles (optional premium layer)
+
+###  Privacy & GDPR Compliance
+
+- **Privacy by Design** (GDPR Art. 25): Minimal data collection, encryption at rest
+- **Automated Retention**: Daily cron job enforces TTLs:
+  - Uploaded files: 7 days
+  - Interview sessions: 30 days
+  - Generated CVs: 90 days (human) / 24 hours (agent)
+- **Right to Erasure** (GDPR Art. 17): One-click full data deletion
+- **Self-Hosted**: Your data never leaves your infrastructure
+
+---
+
+## 烙 Built for the AI Agent Era
+
+Applire is the first career platform optimized for **AI agents as customers**:
+
+### Model Context Protocol (MCP)
+- **Seamless Integration**: First-class support for Claude Desktop, ChatGPT, Cursor, and custom AI agents
+- **Stateful Sessions**: Agents can pause, resume, and recover from interruptions
+- **Flow Orchestrator**: Guides agents through the correct sequence (JD analysis → CV import → gap analysis → interview → generation)
+- **Async Generation**: Non-blocking CV generation with polling-based status checks
+
+### REST API
+- **Full HTTP API**: Programmatic access for remote integrations
+- **OpenAPI Documentation**: Interactive Swagger UI at `/docs`
+- **Usage-Based Pricing**: Pay-per-CV model for agent-driven workflows (future)
+
+### Agent Workflow Example
+```bash
+# Start MCP server (stdio transport)
+python -m applire.mcp
+
+# Agent calls:
+1. start_flow() → flow_id
+2. analyze_jd(text="Senior Python Engineer...") → job_id
+3. analyze_gaps(job_id) → gap_report
+4. run_interview(session_id, message="I have 5 years...") → next_question
+5. generate_cv(job_id) → cv_id (async)
+6. get_cv_status(cv_id) → {status: "ready", pdf_url: "..."}
+```
+
+---
+
+## ️ Architecture & Tech Stack
 
 ### Backend
-- **Python 3.11+**: Modern Python with type hints
-- **Django 5.x**: Robust web framework with ORM
-- **PostgreSQL**: Relational database for structured data
-- **Celery**: Asynchronous task processing
-- **Redis**: Caching and message broker
+
+- **Python 3.12+**: Modern async Python with type hints
+- **FastAPI**: High-performance async web framework
+- **PostgreSQL 16**: JSONB for flexible Master Profile schema
+- **Pydantic**: Type-safe data validation and serialization
+- **SQLAlchemy 2.0**: Async ORM with full type support
+- **Alembic**: Database migrations
 
 ### Frontend
-- **React 18.x**: Modern UI with hooks
+
+- **Next.js 14**: React framework with App Router
 - **TypeScript**: Type-safe JavaScript
+- **ShadCN/UI**: Accessible component library
 - **Tailwind CSS**: Utility-first styling
-- **Vite**: Fast build tooling
 
 ### AI/ML
-- **OpenAI GPT-4**: Advanced language understanding
-- **LangChain**: LLM orchestration
-- **Custom NLP Pipeline**: CV parsing and entity extraction
+
+- **Mistral AI** (default): EU-hosted LLM with strong German proficiency (`mistral-large-latest`)
+- **LLM Provider Abstraction**: Pluggable backends for Mistral, OpenAI, Ollama (self-hosted)
+- **Custom State Machine**: 4-node async interview orchestrator (no LangGraph dependency)
+- **Playwright**: Headless Chromium for PDF generation
 
 ### Infrastructure
-- **Docker**: Containerization
-- **Docker Compose**: Local development orchestration
-- **GitHub Actions**: CI/CD pipeline
-- **AWS/Azure**: Cloud deployment (configurable)
+
+- **Docker & Docker Compose**: Containerized deployment
+- **PostgreSQL 16**: Primary database with JSONB support
+- **Retention Worker**: Daily cron for GDPR TTL enforcement
+- **GitHub Actions**: CI/CD pipeline with pytest and Playwright E2E tests
+
+### Agent Integration
+
+- **Model Context Protocol (MCP)**: stdio transport for local AI agents
+- **REST API**: Full HTTP API for remote integrations
+- **Flow Orchestrator**: State machine for multi-step agent workflows
+- **Session Recovery**: Agents can resume interrupted sessions via `flow_id`
 
 ---
 
-## 📦 Installation
+##  Installation
 
 ### Prerequisites
 
-- **Python 3.11+**
+- **Python 3.12+**
 - **Node.js 18+**
-- **PostgreSQL 14+**
-- **Redis 7+**
+- **PostgreSQL 16+**
 - **Docker & Docker Compose** (recommended)
+- **LLM API Key**: Mistral AI (default), OpenAI, or Ollama (local)
 
-### Quick Start with Docker
+### Quick Start with Docker Compose
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/applire.git
+git clone https://github.com/applire/applire.git
 cd applire
 
 # Copy environment template
 cp .env.example .env
 
-# Edit .env and add your API keys
-# - OPENAI_API_KEY=your_key_here
-# - DATABASE_URL=postgresql://...
+# Edit .env and configure:
+# - LLM_PROVIDER=mistral (or openai, ollama)
+# - MISTRAL_API_KEY=your_key_here (or OPENAI_API_KEY)
+# - DATABASE_URL=postgresql://applire:password@db:5432/applire
 
 # Start all services
 docker-compose up -d
 
-# Run migrations
-docker-compose exec backend python manage.py migrate
-
-# Create superuser
-docker-compose exec backend python manage.py createsuperuser
+# Run database migrations
+docker-compose exec backend alembic upgrade head
 
 # Access the application
 # Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# Admin: http://localhost:8000/admin
+# Backend API: http://localhost:8001
+# API Docs: http://localhost:8001/docs
 ```
 
 ### Manual Setup (Development)
@@ -131,7 +233,6 @@ docker-compose exec backend python manage.py createsuperuser
 #### Backend
 
 ```bash
-# Navigate to backend directory
 cd backend
 
 # Create virtual environment
@@ -141,176 +242,192 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
 # Run migrations
-python manage.py migrate
+alembic upgrade head
 
 # Start development server
-python manage.py runserver
+uvicorn applire.main:app --reload --port 8001
 ```
 
 #### Frontend
 
 ```bash
-# Navigate to frontend directory
 cd frontend
 
 # Install dependencies
 npm install
 
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your configuration
+
 # Start development server
 npm run dev
 ```
 
-#### Background Workers
+#### Retention Worker (GDPR Compliance)
 
 ```bash
-# Start Celery worker
-celery -A applire worker -l info
-
-# Start Celery beat (scheduled tasks)
-celery -A applire beat -l info
+# The retention worker runs as a daily cron in Docker Compose
+# For manual execution:
+python -m applire.retention
 ```
 
 ---
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 
 Create a `.env` file in the project root:
 
 ```env
-# Django Settings
-SECRET_KEY=your-secret-key-here
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+# LLM Provider (mistral, openai, ollama)
+LLM_PROVIDER=mistral
+MISTRAL_API_KEY=your_mistral_api_key_here
+# OPENAI_API_KEY=your_openai_api_key_here  # Alternative
+# OLLAMA_BASE_URL=http://localhost:11434   # For local Ollama
 
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/applire
+DATABASE_URL=postgresql://applire:password@localhost:5432/applire
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
-
-# OpenAI
-OPENAI_API_KEY=sk-...
-
-# Email (optional)
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
+# Backend
+SECRET_KEY=your-secret-key-here-generate-with-openssl-rand-hex-32
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1
+APPLIRE_BASE_URL=http://localhost:8001
 
 # Frontend
-VITE_API_URL=http://localhost:8000/api
+NEXT_PUBLIC_API_URL=http://localhost:8001
+
+# Storage (local by default)
+UPLOAD_DIR=./data/uploads
+
+# OCR Backend (mistral_vision or tesseract)
+OCR_BACKEND=mistral_vision
+
+# Auth (none for Community Edition single-user mode)
+AUTH_PROVIDER=none
 ```
+
+### LLM Provider Options
+
+Applire supports multiple LLM backends via a pluggable abstraction layer:
+
+| Provider | Configuration | Use Case |
+|----------|---------------|----------|
+| **Mistral AI** (default) | `LLM_PROVIDER=mistral`<br>`MISTRAL_API_KEY=...` | EU-hosted, GDPR-native, strong German proficiency |
+| **OpenAI** | `LLM_PROVIDER=openai`<br>`OPENAI_API_KEY=...` | High quality, widely available |
+| **Ollama** (local) | `LLM_PROVIDER=ollama`<br>`OLLAMA_BASE_URL=http://localhost:11434` | Fully offline, no API costs, privacy-first |
 
 ---
 
-## 📚 API Documentation
+##  API Documentation
 
-### Authentication
+### REST API
 
-Applire uses JWT (JSON Web Tokens) for authentication.
+Full OpenAPI documentation available at `http://localhost:8001/docs` (Swagger UI).
 
-```bash
-# Register a new user
-POST /api/auth/register
-{
-  "email": "user@example.com",
-  "password": "secure_password",
-  "first_name": "John",
-  "last_name": "Doe"
-}
-
-# Login
-POST /api/auth/login
-{
-  "email": "user@example.com",
-  "password": "secure_password"
-}
-
-# Response
-{
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
-}
-```
-
-### Core Endpoints
-
-#### Upload CVs
+#### Core Endpoints
 
 ```bash
-POST /api/cv/upload
+# Job Description Analysis
+POST /api/job/analyze
+{
+  "text": "Senior Software Engineer role...",
+  "url": "https://example.com/job"  # Optional
+}
+
+# CV Upload & Profile Enrichment
+POST /api/profile/upload
 Content-Type: multipart/form-data
+files: [cv1.pdf, cv2.pdf]
+job_id: <optional-job-id>  # For JD-aware extraction
 
-files: [cv1.pdf, cv2.pdf, cv3.pdf]
-```
-
-#### Create Master Profile
-
-```bash
-POST /api/profile/create
+# Gap Analysis
+POST /api/gap/analyze
 {
-  "cv_ids": [1, 2, 3],
-  "job_description": "QA Manager role in pharma..."
+  "job_id": "uuid",
+  "profile_id": "uuid"  # Optional, uses current user's profile by default
 }
-```
 
-#### Analyze Match
-
-```bash
-GET /api/match/{profile_id}/{job_id}
-
-Response:
+# Start Interview Session
+POST /api/session
 {
-  "match_score": 82,
-  "status": "strong_fit",
-  "gaps": [
-    {
-      "requirement": "EU GMP Audit Experience",
-      "user_has": "ANVISA audits (highly relevant)",
-      "severity": "minor"
-    }
-  ]
+  "job_id": "uuid",
+  "mode": "targeted"  # or "guided", or auto-detected
 }
-```
 
-#### Generate Tailored CV
+# Send Interview Message
+POST /api/session/{session_id}/message
+{
+  "message": "I have 5 years of experience with Python and FastAPI..."
+}
 
-```bash
+# Generate CV
 POST /api/cv/generate
 {
-  "profile_id": 123,
-  "job_id": 456,
-  "format": "pdf"
+  "job_id": "uuid",
+  "format": "german_lebenslauf",  # or "international"
+  "theme": "classic_german"
 }
 
-Response:
-{
-  "cv_url": "https://cdn.applire.com/cv/...",
-  "download_url": "https://cdn.applire.com/download/..."
-}
+# Check CV Generation Status
+GET /api/cv/{cv_id}/status
+# Returns: { "status": "pending" | "ready" | "failed", "pdf_url": "..." }
+
+# Download CV
+GET /api/cv/{cv_id}/pdf
 ```
 
-Full API documentation available at `/api/docs` (Swagger UI).
+### Model Context Protocol (MCP)
+
+Applire exposes an MCP server for AI agents:
+
+```bash
+# Start MCP server (stdio transport)
+python -m applire.mcp
+```
+
+#### MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `start_flow(job_id?)` | Create or resume a flow session |
+| `analyze_jd(text?, url?)` | Analyze a job description |
+| `analyze_gaps(job_id)` | Detect gaps between profile and JD |
+| `run_interview(session_id, message)` | Send a message in an interview session |
+| `generate_cv(job_id, options?)` | Initiate async CV generation |
+| `get_cv_status(cv_id)` | Poll CV generation status |
+| `advance_flow(flow_id, step, artifact_id?)` | Advance to next step in flow |
+| `get_flow_state(flow_id)` | Get current flow state and available actions |
+
+#### MCP Resources
+
+- `profile://current` — User's Master Profile
+- `job://{job_id}` — Job analysis
+- `cv://{cv_id}` — Generated CV
+- `flow://{flow_id}` — Flow session state
 
 ---
 
-## 🧪 Testing
+## 離 Testing
 
 ### Backend Tests
 
 ```bash
 # Run all tests
-python manage.py test
+pytest
 
-# Run with coverage
-coverage run --source='.' manage.py test
-coverage report
-coverage html  # Generate HTML report
+# Run with coverage (enforces ≥75% threshold)
+pytest --cov=applire --cov-fail-under=75
+
+# Generate HTML coverage report
+pytest --cov=applire --cov-report=html
 ```
 
 ### Frontend Tests
@@ -319,40 +436,57 @@ coverage html  # Generate HTML report
 # Run unit tests
 npm test
 
-# Run with coverage
-npm run test:coverage
-
-# Run E2E tests
+# Run E2E tests (Playwright)
 npm run test:e2e
+
+# Run E2E tests in UI mode
+npm run test:e2e:ui
 ```
+
+### CI/CD Pipeline
+
+GitHub Actions runs:
+1. Backend unit tests (pytest, ≥75% coverage)
+2. Backend integration tests (Docker stack)
+3. E2E tests (Playwright)
+
+All tiers must pass before merge.
 
 ---
 
-## 🗂️ Project Structure
+## ️ Project Structure
 
 ```
 applire/
 ├── backend/
-│   ├── applire/              # Django project settings
-│   ├── apps/
-│   │   ├── cv/               # CV parsing and management
-│   │   ├── profile/          # Master profile logic
-│   │   ├── matching/         # Gap analysis and scoring
-│   │   ├── generation/       # CV generation engine
-│   │   └── users/            # User management
-│   ├── tests/
-│   ├── manage.py
+│   ├── applire/
+│   │   ├── main.py              # FastAPI application entry point
+│   │   ├── models/              # SQLAlchemy ORM models
+│   │   ├── schemas/             # Pydantic request/response schemas
+│   │   ├── routers/             # FastAPI route handlers
+│   │   ├── services/            # Business logic layer
+│   │   │   ├── interview/       # Interview Orchestrator (state machine)
+│   │   │   ├── flow/            # Flow Orchestrator
+│   │   │   ├── profile/         # Master Profile merge logic
+│   │   │   ├── cv/              # CV generation & section editing
+│   │   │   └── gap/             # Gap analysis
+│   │   ├── providers/           # LLM, Auth, Storage abstractions
+│   │   ├── mcp/                 # Model Context Protocol server
+│   │   ├── retention/           # GDPR retention worker
+│   │   └── templates/           # Jinja2 CV templates
+│   ├── alembic/                 # Database migrations
+│   ├── tests/                   # Pytest test suite
 │   └── requirements.txt
 ├── frontend/
-│   ├── src/
-│   │   ├── components/       # React components
-│   │   ├── pages/            # Page components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── services/         # API services
-│   │   └── utils/            # Utility functions
-│   ├── public/
-│   ├── package.json
-│   └── vite.config.ts
+│   ├── app/                     # Next.js App Router pages
+│   ├── components/              # React components
+│   ├── lib/                     # Utilities and API clients
+│   └── public/
+├── docs/
+│   ├── architecture/
+│   │   ├── arc42.md             # Architecture documentation
+│   │   └── ADR.md               # Architecture Decision Records
+│   └── deployment.md
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -360,38 +494,52 @@ applire/
 
 ---
 
-## 🛣️ Roadmap
+## ️ Roadmap
+## ️ Roadmap
 
-### ✅ Completed (Sprint 1-10)
+### ✅ Current Release (MVP)
 
-- [x] Multi-CV upload and parsing
-- [x] Master profile consolidation
-- [x] Job description analysis
+- [x] Multi-CV upload and parsing (PDF, DOCX, images via OCR)
+- [x] Master Profile consolidation with conflict resolution
+- [x] Job description analysis (text + URL scraping)
 - [x] Gap detection and match scoring
-- [x] Conversational interview flow
-- [x] CV generation (PDF/DOCX)
-- [x] Cultural adaptation detection
-- [x] B2B batch matching
-- [x] Kandidatenprofile generation
+- [x] Conversational interview flow (Targeted + Guided modes)
+- [x] CV generation (PDF via Playwright)
+- [x] CV Section Editor (Finetuner) with live preview and AI-assisted editing
+- [x] Cultural adaptation detection (DACH-specific)
+- [x] MCP Server (stdio transport for AI agents)
+- [x] Flow Orchestrator (state machine for user journey)
+- [x] GDPR Retention Worker (automated TTL enforcement)
 
-### 🚧 In Progress
+###  Next Up
 
-- [ ] Advanced ATS optimization
-- [ ] Multi-language support (German, French, Spanish)
-- [ ] LinkedIn profile import
-- [ ] Browser extension for one-click applications
+**Application Document Completeness**
+- [ ] **Cover Letter Generation**: AI-powered cover letter creation based on JD + Master Profile, with optional motivation interview
+- [ ] **Photo Management**: Upload and extract application photos from CVs (DACH-specific requirement)
 
-### 🔮 Future
+**Core Experience Improvements**
+- [ ] **Gap Interview Refinement**: Enhanced question quality and relevance through fine-tuning
+- [ ] **Additional CV Layouts**: Expanding template library (Modern Swiss, International, Academic, etc.)
 
-- [ ] AI-powered interview preparation
-- [ ] Salary negotiation insights
-- [ ] Company culture matching
-- [ ] Mobile app (iOS/Android)
-- [ ] Integration with job boards (LinkedIn, Indeed, StepStone)
+**Market Expansion**
+- [ ] **European Country Support**: Gradual rollout beyond DACH (France, Italy, Spain, Portugal, Poland) with localized formats, cultural adaptations, and language support
 
+**Developer Experience**
+- [ ] **REST API Public Release**: Full HTTP API with comprehensive documentation
+- [ ] **MCP Marketplace Listing**: Distribution via Anthropic, OpenAI, and Cursor marketplaces
+
+###  Future Vision
+
+**Career Intelligence Platform (Post-MVP Validation)**
+- [ ] **Mock Interview Preparation**: AI-powered practice sessions with role-specific questions and feedback
+- [ ] **Gamification Elements**: Profile completeness scores, interview readiness tracking, achievement system
+- [ ] **Career Path Advisory**: Skill gap analysis and training recommendations (informational service)
+- [ ] **Job Search & Recommendation**: Curated job suggestions based on Master Profile
+- [ ] **One-Click Application**: Full document package generation and submission
+- [ ] **Mobile App**: iOS and Android native applications
 ---
 
-## 🤝 Contributing
+## 欄 Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -403,11 +551,12 @@ We welcome contributions! Please follow these steps:
 
 ### Development Guidelines
 
-- Follow **PEP 8** for Python code
-- Use **ESLint** and **Prettier** for TypeScript/React
-- Write **tests** for new features
-- Update **documentation** as needed
+- Follow **PEP 8** for Python code (enforced by `black` and `flake8`)
+- Use **TypeScript** for all frontend code
+- Write **tests** for new features (≥75% coverage for backend)
+- Update **documentation** as needed (arc42.md, ADRs)
 - Keep commits **atomic** and **descriptive**
+- Sign commits with **DCO** (`git commit -s`)
 
 ### Code Style
 
@@ -425,36 +574,83 @@ npm run format
 npm run lint
 ```
 
+### Contributor License Agreement (CLA)
+
+For contributions to core service logic (`applire/services/`, `applire/models/`, `applire/routers/`), we require a signed CLA. This allows us to maintain the open-core business model while keeping the Community Edition fully open-source.
+
+- **DCO** (Developer Certificate of Origin): Required for all commits (`git commit -s`)
+- **CLA** (Contributor License Agreement): Required for core logic contributions (signed once via CLA Assistant)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
 ---
 
-## 📄 License
+##  Community & Support
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+### Get Help
+
+-  **[Documentation](docs/)** - Architecture, ADRs, deployment guides
+-  **[GitHub Issues](https://github.com/applire/applire/issues)** - Report bugs and request features
+-  **[GitHub Discussions](https://github.com/applire/applire/discussions)** - Ask questions and share ideas
+
+### Stay Updated
+
+-  **[Twitter](https://twitter.com/applire)** - Follow for updates and announcements
+-  **[Blog](https://applire.com/blog)** - Product updates, tutorials, and case studies
 
 ---
 
-## 🙏 Acknowledgments
+##  License
 
-- **OpenAI** for GPT-4 API
-- **Django** and **React** communities
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](LICENSE) file for details.
+
+### Why AGPL?
+
+We chose AGPL to ensure that:
+- ✅ **The software remains free and open source** - Always accessible to everyone
+- ✅ **Modifications must be shared** - Even when used as a service (SaaS)
+- ✅ **The community benefits** - All improvements flow back to the project
+- ✅ **Your privacy is protected** - Full transparency in how your data is processed
+- ✅ **No vendor lock-in** - You control your data and infrastructure
+
+### Commercial Licensing
+
+For organizations that cannot comply with AGPL requirements (e.g., proprietary SaaS offerings), we offer commercial licenses with:
+- Proprietary use rights
+- Custom SLA and support
+- Priority feature development
+- Legal indemnification
+
+ Contact **licensing@applire.com** for details.
+
+---
+
+##  Acknowledgments
+
+- **Mistral AI** for EU-hosted LLM infrastructure
+- **FastAPI** and **Next.js** communities
 - All contributors and early adopters
-- Pharma industry professionals who provided domain expertise
+- DACH industry professionals who provided domain expertise
+- The open-source community for inspiration and tools
 
 ---
 
-## 📞 Contact & Support
+##  Contact & Support
 
-- **Website**: [applire.com](https://applire.com) *(coming soon)*
+- **Website**: [applire.com](https://applire.com)
 - **Email**: support@applire.com
-- **Issues**: [GitHub Issues](https://github.com/yourusername/applire/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/applire/discussions)
+- **Issues**: [GitHub Issues](https://github.com/applire/applire/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/applire/applire/discussions)
+- **Security**: security@applire.com (for responsible disclosure)
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for job seekers and recruiters worldwide**
+**Built with ❤️ for job seekers in the DACH market**
 
-*Precise. Confident. Future-Ready.*
+*Open-source career intelligence. Privacy-first. Agent-ready.*
+
+[⭐ Star us on GitHub](https://github.com/applire/applire) • [ Follow on Twitter](https://twitter.com/applire)
 
 </div>
