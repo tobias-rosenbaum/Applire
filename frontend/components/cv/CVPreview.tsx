@@ -56,6 +56,9 @@ export function CVPreview({
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [fineTuneOpen, setFineTuneOpen] = useState(false);
+  const [fineTunePanelHasUnsaved, setFineTunePanelHasUnsaved] = useState(false);
+  const [showLeaveGuard, setShowLeaveGuard] = useState(false);
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -102,9 +105,28 @@ export function CVPreview({
     };
   }, [cvId, retryCount]);
 
+  useEffect(() => {
+    if (!fineTuneOpen || !fineTunePanelHasUnsaved) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [fineTuneOpen, fineTunePanelHasUnsaved]);
+
   const isExpired = cvSummary
     ? new Date(cvSummary.expires_at) < new Date()
     : false;
+
+  function requestNavigate(action: () => void) {
+    if (fineTuneOpen && fineTunePanelHasUnsaved) {
+      setPendingLeaveAction(() => action);
+      setShowLeaveGuard(true);
+    } else {
+      action();
+    }
+  }
 
   async function handleDownload() {
     try {
@@ -127,6 +149,44 @@ export function CVPreview({
 
   return (
     <div className="flex flex-col md:flex-row gap-4 md:gap-6 animate-fade-in">
+      {/* Page-level leave guard dialog */}
+      {showLeaveGuard && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full mx-4">
+            <p className="text-sm font-semibold text-neutral-dark mb-4">
+              Du hast ungespeicherte Änderungen. Wirklich verlassen?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveGuard(false);
+                  if (pendingLeaveAction) {
+                    pendingLeaveAction();
+                    setPendingLeaveAction(null);
+                  }
+                }}
+                className="flex-1 bg-critical text-white font-semibold py-2 rounded-lg text-sm hover:opacity-90"
+                data-testid="leave-confirm"
+              >
+                Verlassen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveGuard(false);
+                  setPendingLeaveAction(null);
+                }}
+                className="flex-1 border border-teal text-teal font-semibold py-2 rounded-lg text-sm hover:opacity-90"
+                data-testid="stay-editing"
+              >
+                Bleiben
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left metadata panel — 256px fixed on desktop, full-width on mobile */}
       <div className="w-full md:w-64 md:h-[75vh] flex flex-col gap-4 bg-neutral-light rounded-xl p-5 overflow-y-auto shrink-0">
         {jobSummary && (
@@ -181,21 +241,21 @@ export function CVPreview({
             <>
               <button
                 type="button"
-                onClick={onRegenerateSame}
+                onClick={() => requestNavigate(onRegenerateSame)}
                 className="w-full border border-teal text-teal font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
               >
                 Neu generieren
               </button>
               <button
                 type="button"
-                onClick={onRegenerateDifferent}
+                onClick={() => requestNavigate(onRegenerateDifferent)}
                 className="w-full border border-teal text-teal font-semibold py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity"
               >
                 Andere Vorlage
               </button>
               <button
                 type="button"
-                onClick={onNext}
+                onClick={() => requestNavigate(onNext)}
                 className="w-full bg-teal text-white font-semibold py-3 rounded-lg text-sm hover:opacity-90 transition-colors"
               >
                 Was nun? →
@@ -210,6 +270,7 @@ export function CVPreview({
           cvId={cvId}
           initialHtml={htmlContent}
           onClose={() => setFineTuneOpen(false)}
+          onUnsavedChange={setFineTunePanelHasUnsaved}
         />
       ) : (
         /*

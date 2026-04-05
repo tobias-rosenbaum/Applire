@@ -4,7 +4,7 @@
 Responsibilities:
 - build_content_snapshot: extract structured snapshot from TailoredCVData at generation time
 - get_cv_sections: return merged snapshot+overrides+gap hints for GET /api/cv/{id}/sections
-- patch_cv_section: write override, re-render, optionally save to profile
+- patch_cv_section: write override, re-render, optionally save to profile and auto-resolve gaps
 - apply_overrides_to_tailored: merge section_overrides on top of TailoredCVData (used by get_cv_html)
 """
 import uuid
@@ -227,7 +227,8 @@ async def patch_cv_section(
     """Write a section override and re-render the CV HTML.
 
     Validates section_id against snapshot. Optionally saves to profile.
-    Returns updated HTML and list of all applied overrides.
+    Auto-resolves gaps whose keywords are now present in the new content.
+    Returns updated HTML, list of all applied overrides, and resolved gap IDs.
     """
     from apliqa.services.cv import _jinja_env, _TEMPLATE_FILES
 
@@ -253,6 +254,9 @@ async def patch_cv_section(
     if save_to_profile:
         await _save_section_to_profile(cv_id, section_id, content, record, db)
 
+    # Gap auto-resolve: check which gaps now have keyword overlap with the new content
+    resolved_gaps = await _resolve_gaps(cv_id, section_id, content, db)
+
     # Jinja2 re-render with overrides applied
     tailored = TailoredCVData.model_validate(record.tailored_data)
     tailored_with_overrides = apply_overrides_to_tailored(
@@ -265,6 +269,7 @@ async def patch_cv_section(
     return SectionPatchResponse(
         html=html,
         overrides_applied=list(overrides.keys()),
+        resolved_gaps=resolved_gaps,
     )
 
 
@@ -317,6 +322,50 @@ async def _save_section_to_profile(
 
     profile.profile_json = profile_data.model_dump()
     await db.commit()
+
+
+async def _resolve_gaps(
+    cv_id: uuid.UUID,
+    section_id: str,
+    new_content: str,
+    db: AsyncSession,
+) -> list[str]:
+    """Return gap IDs whose keywords are now present in new_content.
+
+    Also removes resolved gaps from gap_analysis.category_b / category_c.
+    Returns empty list if no gap_analysis linked to this CV.
+    """
+    flow_result = await db.execute(
+        select(FlowSession)
+        .where(
+            FlowSession.generated_cv_id == cv_id,
+            FlowSession.deleted_at.is_(None),
+        )
+        .limit(1)
+    )
+    flow = flow_result.scalar_one_or_none()
+    if not flow or not flow.gap_analysis_id:
+        return []
+
+    gap_analysis = await db.get(GapAnalysis, flow.gap_analysis_id)
+    if not gap_analysis:
+        return []
+
+    all_gaps: list[str] = list(gap_analysis.category_b) + list(gap_analysis.category_c)
+    if not all_gaps:
+        return []
+
+    # Check which gaps have keyword overlap with the new content
+    mapping = map_gaps_to_sections(all_gaps, {section_id: new_content})
+    resolved: list[str] = mapping.get(section_id, [])
+
+    if resolved:
+        resolved_set = set(resolved)
+        gap_analysis.category_b = [g for g in gap_analysis.category_b if g not in resolved_set]
+        gap_analysis.category_c = [g for g in gap_analysis.category_c if g not in resolved_set]
+        await db.commit()
+
+    return resolved
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 _Not yet detected._
 
 ## Architecture
-Apliqa Docs is a unknown project with 0 files (? lines of code). Tech stack: Unknown. Contains 0 classes and 0 functions across 0 language(s).
+Applire Docs is a unknown project with 0 files (? lines of code). Tech stack: Unknown. Contains 0 classes and 0 functions across 0 language(s).
 
 ## Key Files & Directories
 _Important files and what they do._

@@ -86,4 +86,26 @@ describe("FineTunePanel", () => {
     render(<FineTunePanel {...BASE_PROPS} />);
     await screen.findByTestId("all-gaps-closed");
   });
+
+  it("gap badge is shown for sections with gaps", async () => {
+    render(<FineTunePanel {...BASE_PROPS} />);
+    await screen.findAllByTestId("section-list-item");
+    expect(screen.getByTestId("gap-badge")).toBeTruthy();
+  });
+
+  it("renders mobile-accordion when matchMedia returns mobile", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("768"),
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
+
+    render(<FineTunePanel {...BASE_PROPS} />);
+    await screen.findAllByTestId("section-list-item");
+    expect(document.querySelector("[data-testid='mobile-accordion']")).toBeTruthy();
+  });
 });
