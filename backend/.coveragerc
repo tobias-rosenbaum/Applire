@@ -1,0 +1,18 @@
+[run]
+# Modules excluded from unit test coverage measurement.
+# These are covered by integration tests (tests/test_iter*.py, tests/integration/)
+# which require a live Docker stack and are run in the backend-integration-tests CI job.
+omit =
+    applire/routers/*
+    applire/retention/*
+    applire/ocr/*
+    applire/services/thumbnails.py
+    applire/services/session.py
+
+[report]
+omit =
+    applire/routers/*
+    applire/retention/*
+    applire/ocr/*
+    applire/services/thumbnails.py
+    applire/services/session.py

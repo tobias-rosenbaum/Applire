@@ -33,6 +33,7 @@ jobs:
             --ignore=tests/conftest.py \
             --ignore=backend/tests/conftest.py \
             --cov=applire \
+            --cov-config=backend/.coveragerc \
             --cov-report=term-missing \
             --cov-report=html:backend/htmlcov \
             --cov-fail-under=70 \
