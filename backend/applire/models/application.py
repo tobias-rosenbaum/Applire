@@ -18,7 +18,7 @@ from enum import Enum
 from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from apliqa.db.session import Base
+from applire.db.session import Base
 
 _APPLICATION_TTL_DAYS = 730  # 24 months inactivity (ADR 005 amendment)
 

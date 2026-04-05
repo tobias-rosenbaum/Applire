@@ -1,6 +1,6 @@
 # backend/tests/unit/test_iter24_schemas.py
 """Schema smoke tests for Sprint 10 assist schemas."""
-from apliqa.schemas.cv_sections import (
+from applire.schemas.cv_sections import (
     AssistStartRequest,
     AssistStartResponse,
     AssistAnswerRequest,

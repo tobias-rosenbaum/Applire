@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 _JSON = JSONB().with_variant(JSON(), "sqlite")
 
-from apliqa.db.session import Base
+from applire.db.session import Base
 
 _TTL_DAYS = 90
 

@@ -16,7 +16,7 @@ System prompt fingerprints:
 import json
 from typing import Any
 
-from apliqa.providers.llm.base import LLMProvider
+from applire.providers.llm.base import LLMProvider
 
 
 _JOB_ANALYSIS_RESPONSE: dict[str, Any] = {

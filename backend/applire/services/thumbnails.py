@@ -18,7 +18,7 @@ _TEMPLATE_FILES: dict[str, str] = {
     "modern_swiss": "modern_swiss.html.j2",
 }
 
-from apliqa.schemas.cv import (
+from applire.schemas.cv import (
     TailoredCVData,
     TailoredContact,
     TailoredWorkEntry,

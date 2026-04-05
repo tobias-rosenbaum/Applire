@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from apliqa.db.session import Base
+from applire.db.session import Base
 
 # JSONB on PostgreSQL (binary, indexed); falls back to JSON on SQLite for unit tests.
 _ProfileJSON = JSONB().with_variant(JSON(), "sqlite")

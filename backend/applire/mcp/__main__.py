@@ -22,7 +22,7 @@ def main() -> None:
         )
         sys.exit(1)
 
-    from apliqa.mcp.server import mcp
+    from applire.mcp.server import mcp
 
     mcp.run(transport="stdio")
 

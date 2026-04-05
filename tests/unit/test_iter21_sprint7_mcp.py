@@ -59,7 +59,7 @@ def _mock_app(**kwargs) -> MagicMock:
 @pytest.mark.asyncio
 async def test_list_applications_happy_path():
     """Returns a list of dicts when user exists and applications are found."""
-    from apliqa.mcp.server import list_applications
+    from applire.mcp.server import list_applications
 
     app1 = _mock_app(role_title="Backend Engineer")
     app2 = _mock_app(role_title="Frontend Engineer")
@@ -77,9 +77,9 @@ async def test_list_applications_happy_path():
     mock_session.execute = AsyncMock(return_value=mock_execute_result)
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.app_svc.list_applications",
+            "applire.mcp.server.app_svc.list_applications",
             AsyncMock(return_value=mock_list_result),
         ),
     ):
@@ -94,8 +94,8 @@ async def test_list_applications_happy_path():
 @pytest.mark.asyncio
 async def test_list_applications_passes_status_filter_to_service():
     """A valid status_filter is converted to UserStatus and forwarded to the service."""
-    from apliqa.mcp.server import list_applications
-    from apliqa.models.application import UserStatus
+    from applire.mcp.server import list_applications
+    from applire.models.application import UserStatus
 
     mock_list_result = MagicMock()
     mock_list_result.items = []
@@ -114,8 +114,8 @@ async def test_list_applications_passes_status_filter_to_service():
         return mock_list_result
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.app_svc.list_applications", side_effect=_capture),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.app_svc.list_applications", side_effect=_capture),
     ):
         await list_applications(status_filter="applied")
 
@@ -125,7 +125,7 @@ async def test_list_applications_passes_status_filter_to_service():
 @pytest.mark.asyncio
 async def test_list_applications_invalid_status_filter_raises():
     """An unrecognised status_filter raises McpError with invalid-input code (-32602)."""
-    from apliqa.mcp.server import list_applications
+    from applire.mcp.server import list_applications
 
     with pytest.raises(McpError) as exc_info:
         await list_applications(status_filter="nonexistent_status")
@@ -136,14 +136,14 @@ async def test_list_applications_invalid_status_filter_raises():
 @pytest.mark.asyncio
 async def test_list_applications_no_user_raises_not_found():
     """When no User row exists in the DB, McpError with not-found code (-32001) is raised."""
-    from apliqa.mcp.server import list_applications
+    from applire.mcp.server import list_applications
 
     cm, mock_session = _mock_db()
     mock_execute_result = MagicMock()
     mock_execute_result.scalar_one_or_none.return_value = None  # no user
     mock_session.execute = AsyncMock(return_value=mock_execute_result)
 
-    with patch("apliqa.mcp.server.get_db", return_value=cm):
+    with patch("applire.mcp.server.get_db", return_value=cm):
         with pytest.raises(McpError) as exc_info:
             await list_applications()
 
@@ -158,16 +158,16 @@ async def test_list_applications_no_user_raises_not_found():
 @pytest.mark.asyncio
 async def test_get_application_happy_path():
     """Returns a dict with application fields when the ID is valid and found."""
-    from apliqa.mcp.server import get_application
+    from applire.mcp.server import get_application
 
     app_id = uuid.uuid4()
     mock_app = _mock_app(id=str(app_id), role_title="Data Engineer")
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.app_svc.get_application",
+            "applire.mcp.server.app_svc.get_application",
             AsyncMock(return_value=mock_app),
         ),
     ):
@@ -180,7 +180,7 @@ async def test_get_application_happy_path():
 @pytest.mark.asyncio
 async def test_get_application_invalid_uuid_raises():
     """A non-UUID application_id raises McpError with invalid-input code (-32602)."""
-    from apliqa.mcp.server import get_application
+    from applire.mcp.server import get_application
 
     with pytest.raises(McpError) as exc_info:
         await get_application(application_id="not-a-uuid")
@@ -191,14 +191,14 @@ async def test_get_application_invalid_uuid_raises():
 @pytest.mark.asyncio
 async def test_get_application_not_found_raises():
     """LookupError from the service layer raises McpError with not-found code (-32001)."""
-    from apliqa.mcp.server import get_application
+    from applire.mcp.server import get_application
 
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.app_svc.get_application",
+            "applire.mcp.server.app_svc.get_application",
             AsyncMock(side_effect=LookupError("Application not found")),
         ),
     ):

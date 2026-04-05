@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-from apliqa.models.cv import CVGenerationStatus
+from applire.models.cv import CVGenerationStatus
 
 CVTemplate = Literal["classic_german", "modern_swiss"]
 

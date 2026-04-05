@@ -5,14 +5,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.auth import get_auth_provider
-from apliqa.auth.base import AuthProvider
-from apliqa.db.session import get_db
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.providers import get_provider
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.cv import CVGenerateRequest, CVGenerateResponse, CVStatusResponse
-from apliqa.schemas.cv_sections import (
+from applire.auth import get_auth_provider
+from applire.auth.base import AuthProvider
+from applire.db.session import get_db
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.providers import get_provider
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.cv import CVGenerateRequest, CVGenerateResponse, CVStatusResponse
+from applire.schemas.cv_sections import (
     AssistAnswerRequest,
     AssistAnswerResponse,
     AssistStartRequest,
@@ -21,9 +21,9 @@ from apliqa.schemas.cv_sections import (
     SectionPatchRequest,
     SectionPatchResponse,
 )
-from apliqa.services.cv import generate_cv, get_cv_html, get_cv_pdf, get_cv_status, get_pdf_filename, list_cvs_for_job
-from apliqa.services.cv_assist import start_assist_session, submit_assist_answer
-from apliqa.services.cv_section_editor import get_cv_sections, patch_cv_section
+from applire.services.cv import generate_cv, get_cv_html, get_cv_pdf, get_cv_status, get_pdf_filename, list_cvs_for_job
+from applire.services.cv_assist import start_assist_session, submit_assist_answer
+from applire.services.cv_section_editor import get_cv_sections, patch_cv_section
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 

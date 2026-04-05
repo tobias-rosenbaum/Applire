@@ -7,9 +7,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from apliqa.auth import get_auth_provider
-from apliqa.db.session import get_db
-from apliqa.routers.cv import router
+from applire.auth import get_auth_provider
+from applire.db.session import get_db
+from applire.routers.cv import router
 
 _CV_ID = str(uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc"))
 
@@ -28,7 +28,7 @@ def client():
 
 
 def test_patch_section_returns_resolved_gaps_when_keyword_present(client):
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
 
     mock_response = SectionPatchResponse(
         html="<html/>",
@@ -36,7 +36,7 @@ def test_patch_section_returns_resolved_gaps_when_keyword_present(client):
         resolved_gaps=["Python"],
     )
     with patch(
-        "apliqa.routers.cv.patch_cv_section",
+        "applire.routers.cv.patch_cv_section",
         new_callable=AsyncMock,
         return_value=mock_response,
     ):
@@ -51,7 +51,7 @@ def test_patch_section_returns_resolved_gaps_when_keyword_present(client):
 
 
 def test_patch_section_returns_empty_resolved_gaps_when_keyword_absent(client):
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
 
     mock_response = SectionPatchResponse(
         html="<html/>",
@@ -59,7 +59,7 @@ def test_patch_section_returns_empty_resolved_gaps_when_keyword_absent(client):
         resolved_gaps=[],
     )
     with patch(
-        "apliqa.routers.cv.patch_cv_section",
+        "applire.routers.cv.patch_cv_section",
         new_callable=AsyncMock,
         return_value=mock_response,
     ):

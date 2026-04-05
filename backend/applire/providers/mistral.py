@@ -3,8 +3,8 @@ from typing import Any
 
 from mistralai import Mistral
 
-from apliqa.config import settings
-from apliqa.providers.base import LLMProvider
+from applire.config import settings
+from applire.providers.base import LLMProvider
 
 DEFAULT_MODEL = "mistral-large-latest"
 

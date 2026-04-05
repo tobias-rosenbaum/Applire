@@ -97,7 +97,7 @@ def _run_mcp(stdin: str, env_overrides: dict | None = None, timeout: float = 20.
     cmd = [
         "docker", "compose", "exec", "-iT",
         *extra,
-        "backend", "python", "-m", "apliqa.mcp",
+        "backend", "python", "-m", "applire.mcp",
     ]
     proc = subprocess.Popen(
         cmd,
@@ -156,7 +156,7 @@ def test_mcp_sse_transport_rejected_with_exit_code_1():
         [
             "docker", "compose", "exec", "-iT",
             "-e", "MCP_TRANSPORT=sse",
-            "backend", "python", "-m", "apliqa.mcp",
+            "backend", "python", "-m", "applire.mcp",
         ],
         cwd=PROJECT_ROOT,
         env=_DOCKER_ENV,

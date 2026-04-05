@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
 
 
 # ---------------------------------------------------------------------------
@@ -40,58 +40,58 @@ def mock_settings(monkeypatch):
 
 
 def test_factory_returns_mistral_provider(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "llm_provider", "mistral")
     monkeypatch.setattr(cfg.settings, "mistral_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "mistral_model", "mistral-small-latest")
-    with patch("apliqa.providers.llm.mistral.Mistral"):
-        from apliqa.providers.llm import get_provider
-        from apliqa.providers.llm.mistral import MistralProvider
+    with patch("applire.providers.llm.mistral.Mistral"):
+        from applire.providers.llm import get_provider
+        from applire.providers.llm.mistral import MistralProvider
         provider = get_provider()
         assert isinstance(provider, MistralProvider)
 
 
 def test_factory_returns_openrouter_provider(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "llm_provider", "openrouter")
     monkeypatch.setattr(cfg.settings, "openrouter_api_key", "sk-test")
     monkeypatch.setattr(cfg.settings, "openrouter_base_url", "https://openrouter.ai/api/v1")
     monkeypatch.setattr(cfg.settings, "openrouter_model", "mistralai/mistral-large-latest")
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm import get_provider
-        from apliqa.providers.llm.openrouter import OpenRouterProvider
+        from applire.providers.llm import get_provider
+        from applire.providers.llm.openrouter import OpenRouterProvider
         provider = get_provider()
         assert isinstance(provider, OpenRouterProvider)
 
 
 def test_factory_returns_openai_provider(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "llm_provider", "openai")
     monkeypatch.setattr(cfg.settings, "openai_api_key", "sk-test")
     monkeypatch.setattr(cfg.settings, "openai_base_url", "")
     monkeypatch.setattr(cfg.settings, "openai_model", "gpt-4o")
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm import get_provider
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm import get_provider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = get_provider()
         assert isinstance(provider, OpenAIProvider)
 
 
 def test_factory_returns_ollama_provider(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "llm_provider", "ollama")
     monkeypatch.setattr(cfg.settings, "ollama_base_url", "http://localhost:11434")
     monkeypatch.setattr(cfg.settings, "ollama_model", "llama3")
-    from apliqa.providers.llm import get_provider
-    from apliqa.providers.llm.ollama import OllamaProvider
+    from applire.providers.llm import get_provider
+    from applire.providers.llm.ollama import OllamaProvider
     provider = get_provider()
     assert isinstance(provider, OllamaProvider)
 
 
 def test_factory_raises_on_unknown_provider(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "llm_provider", "unicorn")
-    from apliqa.providers.llm import get_provider
+    from applire.providers.llm import get_provider
     with pytest.raises(ValueError, match="Unknown LLM_PROVIDER"):
         get_provider()
 
@@ -102,7 +102,7 @@ def test_factory_raises_on_unknown_provider(monkeypatch):
 
 
 def test_openrouter_headers_and_default_model(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openrouter_api_key", "sk-test-or")
     monkeypatch.setattr(cfg.settings, "openrouter_model", "")
     monkeypatch.setattr(cfg.settings, "openrouter_base_url", "https://openrouter.ai/api/v1")
@@ -114,7 +114,7 @@ def test_openrouter_headers_and_default_model(monkeypatch):
         return MagicMock()
 
     with patch("openai.AsyncOpenAI", side_effect=fake_async_openai):
-        from apliqa.providers.llm.openrouter import OpenRouterProvider
+        from applire.providers.llm.openrouter import OpenRouterProvider
         p = OpenRouterProvider()
 
     headers = captured_kwargs.get("default_headers", {})
@@ -124,7 +124,7 @@ def test_openrouter_headers_and_default_model(monkeypatch):
 
 
 def test_openrouter_uses_default_base_url(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openrouter_api_key", "sk-test-or")
     monkeypatch.setattr(cfg.settings, "openrouter_base_url", "")
     monkeypatch.setattr(cfg.settings, "openrouter_model", "mistralai/mistral-large-latest")
@@ -136,7 +136,7 @@ def test_openrouter_uses_default_base_url(monkeypatch):
         return MagicMock()
 
     with patch("openai.AsyncOpenAI", side_effect=fake_async_openai):
-        from apliqa.providers.llm.openrouter import _DEFAULT_BASE_URL, OpenRouterProvider
+        from applire.providers.llm.openrouter import _DEFAULT_BASE_URL, OpenRouterProvider
         OpenRouterProvider()
 
     assert captured_kwargs.get("base_url") == _DEFAULT_BASE_URL
@@ -151,7 +151,7 @@ def test_openrouter_uses_default_base_url(monkeypatch):
 async def test_openrouter_rate_limit_raises_llm_rate_limit_error(monkeypatch):
     import openai
 
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openrouter_api_key", "sk-test")
     monkeypatch.setattr(cfg.settings, "openrouter_model", "mistralai/mistral-large-latest")
     monkeypatch.setattr(cfg.settings, "openrouter_base_url", "https://openrouter.ai/api/v1")
@@ -166,7 +166,7 @@ async def test_openrouter_rate_limit_raises_llm_rate_limit_error(monkeypatch):
     )
 
     with patch("openai.AsyncOpenAI", return_value=mock_client):
-        from apliqa.providers.llm.openrouter import OpenRouterProvider
+        from applire.providers.llm.openrouter import OpenRouterProvider
         provider = OpenRouterProvider(timeout=30)
 
     with patch("asyncio.sleep", new_callable=AsyncMock):
@@ -188,7 +188,7 @@ async def test_openai_rate_limit_raises_llm_rate_limit_error():
     )
 
     with patch("openai.AsyncOpenAI", return_value=mock_client):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = OpenAIProvider(api_key="sk-test", timeout=30)
 
     with patch("asyncio.sleep", new_callable=AsyncMock):
@@ -212,7 +212,7 @@ async def test_ollama_rate_limit_raises_llm_rate_limit_error():
         )
         mock_client_cls.return_value = mock_client
 
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
         provider = OllamaProvider(base_url="http://localhost:11434", model="llama3", timeout=30)
 
         with patch("asyncio.sleep", new_callable=AsyncMock):
@@ -238,9 +238,9 @@ async def test_provider_timeout_raises_llm_timeout_error():
 
     with patch("openai.AsyncOpenAI", return_value=mock_client):
         import importlib
-        import apliqa.providers.llm.openai as mod
+        import applire.providers.llm.openai as mod
         importlib.reload(mod)
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = OpenAIProvider(api_key="sk-test", timeout=1)
 
     with pytest.raises(LLMTimeoutError):
@@ -254,14 +254,14 @@ async def test_provider_timeout_raises_llm_timeout_error():
 
 def test_provider_stores_timeout():
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         p = OpenAIProvider(api_key="sk-test", timeout=45)
         assert p._timeout == 45
 
 
 def test_provider_default_timeout():
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         p = OpenAIProvider(api_key="sk-test")
         assert p._timeout == 30
 
@@ -272,12 +272,12 @@ def test_provider_default_timeout():
 
 
 def test_providers_base_shim_exports_llm_provider():
-    from apliqa.providers.base import LLMProvider  # noqa: F401 — shim import
+    from applire.providers.base import LLMProvider  # noqa: F401 — shim import
     assert LLMProvider is not None
 
 
 def test_providers_init_exports_get_provider():
-    from apliqa.providers import get_provider  # noqa: F401 — shim import
+    from applire.providers import get_provider  # noqa: F401 — shim import
     assert callable(get_provider)
 
 
@@ -287,7 +287,7 @@ def test_providers_init_exports_get_provider():
 
 
 def test_config_has_openrouter_fields():
-    from apliqa.config import Settings
+    from applire.config import Settings
     # Check field definitions directly — avoids interference from .env overrides
     fields = Settings.model_fields
     assert "openrouter_api_key" in fields

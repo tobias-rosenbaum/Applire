@@ -18,29 +18,29 @@ import pytest
 
 
 def test_factory_returns_no_auth_provider_by_default():
-    from apliqa.auth import get_auth_provider
-    from apliqa.auth.no_auth import NoAuthProvider
+    from applire.auth import get_auth_provider
+    from applire.auth.no_auth import NoAuthProvider
 
-    with patch("apliqa.auth.settings") as mock_settings:
+    with patch("applire.auth.settings") as mock_settings:
         mock_settings.auth_provider = "none"
         provider = get_auth_provider()
     assert isinstance(provider, NoAuthProvider)
 
 
 def test_factory_is_case_insensitive():
-    from apliqa.auth import get_auth_provider
-    from apliqa.auth.no_auth import NoAuthProvider
+    from applire.auth import get_auth_provider
+    from applire.auth.no_auth import NoAuthProvider
 
-    with patch("apliqa.auth.settings") as mock_settings:
+    with patch("applire.auth.settings") as mock_settings:
         mock_settings.auth_provider = "None"
         provider = get_auth_provider()
     assert isinstance(provider, NoAuthProvider)
 
 
 def test_factory_raises_on_unknown_provider():
-    from apliqa.auth import get_auth_provider
+    from applire.auth import get_auth_provider
 
-    with patch("apliqa.auth.settings") as mock_settings:
+    with patch("applire.auth.settings") as mock_settings:
         mock_settings.auth_provider = "magic"
         with pytest.raises(ValueError, match="Unknown AUTH_PROVIDER"):
             get_auth_provider()
@@ -53,8 +53,8 @@ def test_factory_raises_on_unknown_provider():
 
 @pytest.mark.asyncio
 async def test_no_auth_returns_user():
-    from apliqa.auth.no_auth import NoAuthProvider
-    from apliqa.models.user import User
+    from applire.auth.no_auth import NoAuthProvider
+    from applire.models.user import User
 
     provider = NoAuthProvider()
     user = await provider.get_current_user(MagicMock())
@@ -63,7 +63,7 @@ async def test_no_auth_returns_user():
 
 @pytest.mark.asyncio
 async def test_no_auth_stub_has_stable_id():
-    from apliqa.auth.no_auth import NoAuthProvider, _STUB_USER_ID
+    from applire.auth.no_auth import NoAuthProvider, _STUB_USER_ID
 
     provider = NoAuthProvider()
     user = await provider.get_current_user(MagicMock())
@@ -72,7 +72,7 @@ async def test_no_auth_stub_has_stable_id():
 
 @pytest.mark.asyncio
 async def test_no_auth_stub_has_expected_email():
-    from apliqa.auth.no_auth import NoAuthProvider, _STUB_EMAIL
+    from applire.auth.no_auth import NoAuthProvider, _STUB_EMAIL
 
     provider = NoAuthProvider()
     user = await provider.get_current_user(MagicMock())
@@ -81,7 +81,7 @@ async def test_no_auth_stub_has_expected_email():
 
 @pytest.mark.asyncio
 async def test_no_auth_returns_same_user_on_repeated_calls():
-    from apliqa.auth.no_auth import NoAuthProvider
+    from applire.auth.no_auth import NoAuthProvider
 
     provider = NoAuthProvider()
     user1 = await provider.get_current_user(MagicMock())
@@ -92,7 +92,7 @@ async def test_no_auth_returns_same_user_on_repeated_calls():
 
 @pytest.mark.asyncio
 async def test_no_auth_user_is_not_deleted():
-    from apliqa.auth.no_auth import NoAuthProvider
+    from applire.auth.no_auth import NoAuthProvider
 
     provider = NoAuthProvider()
     user = await provider.get_current_user(MagicMock())
@@ -105,7 +105,7 @@ async def test_no_auth_user_is_not_deleted():
 
 
 def test_auth_provider_is_abstract():
-    from apliqa.auth.base import AuthProvider
+    from applire.auth.base import AuthProvider
 
     with pytest.raises(TypeError):
         AuthProvider()  # type: ignore[abstract]

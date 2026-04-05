@@ -7,8 +7,8 @@ Controlled by the LLM_PROVIDER environment variable:
   ollama      — Ollama local server (zero cloud dependencies)
 """
 
-from apliqa.config import settings
-from apliqa.providers.llm.base import LLMProvider
+from applire.config import settings
+from applire.providers.llm.base import LLMProvider
 
 
 def get_provider() -> LLMProvider:
@@ -16,23 +16,23 @@ def get_provider() -> LLMProvider:
     provider = settings.llm_provider.lower()
 
     if provider == "mistral":
-        from apliqa.providers.llm.mistral import MistralProvider
+        from applire.providers.llm.mistral import MistralProvider
         return MistralProvider()
 
     if provider == "openrouter":
-        from apliqa.providers.llm.openrouter import OpenRouterProvider
+        from applire.providers.llm.openrouter import OpenRouterProvider
         return OpenRouterProvider()
 
     if provider == "openai":
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         return OpenAIProvider()
 
     if provider == "ollama":
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
         return OllamaProvider()
 
     if provider == "mock":
-        from apliqa.providers.llm.mock import MockLLMProvider
+        from applire.providers.llm.mock import MockLLMProvider
         return MockLLMProvider()
 
     raise ValueError(

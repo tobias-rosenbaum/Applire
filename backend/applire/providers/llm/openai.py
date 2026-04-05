@@ -12,9 +12,9 @@ from typing import Any
 import openai
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from apliqa.config import settings
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.providers.llm.base import LLMProvider
+from applire.config import settings
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.providers.llm.base import LLMProvider
 
 _retry = retry(
     retry=retry_if_exception_type(openai.RateLimitError),

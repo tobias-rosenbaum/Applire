@@ -1,4 +1,4 @@
-from apliqa.services.cv_gap_mapper import map_gaps_to_sections
+from applire.services.cv_gap_mapper import map_gaps_to_sections
 
 
 def test_gap_maps_to_section_with_most_keyword_overlap():

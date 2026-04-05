@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from fastapi import Request
 
-from apliqa.models.user import User
+from applire.models.user import User
 
 
 class AuthProvider(ABC):

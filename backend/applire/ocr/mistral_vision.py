@@ -9,7 +9,7 @@ expose — that interface is intentionally minimal for text completion.
 
 import base64
 
-from apliqa.ocr.base import CVImageExtractor
+from applire.ocr.base import CVImageExtractor
 
 _VISION_MODEL = "pixtral-12b-2409"
 _SYSTEM_PROMPT = (

@@ -9,7 +9,7 @@
 
 import json
 
-from apliqa.services.gap_inference import PreClassification
+from applire.services.gap_inference import PreClassification
 
 SYSTEM_PROMPT = """\
 You are an expert career coach specialised in the DACH (Germany, Austria, Switzerland) job market.

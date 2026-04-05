@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 from fastapi import Request
 
-from apliqa.auth.base import AuthProvider
-from apliqa.models.user import User
+from applire.auth.base import AuthProvider
+from applire.models.user import User
 
 # Stable stub identity for single-user Community Edition deployments.
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")

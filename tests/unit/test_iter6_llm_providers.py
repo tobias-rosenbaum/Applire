@@ -19,22 +19,22 @@ import pytest
 
 
 def test_factory_returns_mistral_provider(monkeypatch):
-    import apliqa.config as cfg
-    from apliqa.providers import get_provider
-    from apliqa.providers.llm.mistral import MistralProvider
+    import applire.config as cfg
+    from applire.providers import get_provider
+    from applire.providers.llm.mistral import MistralProvider
 
     monkeypatch.setattr(cfg.settings, "llm_provider", "mistral")
     monkeypatch.setattr(cfg.settings, "mistral_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "mistral_model", "mistral-small-latest")
-    with patch("apliqa.providers.llm.mistral.Mistral"):
+    with patch("applire.providers.llm.mistral.Mistral"):
         provider = get_provider()
     assert isinstance(provider, MistralProvider)
 
 
 def test_factory_returns_openai_provider(monkeypatch):
-    import apliqa.config as cfg
-    from apliqa.providers import get_provider
-    from apliqa.providers.llm.openai import OpenAIProvider
+    import applire.config as cfg
+    from applire.providers import get_provider
+    from applire.providers.llm.openai import OpenAIProvider
 
     monkeypatch.setattr(cfg.settings, "llm_provider", "openai")
     monkeypatch.setattr(cfg.settings, "openai_api_key", "test-key")
@@ -46,9 +46,9 @@ def test_factory_returns_openai_provider(monkeypatch):
 
 
 def test_factory_returns_ollama_provider(monkeypatch):
-    import apliqa.config as cfg
-    from apliqa.providers import get_provider
-    from apliqa.providers.llm.ollama import OllamaProvider
+    import applire.config as cfg
+    from applire.providers import get_provider
+    from applire.providers.llm.ollama import OllamaProvider
 
     monkeypatch.setattr(cfg.settings, "llm_provider", "ollama")
     monkeypatch.setattr(cfg.settings, "ollama_base_url", "http://localhost:11434")
@@ -58,8 +58,8 @@ def test_factory_returns_ollama_provider(monkeypatch):
 
 
 def test_factory_raises_on_unknown_provider(monkeypatch):
-    import apliqa.config as cfg
-    from apliqa.providers import get_provider
+    import applire.config as cfg
+    from applire.providers import get_provider
 
     monkeypatch.setattr(cfg.settings, "llm_provider", "unknownprovider")
     with pytest.raises(ValueError, match="Unknown LLM_PROVIDER"):
@@ -67,14 +67,14 @@ def test_factory_raises_on_unknown_provider(monkeypatch):
 
 
 def test_factory_is_case_insensitive(monkeypatch):
-    import apliqa.config as cfg
-    from apliqa.providers import get_provider
-    from apliqa.providers.llm.mistral import MistralProvider
+    import applire.config as cfg
+    from applire.providers import get_provider
+    from applire.providers.llm.mistral import MistralProvider
 
     monkeypatch.setattr(cfg.settings, "llm_provider", "Mistral")
     monkeypatch.setattr(cfg.settings, "mistral_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "mistral_model", "mistral-small-latest")
-    with patch("apliqa.providers.llm.mistral.Mistral"):
+    with patch("applire.providers.llm.mistral.Mistral"):
         provider = get_provider()
     assert isinstance(provider, MistralProvider)
 
@@ -94,13 +94,13 @@ def _make_openai_response(content: str) -> MagicMock:
 
 @pytest.mark.asyncio
 async def test_openai_acomplete_sends_messages(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openai_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "openai_base_url", "")
     monkeypatch.setattr(cfg.settings, "openai_model", "gpt-4o")
 
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = OpenAIProvider(api_key="test-key")
 
     mock_create = AsyncMock(return_value=_make_openai_response("hello world"))
@@ -116,13 +116,13 @@ async def test_openai_acomplete_sends_messages(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_openai_acomplete_without_system(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openai_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "openai_base_url", "")
     monkeypatch.setattr(cfg.settings, "openai_model", "gpt-4o")
 
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = OpenAIProvider(api_key="test-key")
 
     mock_create = AsyncMock(return_value=_make_openai_response("pong"))
@@ -139,13 +139,13 @@ async def test_openai_acomplete_without_system(monkeypatch):
 async def test_openai_aparse_json_returns_dict(monkeypatch):
     payload = {"role_title": "Backend Engineer", "skills": ["Python"]}
 
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openai_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "openai_base_url", "")
     monkeypatch.setattr(cfg.settings, "openai_model", "gpt-4o")
 
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = OpenAIProvider(api_key="test-key")
 
     mock_create = AsyncMock(return_value=_make_openai_response(json.dumps(payload)))
@@ -158,13 +158,13 @@ async def test_openai_aparse_json_returns_dict(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_openai_aparse_json_requests_json_format(monkeypatch):
-    import apliqa.config as cfg
+    import applire.config as cfg
     monkeypatch.setattr(cfg.settings, "openai_api_key", "test-key")
     monkeypatch.setattr(cfg.settings, "openai_base_url", "")
     monkeypatch.setattr(cfg.settings, "openai_model", "gpt-4o")
 
     with patch("openai.AsyncOpenAI"):
-        from apliqa.providers.llm.openai import OpenAIProvider
+        from applire.providers.llm.openai import OpenAIProvider
         provider = OpenAIProvider(api_key="test-key")
 
     mock_create = AsyncMock(return_value=_make_openai_response('{"ok": true}'))
@@ -194,7 +194,7 @@ def _patch_httpx_post(return_value: MagicMock):
     mock_async_cm = MagicMock()
     mock_async_cm.__aenter__ = AsyncMock(return_value=mock_client)
     mock_async_cm.__aexit__ = AsyncMock(return_value=False)
-    return patch("apliqa.providers.llm.ollama.httpx.AsyncClient", return_value=mock_async_cm), mock_client
+    return patch("applire.providers.llm.ollama.httpx.AsyncClient", return_value=mock_async_cm), mock_client
 
 
 @pytest.mark.asyncio
@@ -203,7 +203,7 @@ async def test_ollama_acomplete_returns_content():
     patcher, mock_client = _patch_httpx_post(_make_httpx_response(ollama_body))
 
     with patcher:
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
 
         provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2")
         result = await provider.acomplete("Sag Hallo")
@@ -217,7 +217,7 @@ async def test_ollama_acomplete_posts_to_correct_endpoint():
     patcher, mock_client = _patch_httpx_post(_make_httpx_response(ollama_body))
 
     with patcher:
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
 
         provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2")
         await provider.acomplete("test")
@@ -236,7 +236,7 @@ async def test_ollama_aparse_json_returns_dict():
     patcher, mock_client = _patch_httpx_post(_make_httpx_response(ollama_body))
 
     with patcher:
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
 
         provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2")
         result = await provider.aparse_json("Analyse gaps")
@@ -251,7 +251,7 @@ async def test_ollama_aparse_json_requests_json_format():
     patcher, mock_client = _patch_httpx_post(_make_httpx_response(ollama_body))
 
     with patcher:
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
 
         provider = OllamaProvider(base_url="http://localhost:11434", model="llama3.2")
         await provider.aparse_json("Go")
@@ -266,7 +266,7 @@ async def test_ollama_strips_trailing_slash_from_base_url():
     patcher, mock_client = _patch_httpx_post(_make_httpx_response(ollama_body))
 
     with patcher:
-        from apliqa.providers.llm.ollama import OllamaProvider
+        from applire.providers.llm.ollama import OllamaProvider
 
         provider = OllamaProvider(base_url="http://localhost:11434/", model="llama3.2")
         await provider.acomplete("hi")

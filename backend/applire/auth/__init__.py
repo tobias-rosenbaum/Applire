@@ -1,5 +1,5 @@
-from apliqa.config import settings
-from apliqa.auth.base import AuthProvider
+from applire.config import settings
+from applire.auth.base import AuthProvider
 
 
 def get_auth_provider() -> AuthProvider:
@@ -14,7 +14,7 @@ def get_auth_provider() -> AuthProvider:
     provider = settings.auth_provider.lower()
 
     if provider == "none":
-        from apliqa.auth.no_auth import NoAuthProvider
+        from applire.auth.no_auth import NoAuthProvider
         return NoAuthProvider()
 
     raise ValueError(

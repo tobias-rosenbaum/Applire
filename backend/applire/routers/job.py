@@ -4,17 +4,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.auth import get_auth_provider
-from apliqa.auth.base import AuthProvider
-from apliqa.db.session import get_db
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.providers import get_provider
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.gap import GapAnalysisResponse
-from apliqa.schemas.job import JobAnalyzeRequest, JobAnalysisResponse
-from apliqa.services.gap import analyze_gaps
-from apliqa.services.job import analyze_jd
-from apliqa.services.scraper import ScraperError, scrape_job_url
+from applire.auth import get_auth_provider
+from applire.auth.base import AuthProvider
+from applire.db.session import get_db
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.providers import get_provider
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.gap import GapAnalysisResponse
+from applire.schemas.job import JobAnalyzeRequest, JobAnalysisResponse
+from applire.services.gap import analyze_gaps
+from applire.services.job import analyze_jd
+from applire.services.scraper import ScraperError, scrape_job_url
 
 router = APIRouter(prefix="/api/job", tags=["job"])
 
@@ -71,7 +71,7 @@ async def get_job_analysis(
 ) -> JobAnalysisResponse:
     """Retrieve a stored JobAnalysis without re-triggering LLM (17.11)."""
     from sqlalchemy import select
-    from apliqa.models.job import JobAnalysis
+    from applire.models.job import JobAnalysis
 
     result = await db.execute(
         select(JobAnalysis).where(

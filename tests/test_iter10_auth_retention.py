@@ -46,7 +46,7 @@ _RETENTION_COUNT_KEYS = _RETENTION_KEYS - {"run_at"}
 def _run_retention() -> dict:
     """Run the retention worker inside the backend container and return parsed JSON."""
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "python", "-m", "apliqa.retention"],
+        ["docker", "compose", "exec", "-T", "backend", "python", "-m", "applire.retention"],
         capture_output=True,
         text=True,
         timeout=60,

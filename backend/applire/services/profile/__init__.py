@@ -11,19 +11,19 @@ from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.profile import MasterProfile
-from apliqa.models.uploads import UploadRecord
-from apliqa.prompts.cv_extraction import (
+from applire.models.profile import MasterProfile
+from applire.models.uploads import UploadRecord
+from applire.prompts.cv_extraction import (
     GENERIC_CV_EXTRACTION_PROMPT,
     JD_AWARE_CV_EXTRACTION_PROMPT,
     build_generic_prompt,
     build_jd_aware_prompt,
 )
-from apliqa.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
-from apliqa.services.profile.merge import merge_profiles
-from apliqa.schemas.profile import (
+from applire.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
+from applire.providers.llm.base import LLMProvider
+from applire.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
+from applire.services.profile.merge import merge_profiles
+from applire.schemas.profile import (
     ConflictSummary,
     CVUploadResponse,
     EnrichmentRecord,
@@ -409,8 +409,8 @@ async def upload_cv(
       5. Persist UploadRecord (file + cost metadata)
       6. Return CVUploadResponse with status, completeness, and conflicts
     """
-    from apliqa.models.job import JobAnalysis
-    from apliqa.services.cv_parser import extract_text
+    from applire.models.job import JobAnalysis
+    from applire.services.cv_parser import extract_text
 
     # 1. Text extraction — each CV is analysed individually; never concatenated.
     #    Hard cap prevents token overflow on verbose files (LinkedIn PDFs can be

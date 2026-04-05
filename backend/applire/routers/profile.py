@@ -11,22 +11,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-from apliqa.auth import get_auth_provider
-from apliqa.auth.base import AuthProvider
-from apliqa.db.session import get_db
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.ocr import get_ocr_extractor
-from apliqa.ocr.base import CVImageExtractor
-from apliqa.providers import get_provider
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.profile import (
+from applire.auth import get_auth_provider
+from applire.auth.base import AuthProvider
+from applire.db.session import get_db
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.ocr import get_ocr_extractor
+from applire.ocr.base import CVImageExtractor
+from applire.providers import get_provider
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.profile import (
     ConflictResolutionRequest,
     CVUploadResponse,
     EnrichmentRecord,
     LinkedInImportRequest,
     MasterProfileResponse,
 )
-from apliqa.services.profile import (
+from applire.services.profile import (
     get_enrichment_history,
     get_profile,
     import_from_linkedin,
@@ -38,8 +38,8 @@ from apliqa.services.profile import (
     resolve_conflict,
     upload_cv,
 )
-from apliqa.storage import get_storage
-from apliqa.storage.base import StorageProvider
+from applire.storage import get_storage
+from applire.storage.base import StorageProvider
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -303,13 +303,13 @@ async def erase_profile(
       → applications → master_profiles → users
     job_analyses are NOT deleted (shared/global, no user_id).
     """
-    from apliqa.models.application import Application
-    from apliqa.models.cv import GeneratedCV
-    from apliqa.models.flow import FlowSession
-    from apliqa.models.profile import MasterProfile
-    from apliqa.models.session import InterviewSession
-    from apliqa.models.uploads import UploadRecord
-    from apliqa.models.user import User
+    from applire.models.application import Application
+    from applire.models.cv import GeneratedCV
+    from applire.models.flow import FlowSession
+    from applire.models.profile import MasterProfile
+    from applire.models.session import InterviewSession
+    from applire.models.uploads import UploadRecord
+    from applire.models.user import User
 
     user = await auth.get_current_user(request)
     uid = user.id
@@ -407,11 +407,11 @@ async def export_profile(
 
     Excludes internal system state (raw_text_hash, token counts, etc.).
     """
-    from apliqa.models.application import Application
-    from apliqa.models.cv import GeneratedCV
-    from apliqa.models.profile import MasterProfile
-    from apliqa.models.session import InterviewSession
-    from apliqa.models.uploads import UploadRecord
+    from applire.models.application import Application
+    from applire.models.cv import GeneratedCV
+    from applire.models.profile import MasterProfile
+    from applire.models.session import InterviewSession
+    from applire.models.uploads import UploadRecord
 
     user = await auth.get_current_user(request)
     uid = user.id

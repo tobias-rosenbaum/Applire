@@ -13,14 +13,14 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.gap import GapAnalysis
-from apliqa.models.job import JobAnalysis
-from apliqa.models.profile import MasterProfile
-from apliqa.models.session import InterviewSession
-from apliqa.prompts.gap_analysis import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.gap import GapAnalysisResponse
-from apliqa.services.gap_inference import pre_classify
+from applire.models.gap import GapAnalysis
+from applire.models.job import JobAnalysis
+from applire.models.profile import MasterProfile
+from applire.models.session import InterviewSession
+from applire.prompts.gap_analysis import SYSTEM_PROMPT, build_user_prompt
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.gap import GapAnalysisResponse
+from applire.services.gap_inference import pre_classify
 
 
 # ---------------------------------------------------------------------------

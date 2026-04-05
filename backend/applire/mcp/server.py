@@ -27,21 +27,21 @@ import uuid
 from mcp.server.fastmcp import FastMCP
 from sqlalchemy import select
 
-from apliqa.config import settings
-from apliqa.mcp.deps import get_db
-from apliqa.mcp.errors import internal, invalid_input, not_found
-from apliqa.models.cv import GeneratedCV
-from apliqa.models.job import JobAnalysis
-from apliqa.providers import get_provider
-from apliqa.schemas.application import ApplicationListResponse, ApplicationResponse
-from apliqa.schemas.cv import GeneratedCVResponse
-from apliqa.schemas.job import JobAnalysisResponse
-from apliqa.services import application as app_svc
-from apliqa.services import cv as cv_svc
-from apliqa.services import gap as gap_svc
-from apliqa.services import job as job_svc
-from apliqa.services import profile as profile_svc
-from apliqa.services import session as session_svc
+from applire.config import settings
+from applire.mcp.deps import get_db
+from applire.mcp.errors import internal, invalid_input, not_found
+from applire.models.cv import GeneratedCV
+from applire.models.job import JobAnalysis
+from applire.providers import get_provider
+from applire.schemas.application import ApplicationListResponse, ApplicationResponse
+from applire.schemas.cv import GeneratedCVResponse
+from applire.schemas.job import JobAnalysisResponse
+from applire.services import application as app_svc
+from applire.services import cv as cv_svc
+from applire.services import gap as gap_svc
+from applire.services import job as job_svc
+from applire.services import profile as profile_svc
+from applire.services import session as session_svc
 
 mcp = FastMCP("Apliqa")
 
@@ -128,7 +128,7 @@ async def run_interview(job_id: str) -> dict:
     provider = get_provider()
     async with get_db() as db:
         try:
-            from apliqa.schemas.session import SessionCreateRequest as _SCR
+            from applire.schemas.session import SessionCreateRequest as _SCR
             result = await session_svc.create_session(_SCR(job_id=jid), db, provider)
         except LookupError as exc:
             raise not_found(str(exc))
@@ -187,7 +187,7 @@ async def generate_cv(job_id: str) -> dict:
     )
 )
 async def list_applications(status_filter: str | None = None) -> list[dict]:
-    from apliqa.models.application import UserStatus
+    from applire.models.application import UserStatus
 
     user_status = None
     if status_filter:
@@ -199,7 +199,7 @@ async def list_applications(status_filter: str | None = None) -> list[dict]:
                 f"Must be one of: tracking, applied, rejected, offer."
             )
     # Retrieve the single user from the DB (MCP runs in single-user context).
-    from apliqa.models.user import User
+    from applire.models.user import User
     from sqlalchemy import select as _select
     async with get_db() as db:
         user_result = await db.execute(_select(User).limit(1))

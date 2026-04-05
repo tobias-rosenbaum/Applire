@@ -12,12 +12,12 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.cv import GeneratedCV
-from apliqa.models.flow import FlowSession
-from apliqa.models.gap import GapAnalysis
-from apliqa.models.profile import MasterProfile
-from apliqa.schemas.cv import TailoredCVData
-from apliqa.schemas.cv_sections import (
+from applire.models.cv import GeneratedCV
+from applire.models.flow import FlowSession
+from applire.models.gap import GapAnalysis
+from applire.models.profile import MasterProfile
+from applire.schemas.cv import TailoredCVData
+from applire.schemas.cv_sections import (
     ContentSnapshot,
     CVSectionsResponse,
     GapHintItem,
@@ -25,7 +25,7 @@ from apliqa.schemas.cv_sections import (
     SectionPatchResponse,
     SnapshotPosition,
 )
-from apliqa.services.cv_gap_mapper import map_gaps_to_sections
+from applire.services.cv_gap_mapper import map_gaps_to_sections
 
 
 # ---------------------------------------------------------------------------
@@ -230,7 +230,7 @@ async def patch_cv_section(
     Auto-resolves gaps whose keywords are now present in the new content.
     Returns updated HTML, list of all applied overrides, and resolved gap IDs.
     """
-    from apliqa.services.cv import _jinja_env, _TEMPLATE_FILES
+    from applire.services.cv import _jinja_env, _TEMPLATE_FILES
 
     record = await _load_cv(cv_id, db)
 
@@ -286,7 +286,7 @@ async def _save_section_to_profile(
     skills: additive — only appends skills not already present
     position::{uuid}: replaces responsibilities on the first matching work_experience entry
     """
-    from apliqa.schemas.profile import MasterProfileData
+    from applire.schemas.profile import MasterProfileData
 
     profile = await db.get(MasterProfile, record.profile_id)
     if profile is None:
@@ -300,7 +300,7 @@ async def _save_section_to_profile(
     elif section_id == "skills":
         new_skills_raw = [s.strip() for s in content.split("\n") if s.strip()]
         existing = {s.name.lower() for s in (profile_data.skills or [])}
-        from apliqa.schemas.profile import Skill
+        from applire.schemas.profile import Skill
         for skill_name in new_skills_raw:
             if skill_name.lower() not in existing:
                 profile_data.skills = list(profile_data.skills or []) + [

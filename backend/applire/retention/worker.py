@@ -24,12 +24,12 @@ from sqlalchemy import text, update
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.db.session import AsyncSessionLocal
-from apliqa.models.application import Application
-from apliqa.models.cv import CVGenerationStatus, GeneratedCV
-from apliqa.models.profile import MasterProfile
-from apliqa.models.session import InterviewSession
-from apliqa.models.user import User
+from applire.db.session import AsyncSessionLocal
+from applire.models.application import Application
+from applire.models.cv import CVGenerationStatus, GeneratedCV
+from applire.models.profile import MasterProfile
+from applire.models.session import InterviewSession
+from applire.models.user import User
 
 logger = logging.getLogger(__name__)
 

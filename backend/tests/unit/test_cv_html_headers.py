@@ -6,9 +6,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from apliqa.auth import get_auth_provider
-from apliqa.db.session import get_db
-from apliqa.routers.cv import router
+from applire.auth import get_auth_provider
+from applire.db.session import get_db
+from applire.routers.cv import router
 
 _TEST_CV_ID = str(uuid.UUID("12345678-1234-1234-1234-123456789012"))
 _TEST_HTML = "<html><body><p>Max Mustermann</p></body></html>"
@@ -30,7 +30,7 @@ def client():
 
 
 def test_html_endpoint_has_no_x_frame_options_header(client):
-    with patch("apliqa.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
+    with patch("applire.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
         response = client.get(f"/api/cv/{_TEST_CV_ID}/html")
 
     assert response.status_code == 200
@@ -38,7 +38,7 @@ def test_html_endpoint_has_no_x_frame_options_header(client):
 
 
 def test_html_endpoint_has_no_csp_frame_ancestors_header(client):
-    with patch("apliqa.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
+    with patch("applire.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
         response = client.get(f"/api/cv/{_TEST_CV_ID}/html")
 
     assert response.status_code == 200
@@ -46,7 +46,7 @@ def test_html_endpoint_has_no_csp_frame_ancestors_header(client):
 
 
 def test_html_endpoint_returns_html_content_type(client):
-    with patch("apliqa.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
+    with patch("applire.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
         response = client.get(f"/api/cv/{_TEST_CV_ID}/html")
 
     assert response.status_code == 200

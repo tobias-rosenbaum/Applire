@@ -21,20 +21,20 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.constants import (
+from applire.constants import (
     INTERVIEW_HARD_CEILING_GUIDED,
     INTERVIEW_HARD_CEILING_TARGETED,
     INTERVIEW_TARGET_MIN_GUIDED,
     INTERVIEW_TARGET_MIN_TARGETED,
     MODE_B_COMPLETENESS_THRESHOLD,
 )
-from apliqa.models.gap import GapAnalysis
-from apliqa.models.job import JobAnalysis
-from apliqa.models.profile import MasterProfile
-from apliqa.models.session import InterviewSession
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.profile import MasterProfileData
-from apliqa.schemas.session import (
+from applire.models.gap import GapAnalysis
+from applire.models.job import JobAnalysis
+from applire.models.profile import MasterProfile
+from applire.models.session import InterviewSession
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.profile import MasterProfileData
+from applire.schemas.session import (
     ConflictSummary,
     InterviewState,
     SessionCreateRequest,
@@ -42,9 +42,9 @@ from apliqa.schemas.session import (
     SessionMessageResponse,
     SessionStateResponse,
 )
-from apliqa.services.gap import analyze_gaps
-from apliqa.services.interview.signals import is_termination_signal
-from apliqa.services.interview_graph import (
+from applire.services.gap import analyze_gaps
+from applire.services.interview.signals import is_termination_signal
+from applire.services.interview_graph import (
     gap_detector,
     gap_detector_mode_b,
     profile_updater,

@@ -22,8 +22,8 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from apliqa.models.application import Application
-from apliqa.models.cv import CVGenerationStatus, GeneratedCV
+from applire.models.application import Application
+from applire.models.cv import CVGenerationStatus, GeneratedCV
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -50,16 +50,16 @@ def _uid() -> uuid.UUID:
 @pytest_asyncio.fixture
 async def db():
     """In-memory SQLite session with all models registered."""
-    from apliqa.db.session import Base  # noqa: F401
-    import apliqa.models.user         # noqa: F401
-    import apliqa.models.job          # noqa: F401
-    import apliqa.models.profile      # noqa: F401
-    import apliqa.models.gap          # noqa: F401
-    import apliqa.models.cv           # noqa: F401
-    import apliqa.models.session      # noqa: F401
-    import apliqa.models.flow         # noqa: F401
-    import apliqa.models.uploads      # noqa: F401
-    import apliqa.models.application  # noqa: F401
+    from applire.db.session import Base  # noqa: F401
+    import applire.models.user         # noqa: F401
+    import applire.models.job          # noqa: F401
+    import applire.models.profile      # noqa: F401
+    import applire.models.gap          # noqa: F401
+    import applire.models.cv           # noqa: F401
+    import applire.models.session      # noqa: F401
+    import applire.models.flow         # noqa: F401
+    import applire.models.uploads      # noqa: F401
+    import applire.models.application  # noqa: F401
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -75,8 +75,8 @@ async def db():
 @pytest_asyncio.fixture
 async def user_and_job(db):
     """Seed a minimal User + JobAnalysis so FK constraints are satisfied."""
-    from apliqa.models.user import User
-    from apliqa.models.job import JobAnalysis
+    from applire.models.user import User
+    from applire.models.job import JobAnalysis
 
     user = User(
         id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -104,7 +104,7 @@ async def user_and_job(db):
 @pytest_asyncio.fixture
 async def profile(db):
     """Seed a MasterProfile so GeneratedCV FK constraints pass."""
-    from apliqa.models.profile import MasterProfile
+    from applire.models.profile import MasterProfile
 
     p = MasterProfile(profile_json={}, created_at=_now(), updated_at=_now())
     db.add(p)
@@ -165,8 +165,8 @@ async def _seed_cv(
 
 @pytest.mark.asyncio
 async def test_tombstone_inactive_applications_deletes_expired(db, user_and_job):
-    from apliqa.models.job import JobAnalysis
-    from apliqa.retention.worker import _tombstone_inactive_applications
+    from applire.models.job import JobAnalysis
+    from applire.retention.worker import _tombstone_inactive_applications
 
     user, job1 = user_and_job
 
@@ -194,7 +194,7 @@ async def test_tombstone_inactive_applications_deletes_expired(db, user_and_job)
 
 @pytest.mark.asyncio
 async def test_tombstone_inactive_applications_skips_already_deleted(db, user_and_job):
-    from apliqa.retention.worker import _tombstone_inactive_applications
+    from applire.retention.worker import _tombstone_inactive_applications
 
     user, job = user_and_job
     await _seed_application(
@@ -209,7 +209,7 @@ async def test_tombstone_inactive_applications_skips_already_deleted(db, user_an
 
 @pytest.mark.asyncio
 async def test_tombstone_inactive_applications_spares_active(db, user_and_job):
-    from apliqa.retention.worker import _tombstone_inactive_applications
+    from applire.retention.worker import _tombstone_inactive_applications
 
     user, job = user_and_job
     await _seed_application(db, user.id, job.id, expires_at=_now() + timedelta(days=500))
@@ -225,7 +225,7 @@ async def test_tombstone_inactive_applications_spares_active(db, user_and_job):
 
 @pytest.mark.asyncio
 async def test_reap_stale_pending_cv_marked_failed(db, user_and_job, profile):
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     stale = await _seed_cv(
@@ -245,7 +245,7 @@ async def test_reap_stale_pending_cv_marked_failed(db, user_and_job, profile):
 
 @pytest.mark.asyncio
 async def test_reap_stale_generating_cv_marked_failed(db, user_and_job, profile):
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     stale = await _seed_cv(
@@ -264,7 +264,7 @@ async def test_reap_stale_generating_cv_marked_failed(db, user_and_job, profile)
 @pytest.mark.asyncio
 async def test_reap_cv_jobs_spares_recent_pending(db, user_and_job, profile):
     """A pending CV created 2 minutes ago must not be reaped."""
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     await _seed_cv(
@@ -279,7 +279,7 @@ async def test_reap_cv_jobs_spares_recent_pending(db, user_and_job, profile):
 
 @pytest.mark.asyncio
 async def test_reap_cv_jobs_spares_ready(db, user_and_job, profile):
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     await _seed_cv(
@@ -294,7 +294,7 @@ async def test_reap_cv_jobs_spares_ready(db, user_and_job, profile):
 
 @pytest.mark.asyncio
 async def test_reap_cv_jobs_spares_already_failed(db, user_and_job, profile):
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     await _seed_cv(
@@ -309,7 +309,7 @@ async def test_reap_cv_jobs_spares_already_failed(db, user_and_job, profile):
 
 @pytest.mark.asyncio
 async def test_reap_cv_jobs_skips_soft_deleted(db, user_and_job, profile):
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     await _seed_cv(
@@ -326,8 +326,8 @@ async def test_reap_cv_jobs_skips_soft_deleted(db, user_and_job, profile):
 @pytest.mark.asyncio
 async def test_reap_cv_jobs_selects_only_stale(db, user_and_job, profile):
     """Stale pending is reaped; fresh pending is spared in the same run."""
-    from apliqa.models.job import JobAnalysis
-    from apliqa.retention.worker import _reap_stale_cv_jobs
+    from applire.models.job import JobAnalysis
+    from applire.retention.worker import _reap_stale_cv_jobs
 
     user, job = user_and_job
     # Second job for second CV (different job_id avoids no unique constraint issue)

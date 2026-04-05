@@ -8,7 +8,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from apliqa.services.gap_inference import (
+from applire.services.gap_inference import (
     InferredCandidate,
     PreClassification,
     _has_dach_context,
@@ -321,7 +321,7 @@ class TestGapDetector:
             self.critical_gaps = critical_gaps or []
 
     def test_category_c_comes_before_b(self):
-        from apliqa.services.interview_graph import gap_detector
+        from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis(
             category_b=["B-requirement"],
@@ -332,7 +332,7 @@ class TestGapDetector:
         assert targets.index("C-requirement-2") < targets.index("B-requirement")
 
     def test_category_a_excluded(self):
-        from apliqa.services.interview_graph import gap_detector
+        from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis(
             category_a=["A-matched"],
@@ -343,7 +343,7 @@ class TestGapDetector:
         assert "A-matched" not in targets
 
     def test_categories_dict_correct(self):
-        from apliqa.services.interview_graph import gap_detector
+        from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis(
             category_b=["B-req"],
@@ -355,7 +355,7 @@ class TestGapDetector:
 
     def test_legacy_fallback_uses_critical_gaps(self):
         """Records with empty A/B/C columns fall back to critical_gaps treated as C."""
-        from apliqa.services.interview_graph import gap_detector
+        from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis(critical_gaps=["legacy-gap"])
         targets, categories = gap_detector(ga)
@@ -363,7 +363,7 @@ class TestGapDetector:
         assert categories["legacy-gap"] == "C"
 
     def test_empty_gaps_returns_empty(self):
-        from apliqa.services.interview_graph import gap_detector
+        from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis()
         targets, categories = gap_detector(ga)
@@ -372,7 +372,7 @@ class TestGapDetector:
 
     def test_match_score_range_float(self):
         """Validate that float match_score is accepted by GapAnalysisResponse schema."""
-        from apliqa.schemas.gap import GapAnalysisResponse
+        from applire.schemas.gap import GapAnalysisResponse
         import uuid
         from datetime import datetime, timezone
 
@@ -395,7 +395,7 @@ class TestGapDetector:
     def test_match_score_bounds(self):
         """match_score must be in [0.0, 1.0]."""
         from pydantic import ValidationError
-        from apliqa.schemas.gap import GapAnalysisResponse
+        from applire.schemas.gap import GapAnalysisResponse
         import uuid
         from datetime import datetime, timezone
 

@@ -3,10 +3,10 @@ import hashlib
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.job import JobAnalysis
-from apliqa.prompts.job_analysis import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.job import JobAnalysisResponse
+from applire.models.job import JobAnalysis
+from applire.prompts.job_analysis import SYSTEM_PROMPT, build_user_prompt
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.job import JobAnalysisResponse
 
 
 def _hash_text(text: str) -> str:

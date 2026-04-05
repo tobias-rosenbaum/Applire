@@ -11,10 +11,10 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from apliqa import __version__
-from apliqa.config import settings
-from apliqa.db.session import AsyncSessionLocal
-from apliqa.routers import application, cv, flow, health, job, profile, session
-from apliqa.services.thumbnails import ensure_thumbnails
+from applire.config import settings
+from applire.db.session import AsyncSessionLocal
+from applire.routers import application, cv, flow, health, job, profile, session
+from applire.services.thumbnails import ensure_thumbnails
 
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 _STUB_EMAIL = "local@apliqa.community"

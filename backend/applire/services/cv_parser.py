@@ -13,7 +13,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from apliqa.ocr.base import CVImageExtractor
+    from applire.ocr.base import CVImageExtractor
 
 try:
     import fitz  # pymupdf — used only for OCR page rendering; tests can patch this

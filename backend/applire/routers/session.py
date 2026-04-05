@@ -4,22 +4,22 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.auth import get_auth_provider
-from apliqa.auth.base import AuthProvider
-from apliqa.db.session import get_db
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.providers import get_provider
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.gap import GapAnalysisResponse
-from apliqa.schemas.session import (
+from applire.auth import get_auth_provider
+from applire.auth.base import AuthProvider
+from applire.db.session import get_db
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.providers import get_provider
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.gap import GapAnalysisResponse
+from applire.schemas.session import (
     SessionCreateRequest,
     SessionCreateResponse,
     SessionMessageRequest,
     SessionMessageResponse,
     SessionStateResponse,
 )
-from apliqa.services.gap import analyze_gaps_for_session
-from apliqa.services.session import create_session, get_session_state, send_message
+from applire.services.gap import analyze_gaps_for_session
+from applire.services.session import create_session, get_session_state, send_message
 
 router = APIRouter(prefix="/api/session", tags=["session"])
 

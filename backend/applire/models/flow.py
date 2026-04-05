@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
-from apliqa.db.session import Base
+from applire.db.session import Base
 
 
 class FlowSession(Base):

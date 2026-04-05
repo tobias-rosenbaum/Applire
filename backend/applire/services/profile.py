@@ -6,10 +6,10 @@ from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.profile import MasterProfile
-from apliqa.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers.base import LLMProvider
-from apliqa.schemas.profile import (
+from applire.models.profile import MasterProfile
+from applire.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
+from applire.providers.base import LLMProvider
+from applire.schemas.profile import (
     Contact,
     EducationEntry,
     Language,

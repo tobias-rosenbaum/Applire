@@ -30,7 +30,7 @@ settings = Settings()
 # Edition detection: presence of the apliqa.cloud package IS the gate (ADR 012).
 # APLIQA_EDITION env var has been removed — do not re-add it.
 try:
-    import apliqa.cloud  # type: ignore[import-not-found]
+    import applire.cloud  # type: ignore[import-not-found]
     HAS_CLOUD = True
 except ImportError:
     HAS_CLOUD = False

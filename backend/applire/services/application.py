@@ -18,28 +18,28 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.application import (
+from applire.models.application import (
     Application,
     STEP_TO_WORKFLOW_STATUS,
     UserStatus,
     WorkflowStatus,
     _APPLICATION_TTL_DAYS,
 )
-from apliqa.models.flow import FlowSession
-from apliqa.models.job import JobAnalysis
-from apliqa.models.profile import MasterProfile
-from apliqa.schemas.application import (
+from applire.models.flow import FlowSession
+from applire.models.job import JobAnalysis
+from applire.models.profile import MasterProfile
+from applire.schemas.application import (
     ApplicationListResponse,
     ApplicationResponse,
     CreateApplicationRequest,
     PatchApplicationRequest,
 )
-from apliqa.schemas.profile import MasterProfileData
+from applire.schemas.profile import MasterProfileData
 
 # Import flow helpers — these are pure functions with no import of application.py.
 # The orchestrator imports sync_workflow_status lazily (inside advance_flow body)
 # to avoid a circular import at module level.
-from apliqa.services.flow.orchestrator import _compute_actions, _resolve_user_type
+from applire.services.flow.orchestrator import _compute_actions, _resolve_user_type
 
 
 class ConflictError(Exception):

@@ -7,9 +7,9 @@ from typing import Any
 import httpx
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-from apliqa.config import settings
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.providers.llm.base import LLMProvider
+from applire.config import settings
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.providers.llm.base import LLMProvider
 
 _CONNECT_TIMEOUT = 5.0   # fail fast if Ollama is not running
 

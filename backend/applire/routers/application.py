@@ -14,17 +14,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.auth import get_auth_provider
-from apliqa.auth.base import AuthProvider
-from apliqa.db.session import get_db
-from apliqa.models.application import UserStatus, WorkflowStatus
-from apliqa.schemas.application import (
+from applire.auth import get_auth_provider
+from applire.auth.base import AuthProvider
+from applire.db.session import get_db
+from applire.models.application import UserStatus, WorkflowStatus
+from applire.schemas.application import (
     ApplicationListResponse,
     ApplicationResponse,
     CreateApplicationRequest,
     PatchApplicationRequest,
 )
-from apliqa.services.application import (
+from applire.services.application import (
     ConflictError,
     create_application,
     delete_application,

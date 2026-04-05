@@ -28,17 +28,17 @@ import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from apliqa.models.application import (
+from applire.models.application import (
     Application,
     STEP_TO_WORKFLOW_STATUS,
     UserStatus,
     WorkflowStatus,
 )
-from apliqa.schemas.application import (
+from applire.schemas.application import (
     CreateApplicationRequest,
     PatchApplicationRequest,
 )
-from apliqa.services.application import (
+from applire.services.application import (
     ConflictError,
     create_application,
     delete_application,
@@ -59,16 +59,16 @@ _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 @pytest_asyncio.fixture
 async def db():
     """In-memory SQLite session with all models registered."""
-    from apliqa.db.session import Base  # noqa: F401
-    import apliqa.models.user        # noqa: F401
-    import apliqa.models.job         # noqa: F401
-    import apliqa.models.profile     # noqa: F401
-    import apliqa.models.gap         # noqa: F401
-    import apliqa.models.cv          # noqa: F401
-    import apliqa.models.session     # noqa: F401
-    import apliqa.models.flow        # noqa: F401
-    import apliqa.models.uploads     # noqa: F401
-    import apliqa.models.application  # noqa: F401
+    from applire.db.session import Base  # noqa: F401
+    import applire.models.user        # noqa: F401
+    import applire.models.job         # noqa: F401
+    import applire.models.profile     # noqa: F401
+    import applire.models.gap         # noqa: F401
+    import applire.models.cv          # noqa: F401
+    import applire.models.session     # noqa: F401
+    import applire.models.flow        # noqa: F401
+    import applire.models.uploads     # noqa: F401
+    import applire.models.application  # noqa: F401
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -84,8 +84,8 @@ async def db():
 @pytest_asyncio.fixture
 async def user_and_job(db):
     """Insert a stub user and job analysis; return (user, job)."""
-    from apliqa.models.user import User
-    from apliqa.models.job import JobAnalysis
+    from applire.models.user import User
+    from applire.models.job import JobAnalysis
 
     user = User(
         id=_STUB_USER_ID,
@@ -273,7 +273,7 @@ async def test_list_applications_empty(db, user_and_job):
 
 @pytest.mark.asyncio
 async def test_list_applications_returns_all(db, user_and_job):
-    from apliqa.models.job import JobAnalysis
+    from applire.models.job import JobAnalysis
 
     _, job1 = user_and_job
     job2 = JobAnalysis(
@@ -310,7 +310,7 @@ async def test_list_applications_excludes_deleted(db, user_and_job):
 
 @pytest.mark.asyncio
 async def test_list_applications_filter_by_user_status(db, user_and_job):
-    from apliqa.models.job import JobAnalysis
+    from applire.models.job import JobAnalysis
 
     _, job1 = user_and_job
     job2 = JobAnalysis(
@@ -340,7 +340,7 @@ async def test_list_applications_filter_by_user_status(db, user_and_job):
 
 @pytest.mark.asyncio
 async def test_list_applications_filter_by_workflow_status(db, user_and_job):
-    from apliqa.models.job import JobAnalysis
+    from applire.models.job import JobAnalysis
 
     _, job1 = user_and_job
     job2 = JobAnalysis(
@@ -446,7 +446,7 @@ async def test_delete_application_soft_deletes(db, user_and_job):
 
 @pytest.mark.asyncio
 async def test_delete_application_cascades_to_flow_session(db, user_and_job):
-    from apliqa.models.flow import FlowSession
+    from applire.models.flow import FlowSession
     from sqlalchemy import select
 
     _, job = user_and_job

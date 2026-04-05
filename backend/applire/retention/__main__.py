@@ -1,5 +1,5 @@
 import asyncio
 
-from apliqa.retention.worker import run
+from applire.retention.worker import run
 
 asyncio.run(run())

@@ -8,9 +8,9 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 
 from mistralai import Mistral
 
-from apliqa.config import settings
-from apliqa.exceptions import LLMRateLimitError, LLMTimeoutError
-from apliqa.providers.llm.base import LLMProvider
+from applire.config import settings
+from applire.exceptions import LLMRateLimitError, LLMTimeoutError
+from applire.providers.llm.base import LLMProvider
 
 
 def _is_rate_limit(exc: BaseException) -> bool:

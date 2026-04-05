@@ -41,15 +41,15 @@ def _mock_result(**kwargs) -> MagicMock:
 
 @pytest.mark.asyncio
 async def test_analyze_jd_happy_path():
-    from apliqa.mcp.server import analyze_jd
+    from applire.mcp.server import analyze_jd
 
     cm, _ = _mock_db()
     mock_result = _mock_result(id=str(uuid.uuid4()), role_title="Backend Engineer")
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
-        patch("apliqa.mcp.server.job_svc.analyze_jd", AsyncMock(return_value=mock_result)),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
+        patch("applire.mcp.server.job_svc.analyze_jd", AsyncMock(return_value=mock_result)),
     ):
         result = await analyze_jd(text="Senior Backend Engineer at Acme GmbH")
 
@@ -58,7 +58,7 @@ async def test_analyze_jd_happy_path():
 
 @pytest.mark.asyncio
 async def test_analyze_jd_empty_text_raises():
-    from apliqa.mcp.server import analyze_jd
+    from applire.mcp.server import analyze_jd
 
     with pytest.raises(McpError) as exc_info:
         await analyze_jd(text="   ")
@@ -73,14 +73,14 @@ async def test_analyze_jd_empty_text_raises():
 
 @pytest.mark.asyncio
 async def test_get_profile_happy_path():
-    from apliqa.mcp.server import get_profile
+    from applire.mcp.server import get_profile
 
     cm, _ = _mock_db()
     mock_result = _mock_result(id=str(uuid.uuid4()), completeness=80)
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.profile_svc.get_profile", AsyncMock(return_value=mock_result)),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.profile_svc.get_profile", AsyncMock(return_value=mock_result)),
     ):
         result = await get_profile()
 
@@ -89,13 +89,13 @@ async def test_get_profile_happy_path():
 
 @pytest.mark.asyncio
 async def test_get_profile_no_profile_raises():
-    from apliqa.mcp.server import get_profile
+    from applire.mcp.server import get_profile
 
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.profile_svc.get_profile", AsyncMock(return_value=None)),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.profile_svc.get_profile", AsyncMock(return_value=None)),
     ):
         with pytest.raises(McpError) as exc_info:
             await get_profile()
@@ -110,15 +110,15 @@ async def test_get_profile_no_profile_raises():
 
 @pytest.mark.asyncio
 async def test_update_profile_happy_path():
-    from apliqa.mcp.server import update_profile
+    from applire.mcp.server import update_profile
 
     cm, _ = _mock_db()
     mock_result = _mock_result(id=str(uuid.uuid4()), completeness=90)
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.profile_svc.patch_profile_section",
+            "applire.mcp.server.profile_svc.patch_profile_section",
             AsyncMock(return_value=mock_result),
         ),
     ):
@@ -129,14 +129,14 @@ async def test_update_profile_happy_path():
 
 @pytest.mark.asyncio
 async def test_update_profile_invalid_section_raises():
-    from apliqa.mcp.server import update_profile
+    from applire.mcp.server import update_profile
 
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.profile_svc.patch_profile_section",
+            "applire.mcp.server.profile_svc.patch_profile_section",
             AsyncMock(side_effect=ValueError("Invalid section 'bad_section'")),
         ),
     ):
@@ -148,14 +148,14 @@ async def test_update_profile_invalid_section_raises():
 
 @pytest.mark.asyncio
 async def test_update_profile_no_profile_raises():
-    from apliqa.mcp.server import update_profile
+    from applire.mcp.server import update_profile
 
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.profile_svc.patch_profile_section",
+            "applire.mcp.server.profile_svc.patch_profile_section",
             AsyncMock(side_effect=LookupError("No profile found")),
         ),
     ):
@@ -172,16 +172,16 @@ async def test_update_profile_no_profile_raises():
 
 @pytest.mark.asyncio
 async def test_analyze_gaps_happy_path():
-    from apliqa.mcp.server import analyze_gaps
+    from applire.mcp.server import analyze_gaps
 
     job_id = str(uuid.uuid4())
     cm, _ = _mock_db()
     mock_result = _mock_result(match_score=72, critical_gaps=["Kubernetes"])
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
-        patch("apliqa.mcp.server.gap_svc.analyze_gaps", AsyncMock(return_value=mock_result)),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
+        patch("applire.mcp.server.gap_svc.analyze_gaps", AsyncMock(return_value=mock_result)),
     ):
         result = await analyze_gaps(job_id=job_id)
 
@@ -190,7 +190,7 @@ async def test_analyze_gaps_happy_path():
 
 @pytest.mark.asyncio
 async def test_analyze_gaps_invalid_uuid_raises():
-    from apliqa.mcp.server import analyze_gaps
+    from applire.mcp.server import analyze_gaps
 
     with pytest.raises(McpError) as exc_info:
         await analyze_gaps(job_id="not-a-uuid")
@@ -200,16 +200,16 @@ async def test_analyze_gaps_invalid_uuid_raises():
 
 @pytest.mark.asyncio
 async def test_analyze_gaps_job_not_found_raises():
-    from apliqa.mcp.server import analyze_gaps
+    from applire.mcp.server import analyze_gaps
 
     job_id = str(uuid.uuid4())
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
         patch(
-            "apliqa.mcp.server.gap_svc.analyze_gaps",
+            "applire.mcp.server.gap_svc.analyze_gaps",
             AsyncMock(side_effect=LookupError("Job analysis not found")),
         ),
     ):
@@ -226,7 +226,7 @@ async def test_analyze_gaps_job_not_found_raises():
 
 @pytest.mark.asyncio
 async def test_run_interview_happy_path():
-    from apliqa.mcp.server import run_interview
+    from applire.mcp.server import run_interview
 
     job_id = str(uuid.uuid4())
     session_id = uuid.uuid4()
@@ -239,10 +239,10 @@ async def test_run_interview_happy_path():
     )
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
         patch(
-            "apliqa.mcp.server.session_svc.create_session",
+            "applire.mcp.server.session_svc.create_session",
             AsyncMock(return_value=mock_result),
         ),
     ):
@@ -254,7 +254,7 @@ async def test_run_interview_happy_path():
 
 @pytest.mark.asyncio
 async def test_run_interview_invalid_uuid_raises():
-    from apliqa.mcp.server import run_interview
+    from applire.mcp.server import run_interview
 
     with pytest.raises(McpError) as exc_info:
         await run_interview(job_id="bad-uuid")
@@ -269,17 +269,17 @@ async def test_run_interview_invalid_uuid_raises():
 
 @pytest.mark.asyncio
 async def test_send_message_returns_next_question():
-    from apliqa.mcp.server import send_message
+    from applire.mcp.server import send_message
 
     session_id = str(uuid.uuid4())
     cm, _ = _mock_db()
     mock_result = _mock_result(complete=False, question="What was your team size?", gaps_remaining=2)
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
         patch(
-            "apliqa.mcp.server.session_svc.send_message",
+            "applire.mcp.server.session_svc.send_message",
             AsyncMock(return_value=mock_result),
         ),
     ):
@@ -290,17 +290,17 @@ async def test_send_message_returns_next_question():
 
 @pytest.mark.asyncio
 async def test_send_message_returns_complete():
-    from apliqa.mcp.server import send_message
+    from applire.mcp.server import send_message
 
     session_id = str(uuid.uuid4())
     cm, _ = _mock_db()
     mock_result = _mock_result(complete=True, question=None, gaps_remaining=None)
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
         patch(
-            "apliqa.mcp.server.session_svc.send_message",
+            "applire.mcp.server.session_svc.send_message",
             AsyncMock(return_value=mock_result),
         ),
     ):
@@ -311,7 +311,7 @@ async def test_send_message_returns_complete():
 
 @pytest.mark.asyncio
 async def test_send_message_empty_message_raises():
-    from apliqa.mcp.server import send_message
+    from applire.mcp.server import send_message
 
     with pytest.raises(McpError) as exc_info:
         await send_message(session_id=str(uuid.uuid4()), message="  ")
@@ -321,16 +321,16 @@ async def test_send_message_empty_message_raises():
 
 @pytest.mark.asyncio
 async def test_send_message_already_complete_raises():
-    from apliqa.mcp.server import send_message
+    from applire.mcp.server import send_message
 
     session_id = str(uuid.uuid4())
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
         patch(
-            "apliqa.mcp.server.session_svc.send_message",
+            "applire.mcp.server.session_svc.send_message",
             AsyncMock(side_effect=ValueError("Session is already complete")),
         ),
     ):
@@ -347,7 +347,7 @@ async def test_send_message_already_complete_raises():
 
 @pytest.mark.asyncio
 async def test_generate_cv_happy_path():
-    from apliqa.mcp.server import generate_cv
+    from applire.mcp.server import generate_cv
 
     job_id = str(uuid.uuid4())
     cv_id = uuid.uuid4()
@@ -359,9 +359,9 @@ async def test_generate_cv_happy_path():
     )
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.get_provider"),
-        patch("apliqa.mcp.server.cv_svc.generate_cv", AsyncMock(return_value=mock_result)),
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_provider"),
+        patch("applire.mcp.server.cv_svc.generate_cv", AsyncMock(return_value=mock_result)),
     ):
         result = await generate_cv(job_id=job_id)
 
@@ -372,7 +372,7 @@ async def test_generate_cv_happy_path():
 
 @pytest.mark.asyncio
 async def test_generate_cv_invalid_uuid_raises():
-    from apliqa.mcp.server import generate_cv
+    from applire.mcp.server import generate_cv
 
     with pytest.raises(McpError) as exc_info:
         await generate_cv(job_id="not-a-uuid")

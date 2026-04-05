@@ -30,15 +30,15 @@ from playwright.async_api import async_playwright
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.db.session import AsyncSessionLocal
-from apliqa.models.cv import CVGenerationStatus, GeneratedCV
-from apliqa.models.gap import GapAnalysis
-from apliqa.models.job import JobAnalysis
-from apliqa.models.profile import MasterProfile
-from apliqa.prompts.cv_tailoring import SYSTEM_PROMPT, build_user_prompt
-from apliqa.providers import get_provider
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.cv import CVGenerateResponse, CVStatusResponse, CVTemplate, TailoredCVData
+from applire.db.session import AsyncSessionLocal
+from applire.models.cv import CVGenerationStatus, GeneratedCV
+from applire.models.gap import GapAnalysis
+from applire.models.job import JobAnalysis
+from applire.models.profile import MasterProfile
+from applire.prompts.cv_tailoring import SYSTEM_PROMPT, build_user_prompt
+from applire.providers import get_provider
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.cv import CVGenerateResponse, CVStatusResponse, CVTemplate, TailoredCVData
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +212,7 @@ async def get_pdf_filename(cv_id: uuid.UUID, db: AsyncSession) -> str:
 
 
 async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
-    from apliqa.services.cv_section_editor import apply_overrides_to_tailored
+    from applire.services.cv_section_editor import apply_overrides_to_tailored
     record = await _load_cv_ready(cv_id, db)
     tailored = TailoredCVData.model_validate(record.tailored_data)
     tailored = apply_overrides_to_tailored(
@@ -295,7 +295,7 @@ async def _render_cv_background(
 
             tailored = TailoredCVData.model_validate(tailored_raw)
 
-            from apliqa.services.cv_section_editor import build_content_snapshot
+            from applire.services.cv_section_editor import build_content_snapshot
             record.content_snapshot = build_content_snapshot(tailored)
 
             record.tailored_data = tailored.model_dump()

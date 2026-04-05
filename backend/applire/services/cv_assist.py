@@ -12,11 +12,11 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.models.cv import GeneratedCV
-from apliqa.models.flow import FlowSession
-from apliqa.models.gap import GapAnalysis
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.cv_sections import (
+from applire.models.cv import GeneratedCV
+from applire.models.flow import FlowSession
+from applire.models.gap import GapAnalysis
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.cv_sections import (
     AssistAnswerResponse,
     AssistStartResponse,
     ContentSnapshot,

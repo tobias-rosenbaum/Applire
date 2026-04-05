@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from apliqa.db.session import Base
+from applire.db.session import Base
 
 
 class User(Base):

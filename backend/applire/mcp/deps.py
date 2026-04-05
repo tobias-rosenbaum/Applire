@@ -10,7 +10,7 @@ from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.db.session import AsyncSessionLocal
+from applire.db.session import AsyncSessionLocal
 
 
 @asynccontextmanager

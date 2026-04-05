@@ -5,13 +5,13 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from apliqa.config import settings
-from apliqa.db.session import Base
+from applire.config import settings
+from applire.db.session import Base
 
 # Import all models so Alembic can detect them
-import apliqa.models.user  # noqa: F401
-import apliqa.models.job  # noqa: F401
-import apliqa.models.uploads  # noqa: F401
+import applire.models.user  # noqa: F401
+import applire.models.job  # noqa: F401
+import applire.models.uploads  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

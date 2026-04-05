@@ -8,7 +8,7 @@ Requires:
 import asyncio
 from io import BytesIO
 
-from apliqa.ocr.base import CVImageExtractor
+from applire.ocr.base import CVImageExtractor
 
 
 class TesseractExtractor(CVImageExtractor):

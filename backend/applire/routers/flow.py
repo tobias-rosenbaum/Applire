@@ -3,16 +3,16 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.auth import get_auth_provider
-from apliqa.auth.base import AuthProvider
-from apliqa.db.session import get_db
-from apliqa.schemas.flow import (
+from applire.auth import get_auth_provider
+from applire.auth.base import AuthProvider
+from applire.db.session import get_db
+from applire.schemas.flow import (
     AdvanceFlowRequest,
     CreateFlowRequest,
     CreateFlowResponse,
     FlowStateResponse,
 )
-from apliqa.services.flow.orchestrator import (
+from applire.services.flow.orchestrator import (
     ArtifactRequiredError,
     InvalidTransitionError,
     advance_flow,

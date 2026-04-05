@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from pathlib import Path
 
-from apliqa.storage.base import StorageProvider
+from applire.storage.base import StorageProvider
 
 
 class LocalStorageProvider(StorageProvider):

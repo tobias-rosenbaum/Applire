@@ -18,7 +18,7 @@ Rules:
 """
 from dataclasses import dataclass, field
 
-from apliqa.schemas.profile import (
+from applire.schemas.profile import (
     Conflict,
     MasterProfileData,
     Skill,

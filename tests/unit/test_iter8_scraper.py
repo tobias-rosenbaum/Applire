@@ -97,7 +97,7 @@ def _mock_playwright_cm(html: str):
 
 
 def test_scraper_error_carries_url_and_reason():
-    from apliqa.services.scraper import ScraperError
+    from applire.services.scraper import ScraperError
 
     err = ScraperError("https://example.com/job/1", "Could not extract text")
     assert err.url == "https://example.com/job/1"
@@ -111,33 +111,33 @@ def test_scraper_error_carries_url_and_reason():
 
 
 def test_validate_url_accepts_https():
-    from apliqa.services.scraper import _validate_url
+    from applire.services.scraper import _validate_url
 
     _validate_url("https://www.stepstone.de/job/123")  # must not raise
 
 
 def test_validate_url_accepts_http():
-    from apliqa.services.scraper import _validate_url
+    from applire.services.scraper import _validate_url
 
     _validate_url("http://jobs.example.com/engineer")  # must not raise
 
 
 def test_validate_url_rejects_file_scheme():
-    from apliqa.services.scraper import _validate_url
+    from applire.services.scraper import _validate_url
 
     with pytest.raises(ValueError, match="http"):
         _validate_url("file:///etc/passwd")
 
 
 def test_validate_url_rejects_ftp_scheme():
-    from apliqa.services.scraper import _validate_url
+    from applire.services.scraper import _validate_url
 
     with pytest.raises(ValueError, match="http"):
         _validate_url("ftp://jobs.example.com/job.txt")
 
 
 def test_validate_url_rejects_bare_string():
-    from apliqa.services.scraper import _validate_url
+    from applire.services.scraper import _validate_url
 
     with pytest.raises(ValueError):
         _validate_url("not-a-url-at-all")
@@ -160,7 +160,7 @@ def test_validate_url_rejects_bare_string():
     ],
 )
 def test_requires_js_for_known_js_hosts(url):
-    from apliqa.services.scraper import _requires_js
+    from applire.services.scraper import _requires_js
 
     assert _requires_js(url) is True
 
@@ -175,7 +175,7 @@ def test_requires_js_for_known_js_hosts(url):
     ],
 )
 def test_requires_js_false_for_generic_hosts(url):
-    from apliqa.services.scraper import _requires_js
+    from applire.services.scraper import _requires_js
 
     assert _requires_js(url) is False
 
@@ -186,7 +186,7 @@ def test_requires_js_false_for_generic_hosts(url):
 
 
 def test_extract_text_from_main_tag():
-    from apliqa.services.scraper import _extract_text
+    from applire.services.scraper import _extract_text
 
     result = _extract_text(_JOB_HTML_MAIN)
     assert result is not None
@@ -198,7 +198,7 @@ def test_extract_text_from_main_tag():
 
 
 def test_extract_text_from_article_tag():
-    from apliqa.services.scraper import _extract_text
+    from applire.services.scraper import _extract_text
 
     result = _extract_text(_JOB_HTML_ARTICLE)
     assert result is not None
@@ -206,7 +206,7 @@ def test_extract_text_from_article_tag():
 
 
 def test_extract_text_from_job_description_div():
-    from apliqa.services.scraper import _extract_text
+    from applire.services.scraper import _extract_text
 
     result = _extract_text(_JOB_HTML_JOB_DESCRIPTION_DIV)
     assert result is not None
@@ -214,14 +214,14 @@ def test_extract_text_from_job_description_div():
 
 
 def test_extract_text_returns_none_for_tiny_html():
-    from apliqa.services.scraper import _extract_text
+    from applire.services.scraper import _extract_text
 
     result = _extract_text(_TINY_HTML)
     assert result is None
 
 
 def test_extract_text_strips_script_content():
-    from apliqa.services.scraper import _extract_text
+    from applire.services.scraper import _extract_text
 
     html = """
     <html><body><main>
@@ -247,7 +247,7 @@ def test_extract_text_strips_script_content():
 @pytest.mark.asyncio
 async def test_tier1_happy_path():
     """Generic URL: Tier 1 (httpx) succeeds and returns extracted text."""
-    from apliqa.services.scraper import scrape_job_url
+    from applire.services.scraper import scrape_job_url
 
     url = "https://jobs.example.com/senior-python-engineer"
     mock_client = _mock_httpx_client(_JOB_HTML_MAIN)
@@ -262,7 +262,7 @@ async def test_tier1_happy_path():
 @pytest.mark.asyncio
 async def test_tier1_insufficient_text_falls_back_to_tier2():
     """Tier 1 returns too little text → automatically falls back to Tier 2."""
-    from apliqa.services.scraper import scrape_job_url
+    from applire.services.scraper import scrape_job_url
 
     url = "https://jobs.example.com/job/42"
     mock_client = _mock_httpx_client(_TINY_HTML)
@@ -285,7 +285,7 @@ async def test_tier1_insufficient_text_falls_back_to_tier2():
 @pytest.mark.asyncio
 async def test_js_host_skips_tier1_and_uses_tier2():
     """StepStone URL must skip Tier 1 entirely and go straight to Tier 2."""
-    from apliqa.services.scraper import scrape_job_url
+    from applire.services.scraper import scrape_job_url
 
     url = "https://www.stepstone.de/stellenangebote/python-engineer-berlin.html"
     mock_pw = _mock_playwright_cm(_JOB_HTML_MAIN)
@@ -303,7 +303,7 @@ async def test_js_host_skips_tier1_and_uses_tier2():
 @pytest.mark.asyncio
 async def test_indeed_dach_skips_tier1_and_uses_tier2():
     """Indeed DACH URL must skip Tier 1 and use Tier 2."""
-    from apliqa.services.scraper import scrape_job_url
+    from applire.services.scraper import scrape_job_url
 
     url = "https://de.indeed.com/viewjob?jk=abc123def456"
     mock_pw = _mock_playwright_cm(_JOB_HTML_JOB_DESCRIPTION_DIV)
@@ -326,7 +326,7 @@ async def test_indeed_dach_skips_tier1_and_uses_tier2():
 @pytest.mark.asyncio
 async def test_both_tiers_return_no_text_raises_scraper_error():
     """When both tiers extract no usable text, ScraperError is raised."""
-    from apliqa.services.scraper import ScraperError, scrape_job_url
+    from applire.services.scraper import ScraperError, scrape_job_url
 
     url = "https://jobs.example.com/opaque-job"
     mock_client = _mock_httpx_client(_TINY_HTML)
@@ -345,7 +345,7 @@ async def test_both_tiers_return_no_text_raises_scraper_error():
 @pytest.mark.asyncio
 async def test_playwright_exception_raises_scraper_error():
     """A Playwright runtime error must be wrapped in ScraperError."""
-    from apliqa.services.scraper import ScraperError, scrape_job_url
+    from applire.services.scraper import ScraperError, scrape_job_url
 
     url = "https://jobs.example.com/job/99"
     mock_client = _mock_httpx_client(_TINY_HTML)
@@ -371,7 +371,7 @@ async def test_playwright_exception_raises_scraper_error():
 
 @pytest.mark.asyncio
 async def test_scrape_rejects_file_scheme():
-    from apliqa.services.scraper import scrape_job_url
+    from applire.services.scraper import scrape_job_url
 
     with pytest.raises(ValueError):
         await scrape_job_url("file:///etc/passwd")
@@ -379,7 +379,7 @@ async def test_scrape_rejects_file_scheme():
 
 @pytest.mark.asyncio
 async def test_scrape_rejects_ftp_scheme():
-    from apliqa.services.scraper import scrape_job_url
+    from applire.services.scraper import scrape_job_url
 
     with pytest.raises(ValueError):
         await scrape_job_url("ftp://jobs.example.com/job.txt")

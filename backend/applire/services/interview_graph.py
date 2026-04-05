@@ -19,9 +19,9 @@ State is persisted as JSONB in interview_sessions.state between HTTP calls.
 
 import hashlib
 
-from apliqa.models.gap import GapAnalysis
-from apliqa.models.job import JobAnalysis
-from apliqa.prompts.interview import (
+from applire.models.gap import GapAnalysis
+from applire.models.job import JobAnalysis
+from applire.prompts.interview import (
     GUIDED_QUESTION_SYSTEM_PROMPT,
     QUESTION_SYSTEM_PROMPT,
     RESPONSE_PARSER_SYSTEM_PROMPT,
@@ -29,8 +29,8 @@ from apliqa.prompts.interview import (
     build_question_prompt,
     build_response_parser_prompt,
 )
-from apliqa.providers.llm.base import LLMProvider
-from apliqa.schemas.session import ConflictSummary, InterviewState
+from applire.providers.llm.base import LLMProvider
+from applire.schemas.session import ConflictSummary, InterviewState
 
 # Sections included in a MODE B guided build, in default priority order.
 # JD-relevance weighting is applied in gap_detector_mode_b() at session creation.

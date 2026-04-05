@@ -19,17 +19,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apliqa.constants import MODE_B_COMPLETENESS_THRESHOLD
-from apliqa.models.cv import GeneratedCV
-from apliqa.models.flow import FlowSession
-from apliqa.models.gap import GapAnalysis
-from apliqa.models.job import JobAnalysis
-from apliqa.models.profile import MasterProfile
-from apliqa.models.session import InterviewSession
+from applire.constants import MODE_B_COMPLETENESS_THRESHOLD
+from applire.models.cv import GeneratedCV
+from applire.models.flow import FlowSession
+from applire.models.gap import GapAnalysis
+from applire.models.job import JobAnalysis
+from applire.models.profile import MasterProfile
+from applire.models.session import InterviewSession
 # Imported at call-site to avoid circular imports (application service imports
 # _resolve_user_type / _compute_actions from this module).
-# from apliqa.services.application import sync_workflow_status
-from apliqa.schemas.flow import (
+# from applire.services.application import sync_workflow_status
+from applire.schemas.flow import (
     AdvanceFlowRequest,
     CreateFlowRequest,
     CreateFlowResponse,
@@ -39,7 +39,7 @@ from apliqa.schemas.flow import (
     InterviewSummary,
     JobAnalysisSummary,
 )
-from apliqa.schemas.profile import MasterProfileData
+from applire.schemas.profile import MasterProfileData
 
 # ---------------------------------------------------------------------------
 # Step graph
@@ -212,7 +212,7 @@ async def advance_flow(
     # can reference without importing each other. Deferred — current scale doesn't
     # warrant the abstraction.
     if flow.application_id is not None:
-        from apliqa.services.application import sync_workflow_status
+        from applire.services.application import sync_workflow_status
         await sync_workflow_status(flow.application_id, target, db)
 
     await db.commit()
