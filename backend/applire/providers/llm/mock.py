@@ -75,11 +75,11 @@ _PROFILE_PARSE_RESPONSE: dict[str, Any] = {
         }
     ],
     "skills": [
-        {"name": "Python", "category": "Technical", "proficiency": "Expert"},
-        {"name": "FastAPI", "category": "Technical", "proficiency": "Advanced"},
-        {"name": "PostgreSQL", "category": "Technical", "proficiency": "Advanced"},
-        {"name": "Docker", "category": "Technical", "proficiency": "Intermediate"},
-        {"name": "Git", "category": "Technical", "proficiency": "Advanced"},
+        {"name": "Python", "category": "technical", "proficiency": "expert"},
+        {"name": "FastAPI", "category": "technical", "proficiency": "advanced"},
+        {"name": "PostgreSQL", "category": "technical", "proficiency": "advanced"},
+        {"name": "Docker", "category": "technical", "proficiency": "intermediate"},
+        {"name": "Git", "category": "technical", "proficiency": "advanced"},
     ],
     "languages": [
         {"language": "German", "level": "Native"},

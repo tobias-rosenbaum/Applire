@@ -115,6 +115,15 @@ class Skill(BaseModel):
     source: str | None = None  # which role/interview surfaced this
     last_used: date | None = None
 
+    @field_validator("category", mode="before")
+    @classmethod
+    def normalize_category(cls, v: object) -> object:
+        if isinstance(v, str):
+            lowered = v.lower()
+            if lowered in {"technical", "soft", "language", "domain"}:
+                return lowered
+        return v
+
     @field_validator("proficiency", mode="before")
     @classmethod
     def normalize_proficiency(cls, v: object) -> object:
@@ -127,6 +136,7 @@ class Skill(BaseModel):
             _valid = {"basic", "intermediate", "advanced", "expert"}
             if v.lower() not in _valid:
                 return "intermediate"
+            return v.lower()
         return v
 
 
