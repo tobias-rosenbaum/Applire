@@ -8,6 +8,9 @@ jobs:
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -69,6 +72,9 @@ jobs:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      checks: write
+      contents: read
 
     steps:
       - name: Checkout code
