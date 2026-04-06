@@ -290,7 +290,7 @@ def test_patch_contact_returns_200(api):
     _import_pdf(api)
     r = requests.patch(
         f"{api}/api/profile/personal_info",
-        json={"name": "Max Mustermann", "email": "patched@example.de", "location": "Berlin"},
+        json={"name": "Anna Bauer", "email": "patched@example.de", "location": "Berlin"},
         timeout=10,
     )
     assert r.status_code == 200, r.text
