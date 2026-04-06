@@ -398,9 +398,11 @@ async def erase_profile(
         r = await db.execute(delete(MasterProfile))
         counts["master_profiles"] = r.rowcount
 
-        # 8. user record
-        r = await db.execute(delete(User).where(User.id == uid))
-        counts["users"] = r.rowcount
+        # NOTE: The User row is intentionally kept.  In Community Edition the stub
+        # user (seeded once at startup) is required for the app to remain functional
+        # after erasure.  All personal data has been deleted above; only the system
+        # account record stays so subsequent uploads continue to work.
+        counts["users"] = 0
 
         await db.commit()
 

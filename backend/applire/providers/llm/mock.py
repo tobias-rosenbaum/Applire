@@ -37,10 +37,10 @@ _PROFILE_PARSE_RESPONSE: dict[str, Any] = {
     # NOTE: _RESPONSE_PARSER_RESPONSE stays sparse so user_type stays "new" in
     #       interview tests (those go through "extracting structured profile", not here).
     "personal_info": {
-        "name": "Max Mustermann",
-        "email": "max.mustermann@example.com",
+        "name": "Anna Bauer",
+        "email": "anna.bauer@example.de",
         "phone": "+49 170 1234567",
-        "location": "Berlin, Germany",
+        "location": "Munich, Germany",
     },
     "work_experience": [
         {
