@@ -10,6 +10,7 @@ System prompt fingerprints:
   "CV analyst"                     → profile parsing   (aparse_json)
   "three-category gap analysis"    → gap analysis      (aparse_json)
   "extracting structured profile"  → response parser   (aparse_json)
+  "dach career consultant"         → CV tailoring      (aparse_json)
   "career coach" (acomplete)       → interview question
 """
 
@@ -31,15 +32,55 @@ _JOB_ANALYSIS_RESPONSE: dict[str, Any] = {
 }
 
 _PROFILE_PARSE_RESPONSE: dict[str, Any] = {
-    # Intentionally sparse: completeness = personal_info (0.15) + languages (0.10) = 0.25
-    # This keeps user_type = "new" (threshold is 0.3) so the interview button is shown.
+    # Rich profile: completeness = personal_info (0.15) + work_experience (0.40)
+    #               + languages (0.10) = 0.65 — passes the > 0.6 upload/import assertions.
+    # NOTE: _RESPONSE_PARSER_RESPONSE stays sparse so user_type stays "new" in
+    #       interview tests (those go through "extracting structured profile", not here).
     "personal_info": {
         "name": "Max Mustermann",
         "email": "max.mustermann@example.com",
+        "phone": "+49 170 1234567",
+        "location": "Berlin, Germany",
     },
-    "work_experience": [],
-    "education": [],
-    "skills": [],
+    "work_experience": [
+        {
+            "company": "TechVision GmbH",
+            "role": "Senior Software Engineer",
+            "start_date": "2021-03",
+            "end_date": None,
+            "description": "Backend development with Python and FastAPI.",
+            "bullets": [
+                "Built REST APIs serving 50k daily active users.",
+                "Introduced CI/CD pipelines, reducing deploy time by 40%.",
+            ],
+        },
+        {
+            "company": "StartupX AG",
+            "role": "Software Engineer",
+            "start_date": "2018-06",
+            "end_date": "2021-02",
+            "description": "Full-stack development in an agile team.",
+            "bullets": [
+                "Improved test coverage from 30% to 85% using pytest.",
+            ],
+        },
+    ],
+    "education": [
+        {
+            "institution": "Technische Universität Berlin",
+            "degree": "Master of Science",
+            "field": "Computer Science",
+            "start_date": "2016-10",
+            "end_date": "2018-05",
+        }
+    ],
+    "skills": [
+        {"name": "Python", "category": "Technical", "proficiency": "Expert"},
+        {"name": "FastAPI", "category": "Technical", "proficiency": "Advanced"},
+        {"name": "PostgreSQL", "category": "Technical", "proficiency": "Advanced"},
+        {"name": "Docker", "category": "Technical", "proficiency": "Intermediate"},
+        {"name": "Git", "category": "Technical", "proficiency": "Advanced"},
+    ],
     "languages": [
         {"language": "German", "level": "Native"},
         {"language": "English", "level": "C1"},
@@ -55,6 +96,60 @@ _GAP_ANALYSIS_RESPONSE: dict[str, Any] = {
     "category_a": ["CI/CD pipelines"],
     "category_b": ["Kubernetes", "microservices architecture"],
     "category_c": ["5+ years Python experience"],
+}
+
+_CV_TAILORING_RESPONSE: dict[str, Any] = {
+    # Valid TailoredCVData — all required fields present.
+    # contact.name mirrors _PROFILE_PARSE_RESPONSE personal_info.name.
+    "contact": {
+        "name": "Max Mustermann",
+        "email": "max.mustermann@example.com",
+        "phone": "+49 170 1234567",
+        "location": "Berlin, Germany",
+        "linkedin": None,
+    },
+    "summary": (
+        "Experienced software engineer with a strong background in Python and FastAPI, "
+        "specialising in backend systems for the DACH market. "
+        "Proven track record delivering scalable REST APIs and CI/CD pipelines."
+    ),
+    "work_history": [
+        {
+            "company": "TechVision GmbH",
+            "role": "Senior Software Engineer",
+            "start_date": "2021-03",
+            "end_date": None,
+            "bullets": [
+                "Designed and implemented microservices with FastAPI and PostgreSQL.",
+                "Introduced CI/CD pipelines via GitHub Actions, reducing deploy time by 40%.",
+                "Led migration from monolith to containerised Docker architecture.",
+            ],
+        },
+        {
+            "company": "StartupX AG",
+            "role": "Software Engineer",
+            "start_date": "2018-06",
+            "end_date": "2021-02",
+            "bullets": [
+                "Built REST APIs serving 50k daily active users.",
+                "Improved test coverage from 30% to 85% using pytest.",
+            ],
+        },
+    ],
+    "skills": ["Python", "FastAPI", "PostgreSQL", "Docker", "REST APIs", "CI/CD", "Git"],
+    "education": [
+        {
+            "institution": "Technische Universität Berlin",
+            "degree": "Master of Science",
+            "field": "Computer Science",
+            "start_date": "2016-10",
+            "end_date": "2018-05",
+        }
+    ],
+    "languages": [
+        {"language": "German", "level": "Native"},
+        {"language": "English", "level": "C1"},
+    ],
 }
 
 _RESPONSE_PARSER_RESPONSE: dict[str, Any] = {
@@ -109,6 +204,9 @@ class MockLLMProvider(LLMProvider):
 
         if "extracting structured profile" in system_lower:
             return dict(_RESPONSE_PARSER_RESPONSE)
+
+        if "dach career consultant" in system_lower:
+            return dict(_CV_TAILORING_RESPONSE)
 
         # Fallback: return a minimal valid dict for any unrecognised prompt
         return {"mock": True, "raw_prompt_length": len(prompt)}

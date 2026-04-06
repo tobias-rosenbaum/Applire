@@ -156,4 +156,4 @@ def test_import_rejects_unsupported_format_with_helpful_error():
         timeout=30,
     )
     assert resp.status_code == 422
-    assert "upload" in resp.json().get("detail", "").lower()
+    assert "linkedin" in resp.json().get("detail", "").lower()

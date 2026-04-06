@@ -80,9 +80,12 @@ def ensure_profile(api):
 
 @pytest.fixture(scope="module")
 def job_id(api):
+    # Append a UUID so each module invocation creates a fresh job — prevents
+    # previous-run flows (which may be at gap_analysis) from polluting assertions
+    # that expect current_step == "jd_analysis".
     r = requests.post(
         f"{api}/api/job/analyze",
-        json={"text": JD_FILE.read_text()},
+        json={"text": JD_FILE.read_text() + f" [module-{_uuid.uuid4()}]"},
         timeout=60,
     )
     assert r.status_code == 200, f"JD analyze failed: {r.text}"
@@ -317,14 +320,14 @@ class TestAdvanceFlow:
 
         adv2 = requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "cv_generation", "artifact_id": cv_id},
+            json={"step": "cv_generation"},
             timeout=10,
         )
         assert adv2.status_code == 200, adv2.text
 
         adv3 = requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "complete"},
+            json={"step": "complete", "artifact_id": cv_id},
             timeout=10,
         )
         assert adv3.status_code == 200, adv3.text
@@ -358,15 +361,16 @@ class TestAdvanceFlow:
             json={"job_id": job_id},
             timeout=60,
         )
-        cv_id = cv_r.json()["cv_id"] if cv_r.status_code == 201 else str(_uuid.uuid4())
+        assert cv_r.status_code == 201, cv_r.text
+        cv_id = cv_r.json()["cv_id"]
         requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "cv_generation", "artifact_id": cv_id},
+            json={"step": "cv_generation"},
             timeout=10,
         )
         requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "complete"},
+            json={"step": "complete", "artifact_id": cv_id},
             timeout=10,
         )
 

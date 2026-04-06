@@ -9,10 +9,12 @@ Run with:
     INTEGRATION_LLM=1 pytest tests/integration/test_session_sprint5.py -v
 """
 import time
+from pathlib import Path
 
 import pytest
 import requests
 
+_CV_FILE = Path(__file__).parent.parent / "files" / "Profile.pdf"
 
 SAMPLE_JD = (
     "Senior Python Engineer at FinTech GmbH. "
@@ -24,6 +26,22 @@ SAMPLE_JD = (
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module", autouse=True)
+def ensure_profile(api: str) -> None:
+    """Upload a CV so Gap-Click (targeted) session tests can find a master profile.
+
+    In CI each run starts with an empty database. Targeted sessions fail with
+    "No profile found — upload a CV first" if no profile exists.
+    """
+    with _CV_FILE.open("rb") as fh:
+        res = requests.post(
+            f"{api}/api/profile/upload",
+            files={"file": ("Profile.pdf", fh, "application/pdf")},
+            timeout=60,
+        )
+    assert res.status_code == 200, f"Profile upload failed: {res.text}"
+
 
 @pytest.fixture(scope="module")
 def job_id(api: str) -> str:

@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -336,40 +336,61 @@ async def erase_profile(
         return n
 
     # --- Atomic cascade (leaf → root) ---
+    #
+    # FK dependency graph (PostgreSQL enforces all):
+    #   Application.flow_session_id  → flow_sessions.id   (circular with ↓)
+    #   FlowSession.application_id   → applications.id    (circular with ↑)
+    #   FlowSession.generated_cv_id  → generated_cvs.id
+    #   FlowSession.interview_session_id → interview_sessions.id
+    #   GeneratedCV.profile_id       → master_profiles.id
+    #   InterviewSession.profile_id  → master_profiles.id
+    #
+    # Safe order: break the circular FK first, then delete referencing rows before
+    # referenced rows.  Deletion order: uploads → (break cycle) → flow_sessions
+    # → generated_cvs → interview_sessions → applications → master_profiles → users.
     try:
-        # 1. uploads — WHERE user_id = uid naturally skips pre-iter17 rows where
-        #    user_id IS NULL (NULL != uid evaluates to NULL, not TRUE).
+        # 1. uploads
         r = await db.execute(delete(UploadRecord).where(UploadRecord.user_id == uid))
         counts["uploads"] = r.rowcount
 
-        # 2. generated_cvs (via profile_id subquery)
-        # MasterProfile has no user_id column — in single-user deployments all
-        # profiles belong to the authenticating user, so no user filter is needed.
+        # 2. Break Application ↔ FlowSession circular FK so each side can be deleted.
+        #    Nullify Application.flow_session_id first so we can delete FlowSession rows
+        #    without violating the Application.flow_session_id → flow_sessions.id FK.
+        await db.execute(
+            update(Application)
+            .where(Application.user_id == uid)
+            .values(flow_session_id=None)
+        )
+
+        # 3. flow_sessions — must come before generated_cvs and interview_sessions
+        #    because FlowSession holds FKs into those tables; PostgreSQL blocks deleting
+        #    a referenced row while any row in flow_sessions still points to it.
+        r = await db.execute(delete(FlowSession).where(FlowSession.user_id == uid))
+        counts["flow_sessions"] = r.rowcount
+
+        # 4. generated_cvs (via profile_id subquery) — safe now that FlowSession is gone
         profile_ids_sq = select(MasterProfile.id)
         r = await db.execute(
             delete(GeneratedCV).where(GeneratedCV.profile_id.in_(profile_ids_sq))
         )
         counts["generated_cvs"] = r.rowcount
 
-        # 3. interview_sessions (via profile_id subquery)
+        # 5. interview_sessions — safe now that FlowSession is gone
         r = await db.execute(
             delete(InterviewSession).where(InterviewSession.profile_id.in_(profile_ids_sq))
         )
         counts["interview_sessions"] = r.rowcount
 
-        # 4. flow_sessions (direct user_id)
-        r = await db.execute(delete(FlowSession).where(FlowSession.user_id == uid))
-        counts["flow_sessions"] = r.rowcount
-
-        # 5. applications (direct user_id)
+        # 6. applications — safe now that FlowSession rows (which held application_id FKs)
+        #    are deleted
         r = await db.execute(delete(Application).where(Application.user_id == uid))
         counts["applications"] = r.rowcount
 
-        # 6. master_profiles — no user_id column; delete all (single-user deployment)
+        # 7. master_profiles — no user_id column; delete all (single-user deployment)
         r = await db.execute(delete(MasterProfile))
         counts["master_profiles"] = r.rowcount
 
-        # 7. user record
+        # 8. user record
         r = await db.execute(delete(User).where(User.id == uid))
         counts["users"] = r.rowcount
 
@@ -377,7 +398,7 @@ async def erase_profile(
 
     except Exception as exc:
         await db.rollback()
-        logger.exception("GDPR erasure failed for user %s: %s", uid, exc)
+        logger.exception("GDPR erasure failed for user %s", uid, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erasure failed — no data was deleted. Please retry.",
