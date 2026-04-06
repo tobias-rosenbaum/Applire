@@ -148,6 +148,18 @@ def _get_html(api: str, cv_id: str) -> requests.Response:
     return requests.get(f"{api}/api/cv/{cv_id}/html", timeout=30)
 
 
+def _wait_for_cv_ready(api: str, cv_id: str, timeout: int = 60) -> None:
+    """Poll GET /api/cv/{cv_id}/status until status='ready' or timeout."""
+    import time
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        r = requests.get(f"{api}/api/cv/{cv_id}/status", timeout=10)
+        if r.status_code == 200 and r.json().get("status") == "ready":
+            return
+        time.sleep(1)
+    raise TimeoutError(f"CV {cv_id} did not reach 'ready' status within {timeout}s")
+
+
 # ---------------------------------------------------------------------------
 # Module-scoped fixtures: one LLM call chain per test run
 # ---------------------------------------------------------------------------
@@ -178,6 +190,7 @@ def modern_cv(api, job_id):
 
 @pytest.fixture(scope="module")
 def classic_html(api, classic_cv):
+    _wait_for_cv_ready(api, classic_cv["cv_id"])
     r = _get_html(api, classic_cv["cv_id"])
     assert r.status_code == 200, f"GET classic html failed: {r.text}"
     return r
@@ -185,6 +198,7 @@ def classic_html(api, classic_cv):
 
 @pytest.fixture(scope="module")
 def modern_html(api, modern_cv):
+    _wait_for_cv_ready(api, modern_cv["cv_id"])
     r = _get_html(api, modern_cv["cv_id"])
     assert r.status_code == 200, f"GET modern html failed: {r.text}"
     return r
@@ -209,6 +223,7 @@ def test_modern_swiss_response_has_urls(modern_cv):
 
 
 def test_modern_swiss_html_returns_200(api, modern_cv):
+    _wait_for_cv_ready(api, modern_cv["cv_id"])
     r = _get_html(api, modern_cv["cv_id"])
     assert r.status_code == 200, r.text
 
@@ -281,6 +296,7 @@ def test_default_template_is_classic_german(api, job_id):
     r = _post_generate(api, job_id)  # no template param
     assert r.status_code == 201, r.text
     cv_id = r.json()["cv_id"]
+    _wait_for_cv_ready(api, cv_id)
     html_r = _get_html(api, cv_id)
     assert html_r.status_code == 200
     assert "Berufserfahrung" in html_r.text

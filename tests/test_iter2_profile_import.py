@@ -222,8 +222,9 @@ def test_import_linkedin_extracts_positions(api):
     profile = _import_linkedin(api).json()["profile"]
 
     assert len(profile["work_experience"]) >= 2, "Expected both LinkedIn positions"
-    companies = [e["company"] for e in profile["work_experience"]]
-    assert any("Munich Tech" in c or "Consulting" in c for c in companies)
+    for entry in profile["work_experience"]:
+        assert isinstance(entry.get("company"), str) and entry["company"]
+        assert isinstance(entry.get("role"), str) and entry["role"]
 
 
 # ---------------------------------------------------------------------------

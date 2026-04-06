@@ -75,6 +75,7 @@ async def generate_cv(
     provider: LLMProvider,
     background_tasks: BackgroundTasks,
     template: CVTemplate = "classic_german",
+    base_url: str = "http://localhost:8001",
 ) -> CVGenerateResponse:
     """Create a pending GeneratedCV record and enqueue background rendering."""
     # Validate job exists
@@ -117,6 +118,8 @@ async def generate_cv(
     return CVGenerateResponse(
         cv_id=record.id,
         status=CVGenerationStatus.pending,
+        html_url=f"{base_url}/api/cv/{record.id}/html",
+        pdf_url=f"{base_url}/api/cv/{record.id}/pdf",
         expires_at=record.expires_at,
     )
 

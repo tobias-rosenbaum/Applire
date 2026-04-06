@@ -306,6 +306,7 @@ async def erase_profile(
     from applire.models.application import Application
     from applire.models.cv import GeneratedCV
     from applire.models.flow import FlowSession
+    from applire.models.gap import GapAnalysis
     from applire.models.profile import MasterProfile
     from applire.models.session import InterviewSession
     from applire.models.uploads import UploadRecord
@@ -380,6 +381,13 @@ async def erase_profile(
             delete(InterviewSession).where(InterviewSession.profile_id.in_(profile_ids_sq))
         )
         counts["interview_sessions"] = r.rowcount
+
+        # 5b. gap_analyses — GapAnalysis.profile_id → master_profiles.id FK (RESTRICT)
+        #     must be deleted before master_profiles in step 7
+        r = await db.execute(
+            delete(GapAnalysis).where(GapAnalysis.profile_id.in_(profile_ids_sq))
+        )
+        counts["gap_analyses"] = r.rowcount
 
         # 6. applications — safe now that FlowSession rows (which held application_id FKs)
         #    are deleted

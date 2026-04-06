@@ -39,6 +39,7 @@ def _get_provider() -> LLMProvider:
 )
 async def post_generate(
     body: CVGenerateRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     provider: LLMProvider = Depends(_get_provider),
@@ -46,8 +47,9 @@ async def post_generate(
 ) -> CVGenerateResponse:
     """Enqueue async CV generation. Returns immediately with status='pending'.
     Poll GET /api/cv/{cv_id}/status until status='ready'."""
+    base_url = str(request.base_url).rstrip("/")
     try:
-        return await generate_cv(body.job_id, db, provider, background_tasks, body.template)
+        return await generate_cv(body.job_id, db, provider, background_tasks, body.template, base_url)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:
@@ -79,7 +81,13 @@ async def get_html(
 ) -> HTMLResponse:
     try:
         html = await get_cv_html(cv_id, db)
-        return HTMLResponse(content=html)
+        return HTMLResponse(
+            content=html,
+            headers={
+                "X-Frame-Options": "SAMEORIGIN",
+                "Content-Security-Policy": "frame-ancestors 'self'",
+            },
+        )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except Exception as exc:

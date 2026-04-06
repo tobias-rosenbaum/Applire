@@ -100,10 +100,10 @@ _GAP_ANALYSIS_RESPONSE: dict[str, Any] = {
 
 _CV_TAILORING_RESPONSE: dict[str, Any] = {
     # Valid TailoredCVData — all required fields present.
-    # contact.name mirrors _PROFILE_PARSE_RESPONSE personal_info.name.
+    # contact.name matches the iter9 LinkedIn fixture (Anna Bauer) used by CV template tests.
     "contact": {
-        "name": "Max Mustermann",
-        "email": "max.mustermann@example.com",
+        "name": "Anna Bauer",
+        "email": "anna.bauer@example.de",
         "phone": "+49 170 1234567",
         "location": "Berlin, Germany",
         "linkedin": None,
@@ -153,9 +153,9 @@ _CV_TAILORING_RESPONSE: dict[str, Any] = {
 }
 
 _RESPONSE_PARSER_RESPONSE: dict[str, Any] = {
-    # Empty skills_to_add keeps profile completeness below the 0.3 threshold so
-    # user_type stays "new" and the interview button remains visible across all tests.
-    "skills_to_add": [],
+    # skills_to_add must include at least one of the skills named in _RICH_ANSWER
+    # (iter4 test_profile_updated_after_answer checks for "salesforce", "veeva vault", "crm").
+    "skills_to_add": ["Salesforce", "Veeva Vault", "CRM"],
     "work_history_to_add": [],
     "gap_addressed": True,
 }

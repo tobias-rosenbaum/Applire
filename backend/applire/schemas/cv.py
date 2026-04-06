@@ -18,6 +18,8 @@ class CVGenerateResponse(BaseModel):
     """Returned immediately by POST /api/cv/generate (async path)."""
     cv_id: uuid.UUID
     status: CVGenerationStatus
+    html_url: str  # stable URL — usable once status='ready'
+    pdf_url: str
     expires_at: datetime
 
 
