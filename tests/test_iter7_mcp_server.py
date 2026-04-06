@@ -2,7 +2,7 @@
 Iteration 7 — MCP Server (integration test)
 
 Done when:
-  - ``python -m apliqa.mcp`` starts and completes the MCP handshake
+  - ``python -m applire.mcp`` starts and completes the MCP handshake
   - ``tools/list`` returns the 7 expected core tools with descriptions
   - ``resources/list`` returns the 3 expected resource URIs with descriptions
   - ``MCP_TRANSPORT=sse`` is rejected at startup with exit code 1
@@ -85,7 +85,7 @@ _RESOURCE_TEMPLATES_LIST = _msg(4, "resources/templates/list")
 
 def _run_mcp(stdin: str, env_overrides: dict | None = None, timeout: float = 20.0) -> tuple[int, list[dict]]:
     """
-    Run ``python -m apliqa.mcp`` inside the backend container.
+    Run ``python -m applire.mcp`` inside the backend container.
 
     Returns (returncode, list of parsed JSON-RPC response objects from stdout).
     """
@@ -97,7 +97,7 @@ def _run_mcp(stdin: str, env_overrides: dict | None = None, timeout: float = 20.
     cmd = [
         "docker", "compose", "exec", "-iT",
         *extra,
-        "backend", "python", "-m", "apliqa.mcp",
+        "backend", "python", "-m", "applire.mcp",
     ]
     proc = subprocess.Popen(
         cmd,
@@ -142,12 +142,12 @@ def test_mcp_server_responds_to_initialize():
     assert "result" in init_resp, f"initialize returned error: {init_resp}"
 
 
-def test_mcp_server_advertises_apliqa_name():
-    """serverInfo.name must be 'Apliqa'."""
+def test_mcp_server_advertises_applire_name():
+    """serverInfo.name must be 'Applire'."""
     _, responses = _run_mcp(_INIT + _INITIALIZED)
     init_resp = _find(responses, 1)
     assert init_resp and "result" in init_resp
-    assert init_resp["result"].get("serverInfo", {}).get("name") == "Apliqa"
+    assert init_resp["result"].get("serverInfo", {}).get("name") == "Applire"
 
 
 def test_mcp_sse_transport_rejected_with_exit_code_1():
@@ -156,7 +156,7 @@ def test_mcp_sse_transport_rejected_with_exit_code_1():
         [
             "docker", "compose", "exec", "-iT",
             "-e", "MCP_TRANSPORT=sse",
-            "backend", "python", "-m", "apliqa.mcp",
+            "backend", "python", "-m", "applire.mcp",
         ],
         cwd=PROJECT_ROOT,
         env=_DOCKER_ENV,

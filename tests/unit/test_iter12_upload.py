@@ -51,10 +51,10 @@ async def sqlite_session():
     MasterProfile uses JSONB().with_variant(JSON(), "sqlite") — SQLite-safe.
     UploadRecord and User use only standard column types.
     """
-    from apliqa.db.session import Base
-    from apliqa.models.profile import MasterProfile
-    from apliqa.models.uploads import UploadRecord
-    from apliqa.models.user import User
+    from applire.db.session import Base
+    from applire.models.profile import MasterProfile
+    from applire.models.uploads import UploadRecord
+    from applire.models.user import User
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -79,15 +79,15 @@ async def sqlite_session():
 
 class TestDetectFormat:
     def test_pdf_by_extension(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("lebenslauf.pdf", "application/octet-stream") == "pdf"
 
     def test_pdf_by_mime(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("document", "application/pdf") == "pdf"
 
     def test_docx_by_extension(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         fmt = detect_format(
             "cv.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -95,23 +95,23 @@ class TestDetectFormat:
         assert fmt == "docx"
 
     def test_doc_by_extension(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("cv.doc", "application/msword") == "docx"
 
     def test_jpeg_by_extension(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("scan.jpg", "image/jpeg") == "image"
 
     def test_png_by_mime(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("upload", "image/png") == "image"
 
     def test_plain_text(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("cv.txt", "text/plain") == "text"
 
     def test_unknown_defaults_to_text(self):
-        from apliqa.services.cv_parser import detect_format
+        from applire.services.cv_parser import detect_format
         assert detect_format("file.xyz", "application/octet-stream") == "text"
 
 
@@ -132,7 +132,7 @@ class TestExtractTextFromPdf:
         return reader
 
     def test_returns_text_from_pages(self):
-        from apliqa.services.cv_parser import extract_text_from_pdf
+        from applire.services.cv_parser import extract_text_from_pdf
 
         mock_reader = self._make_mock_reader(["Max Mustermann\nSoftware Engineer"])
 
@@ -143,7 +143,7 @@ class TestExtractTextFromPdf:
         assert "Software Engineer" in result
 
     def test_empty_pdf_returns_empty_string(self):
-        from apliqa.services.cv_parser import extract_text_from_pdf
+        from applire.services.cv_parser import extract_text_from_pdf
 
         mock_reader = self._make_mock_reader([""])
 
@@ -160,7 +160,7 @@ class TestExtractTextFromPdf:
 
 class TestCVUploadResponseStatus:
     def test_draft_when_low_completeness(self):
-        from apliqa.schemas.profile import CVUploadResponse
+        from applire.schemas.profile import CVUploadResponse
 
         resp = CVUploadResponse(
             profile_id=uuid.uuid4(),
@@ -174,7 +174,7 @@ class TestCVUploadResponseStatus:
         assert resp.completeness_score < 0.5
 
     def test_complete_when_high_completeness_no_conflicts(self):
-        from apliqa.schemas.profile import CVUploadResponse
+        from applire.schemas.profile import CVUploadResponse
 
         resp = CVUploadResponse(
             profile_id=uuid.uuid4(),
@@ -187,7 +187,7 @@ class TestCVUploadResponseStatus:
         assert resp.status == "COMPLETE"
 
     def test_draft_when_conflicts_present(self):
-        from apliqa.schemas.profile import ConflictSummary, CVUploadResponse
+        from applire.schemas.profile import ConflictSummary, CVUploadResponse
 
         conflict = ConflictSummary(
             conflict_id=str(uuid.uuid4()),
@@ -208,7 +208,7 @@ class TestCVUploadResponseStatus:
 async def test_upload_record_persists(sqlite_session):
     from datetime import timedelta
 
-    from apliqa.models.uploads import UploadRecord
+    from applire.models.uploads import UploadRecord
 
     record = UploadRecord(
         original_filename="lebenslauf.pdf",
@@ -238,7 +238,7 @@ async def test_upload_record_persists(sqlite_session):
 
 @pytest.mark.asyncio
 async def test_local_storage_save(tmp_path):
-    from apliqa.storage.local import LocalStorageProvider
+    from applire.storage.local import LocalStorageProvider
 
     provider = LocalStorageProvider(str(tmp_path))
     file_bytes = b"fake cv content"
@@ -251,7 +251,7 @@ async def test_local_storage_save(tmp_path):
 
 @pytest.mark.asyncio
 async def test_local_storage_delete(tmp_path):
-    from apliqa.storage.local import LocalStorageProvider
+    from applire.storage.local import LocalStorageProvider
 
     provider = LocalStorageProvider(str(tmp_path))
     path = await provider.save(b"data", "test.txt")
@@ -263,7 +263,7 @@ async def test_local_storage_delete(tmp_path):
 
 @pytest.mark.asyncio
 async def test_local_storage_delete_nonexistent_is_noop(tmp_path):
-    from apliqa.storage.local import LocalStorageProvider
+    from applire.storage.local import LocalStorageProvider
 
     provider = LocalStorageProvider(str(tmp_path))
     # Should not raise
@@ -278,33 +278,33 @@ async def test_local_storage_delete_nonexistent_is_noop(tmp_path):
 def test_get_ocr_extractor_returns_mistral_vision_by_default():
     from unittest.mock import patch
 
-    with patch("apliqa.config.settings") as mock_settings:
+    with patch("applire.config.settings") as mock_settings:
         mock_settings.ocr_backend = "mistral_vision"
         mock_settings.mistral_api_key = "test-key"
 
-        from apliqa.ocr import get_ocr_extractor
-        from apliqa.ocr.mistral_vision import MistralVisionExtractor
+        from applire.ocr import get_ocr_extractor
+        from applire.ocr.mistral_vision import MistralVisionExtractor
 
         extractor = get_ocr_extractor()
         assert isinstance(extractor, MistralVisionExtractor)
 
 
 def test_get_ocr_extractor_returns_tesseract_when_configured():
-    with patch("apliqa.config.settings") as mock_settings:
+    with patch("applire.config.settings") as mock_settings:
         mock_settings.ocr_backend = "tesseract"
 
-        from apliqa.ocr import get_ocr_extractor
-        from apliqa.ocr.tesseract import TesseractExtractor
+        from applire.ocr import get_ocr_extractor
+        from applire.ocr.tesseract import TesseractExtractor
 
         extractor = get_ocr_extractor()
         assert isinstance(extractor, TesseractExtractor)
 
 
 def test_get_ocr_extractor_raises_for_unknown_backend():
-    with patch("apliqa.config.settings") as mock_settings:
+    with patch("applire.config.settings") as mock_settings:
         mock_settings.ocr_backend = "unknown_backend"
 
-        from apliqa.ocr import get_ocr_extractor
+        from applire.ocr import get_ocr_extractor
 
         with pytest.raises(ValueError, match="Unknown OCR_BACKEND"):
             get_ocr_extractor()
@@ -318,9 +318,9 @@ def test_get_ocr_extractor_raises_for_unknown_backend():
 @pytest.mark.asyncio
 async def test_upload_cv_first_import(sqlite_session, tmp_path):
     """First CV upload creates a MasterProfile and returns CVUploadResponse."""
-    from apliqa.services.profile import upload_cv
-    from apliqa.storage.local import LocalStorageProvider
-    from apliqa.ocr.tesseract import TesseractExtractor
+    from applire.services.profile import upload_cv
+    from applire.storage.local import LocalStorageProvider
+    from applire.ocr.tesseract import TesseractExtractor
 
     # Mock provider: returns a valid minimal MasterProfileData dict
     mock_provider = AsyncMock()
@@ -361,7 +361,7 @@ async def test_upload_cv_first_import(sqlite_session, tmp_path):
 
     # Mock cv_parser.extract_text to return plain text (bypass pymupdf)
     # Patch extract_text (the dispatcher) to bypass pymupdf entirely
-    with patch("apliqa.services.cv_parser.extract_text", new=AsyncMock(return_value="Max Mustermann\nSoftware Engineer\nSiemens AG")):
+    with patch("applire.services.cv_parser.extract_text", new=AsyncMock(return_value="Max Mustermann\nSoftware Engineer\nSiemens AG")):
         storage = LocalStorageProvider(str(tmp_path))
         response = await upload_cv(
             file_bytes=b"fake-pdf",
@@ -393,8 +393,8 @@ async def test_upload_cv_first_import(sqlite_session, tmp_path):
 @pytest.mark.asyncio
 async def test_upload_cv_second_import_triggers_merge(sqlite_session, tmp_path):
     """Second upload with conflicting dates triggers merge_profiles() and flags conflicts."""
-    from apliqa.services.profile import upload_cv
-    from apliqa.storage.local import LocalStorageProvider
+    from applire.services.profile import upload_cv
+    from applire.storage.local import LocalStorageProvider
 
     mock_ocr = AsyncMock()
     storage = LocalStorageProvider(str(tmp_path))
@@ -433,7 +433,7 @@ async def test_upload_cv_second_import_triggers_merge(sqlite_session, tmp_path):
     mock_provider = AsyncMock()
     mock_provider.__class__.__name__ = "MockProvider"
 
-    with patch("apliqa.services.cv_parser.extract_text", new=AsyncMock(return_value="Anna Schmidt\nBMW Group")):
+    with patch("applire.services.cv_parser.extract_text", new=AsyncMock(return_value="Anna Schmidt\nBMW Group")):
         # First upload
         mock_provider.aparse_json.return_value = first_profile
         await upload_cv(

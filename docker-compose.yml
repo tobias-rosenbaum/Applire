@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: apliqa
-      POSTGRES_PASSWORD: apliqa
-      POSTGRES_DB: apliqa
+      POSTGRES_USER: applire
+      POSTGRES_PASSWORD: applire
+      POSTGRES_DB: applire
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U apliqa"]
+      test: ["CMD-SHELL", "pg_isready -U applire"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -28,7 +28,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: uvicorn apliqa.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn applire.main:app --host 0.0.0.0 --port 8000 --reload
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -69,13 +69,13 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: sh -c "while true; do python -m apliqa.retention; sleep 86400; done"
+    command: sh -c "while true; do python -m applire.retention; sleep 86400; done"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   # MCP server — stdio transport for agent integration (ADR 010).
   # This service is useful for verifying startup in CI.
-  # For actual agent use, launch directly: python -m apliqa.mcp
+  # For actual agent use, launch directly: python -m applire.mcp
   # See docs/mcp.md for Claude Desktop / Cursor configuration.
   mcp:
     build:
@@ -89,7 +89,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: python -m apliqa.mcp
+    command: python -m applire.mcp
     stdin_open: true
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -37,15 +37,15 @@ def mock_cv_record():
 async def test_start_assist_session_returns_session_id_and_question(
     mock_db, mock_provider, mock_cv_record
 ):
-    from apliqa.services.cv_assist import start_assist_session, _sessions
+    from applire.services.cv_assist import start_assist_session, _sessions
     _sessions.clear()
 
     with patch(
-        "apliqa.services.cv_assist._load_cv_and_section",
+        "applire.services.cv_assist._load_cv_and_section",
         new_callable=AsyncMock,
         return_value=("Introduction", "Erfahrener Entwickler"),
     ), patch(
-        "apliqa.services.cv_assist._gap_exists",
+        "applire.services.cv_assist._gap_exists",
         new_callable=AsyncMock,
         return_value=True,
     ):
@@ -62,15 +62,15 @@ async def test_start_assist_session_returns_session_id_and_question(
 async def test_start_assist_session_raises_value_error_on_unknown_gap(
     mock_db, mock_provider, mock_cv_record
 ):
-    from apliqa.services.cv_assist import start_assist_session, _sessions
+    from applire.services.cv_assist import start_assist_session, _sessions
     _sessions.clear()
 
     with patch(
-        "apliqa.services.cv_assist._load_cv_and_section",
+        "applire.services.cv_assist._load_cv_and_section",
         new_callable=AsyncMock,
         return_value=("Introduction", "Erfahrener Entwickler"),
     ), patch(
-        "apliqa.services.cv_assist._gap_exists",
+        "applire.services.cv_assist._gap_exists",
         new_callable=AsyncMock,
         return_value=False,
     ):
@@ -83,7 +83,7 @@ async def test_start_assist_session_raises_value_error_on_unknown_gap(
 
 @pytest.mark.asyncio
 async def test_submit_assist_answer_returns_suggestion(mock_db, mock_provider):
-    from apliqa.services.cv_assist import _sessions, submit_assist_answer
+    from applire.services.cv_assist import _sessions, submit_assist_answer
     _sessions.clear()
 
     session_id = "test-session-abc"
@@ -109,7 +109,7 @@ async def test_submit_assist_answer_returns_suggestion(mock_db, mock_provider):
 
 @pytest.mark.asyncio
 async def test_submit_assist_answer_raises_on_invalid_session(mock_db, mock_provider):
-    from apliqa.services.cv_assist import _sessions, submit_assist_answer
+    from applire.services.cv_assist import _sessions, submit_assist_answer
     _sessions.clear()
 
     with pytest.raises(ValueError, match="session_id"):

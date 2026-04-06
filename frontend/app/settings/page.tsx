@@ -25,7 +25,7 @@ export default function SettingsPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "apliqa-export.json";
+        a.download = "applire-export.json";
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

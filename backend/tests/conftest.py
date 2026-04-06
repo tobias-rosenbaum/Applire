@@ -1,5 +1,5 @@
 """
-Shared fixtures for Apliqa integration tests (patched for container execution).
+Shared fixtures for Applire integration tests (patched for container execution).
 Services are already running, so we just skip the docker management.
 """
 import time

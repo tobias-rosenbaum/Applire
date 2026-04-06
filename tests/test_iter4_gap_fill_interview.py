@@ -206,7 +206,7 @@ def test_session_progresses_or_completes(first_message_body, session_body):
 def test_profile_updated_after_answer(api, first_message_body):
     """GET /api/profile must reflect new skills extracted from _RICH_ANSWER."""
     profile = _get_profile(api)
-    skills = [s.lower() for s in profile["profile"].get("skills", [])]
+    skills = [s["name"].lower() for s in profile["profile"].get("skills", [])]
     # At minimum, one of the skills explicitly named in _RICH_ANSWER should appear.
     # (ResponseParser may not catch all of them, but should catch at least one.)
     expected = {"salesforce", "veeva vault", "crm"}

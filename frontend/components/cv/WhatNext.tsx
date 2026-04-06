@@ -25,8 +25,8 @@ export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
 
   async function handleCopy() {
     const text = roleTitle
-      ? `Mein Lebenslauf für die Stelle „${roleTitle}" wurde mit Apliqa optimiert. Präzise. Überzeugend. Zukunftsfähig.`
-      : "Mein Lebenslauf wurde mit Apliqa optimiert. Präzise. Überzeugend. Zukunftsfähig.";
+      ? `Mein Lebenslauf für die Stelle „${roleTitle}" wurde mit Applire optimiert. Präzise. Überzeugend. Zukunftsfähig.`
+      : "Mein Lebenslauf wurde mit Applire optimiert. Präzise. Überzeugend. Zukunftsfähig.";
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);

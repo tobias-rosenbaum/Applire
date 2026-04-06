@@ -7,9 +7,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from apliqa.auth import get_auth_provider
-from apliqa.db.session import get_db
-from apliqa.routers.cv import router
+from applire.auth import get_auth_provider
+from applire.db.session import get_db
+from applire.routers.cv import router
 
 _CV_ID = str(uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
 _SECTION_ID = "introduction"
@@ -36,7 +36,7 @@ def client():
 
 
 def test_get_sections_returns_200_with_sections(client):
-    from apliqa.schemas.cv_sections import CVSectionsResponse, SectionItem, GapHintItem
+    from applire.schemas.cv_sections import CVSectionsResponse, SectionItem, GapHintItem
     mock_response = CVSectionsResponse(
         sections=[
             SectionItem(
@@ -50,7 +50,7 @@ def test_get_sections_returns_200_with_sections(client):
         general_gaps=[],
     )
     with patch(
-        "apliqa.routers.cv.get_cv_sections",
+        "applire.routers.cv.get_cv_sections",
         new_callable=AsyncMock,
         return_value=mock_response,
     ):
@@ -65,7 +65,7 @@ def test_get_sections_returns_200_with_sections(client):
 
 def test_get_sections_returns_404_when_cv_not_found(client):
     with patch(
-        "apliqa.routers.cv.get_cv_sections",
+        "applire.routers.cv.get_cv_sections",
         new_callable=AsyncMock,
         side_effect=LookupError("CV not found"),
     ):
@@ -75,10 +75,10 @@ def test_get_sections_returns_404_when_cv_not_found(client):
 
 
 def test_get_sections_returns_empty_list_when_no_snapshot(client):
-    from apliqa.schemas.cv_sections import CVSectionsResponse
+    from applire.schemas.cv_sections import CVSectionsResponse
     mock_response = CVSectionsResponse(sections=[], general_gaps=[])
     with patch(
-        "apliqa.routers.cv.get_cv_sections",
+        "applire.routers.cv.get_cv_sections",
         new_callable=AsyncMock,
         return_value=mock_response,
     ):
@@ -94,13 +94,13 @@ def test_get_sections_returns_empty_list_when_no_snapshot(client):
 
 
 def test_patch_section_returns_html_and_overrides_applied(client):
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
     mock_response = SectionPatchResponse(
         html="<html><body>Updated CV</body></html>",
         overrides_applied=["introduction"],
     )
     with patch(
-        "apliqa.routers.cv.patch_cv_section",
+        "applire.routers.cv.patch_cv_section",
         new_callable=AsyncMock,
         return_value=mock_response,
     ):
@@ -117,7 +117,7 @@ def test_patch_section_returns_html_and_overrides_applied(client):
 
 def test_patch_section_returns_422_for_invalid_section_id(client):
     with patch(
-        "apliqa.routers.cv.patch_cv_section",
+        "applire.routers.cv.patch_cv_section",
         new_callable=AsyncMock,
         side_effect=ValueError("Unknown section_id: 'nonexistent'"),
     ):
@@ -140,14 +140,14 @@ def test_patch_section_rejects_content_over_10000_chars(client):
 
 
 def test_patch_section_passes_save_to_profile_true(client):
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
     mock_service = AsyncMock(
         return_value=SectionPatchResponse(
             html="<html></html>",
             overrides_applied=["introduction"],
         )
     )
-    with patch("apliqa.routers.cv.patch_cv_section", new=mock_service):
+    with patch("applire.routers.cv.patch_cv_section", new=mock_service):
         client.patch(
             f"/api/cv/{_CV_ID}/sections/{_SECTION_ID}",
             json={"content": "text", "save_to_profile": True},
@@ -161,14 +161,14 @@ def test_patch_section_passes_save_to_profile_true(client):
 
 def test_patch_section_position_id_with_double_colon(client):
     """Verify the :path converter captures position::uuid correctly."""
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
     mock_service = AsyncMock(
         return_value=SectionPatchResponse(
             html="<html></html>",
             overrides_applied=[_POSITION_SECTION_ID],
         )
     )
-    with patch("apliqa.routers.cv.patch_cv_section", new=mock_service):
+    with patch("applire.routers.cv.patch_cv_section", new=mock_service):
         response = client.patch(
             f"/api/cv/{_CV_ID}/sections/{_POSITION_SECTION_ID}",
             json={"content": "Built APIs\nLed team", "save_to_profile": False},
@@ -186,7 +186,7 @@ def test_patch_section_position_id_with_double_colon(client):
 
 def test_html_endpoint_still_returns_html_with_overrides_applied(client):
     test_html = "<html><body>Patched CV</body></html>"
-    with patch("apliqa.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=test_html):
+    with patch("applire.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=test_html):
         response = client.get(f"/api/cv/{_CV_ID}/html")
 
     assert response.status_code == 200
@@ -200,8 +200,8 @@ def test_html_endpoint_still_returns_html_with_overrides_applied(client):
 
 
 def test_build_content_snapshot_extracts_all_fields():
-    from apliqa.services.cv_section_editor import build_content_snapshot
-    from apliqa.schemas.cv import TailoredCVData, TailoredWorkEntry, TailoredContact
+    from applire.services.cv_section_editor import build_content_snapshot
+    from applire.schemas.cv import TailoredCVData, TailoredWorkEntry, TailoredContact
 
     tailored = TailoredCVData(
         contact=TailoredContact(name="Max"),
@@ -232,8 +232,8 @@ def test_build_content_snapshot_extracts_all_fields():
 
 
 def test_apply_overrides_replaces_introduction():
-    from apliqa.services.cv_section_editor import apply_overrides_to_tailored
-    from apliqa.schemas.cv import TailoredCVData, TailoredContact
+    from applire.services.cv_section_editor import apply_overrides_to_tailored
+    from applire.schemas.cv import TailoredCVData, TailoredContact
 
     tailored = TailoredCVData(
         contact=TailoredContact(name="Max"),
@@ -250,8 +250,8 @@ def test_apply_overrides_replaces_introduction():
 
 
 def test_apply_overrides_replaces_skills():
-    from apliqa.services.cv_section_editor import apply_overrides_to_tailored
-    from apliqa.schemas.cv import TailoredCVData, TailoredContact
+    from applire.services.cv_section_editor import apply_overrides_to_tailored
+    from applire.schemas.cv import TailoredCVData, TailoredContact
 
     tailored = TailoredCVData(
         contact=TailoredContact(name="Max"),
@@ -268,8 +268,8 @@ def test_apply_overrides_replaces_skills():
 
 
 def test_apply_overrides_with_no_overrides_returns_unchanged():
-    from apliqa.services.cv_section_editor import apply_overrides_to_tailored
-    from apliqa.schemas.cv import TailoredCVData, TailoredContact
+    from applire.services.cv_section_editor import apply_overrides_to_tailored
+    from applire.schemas.cv import TailoredCVData, TailoredContact
 
     tailored = TailoredCVData(
         contact=TailoredContact(name="Max"),

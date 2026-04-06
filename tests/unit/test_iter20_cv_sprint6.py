@@ -17,12 +17,12 @@ from pathlib import Path
 
 import pytest
 
-# Make the apliqa package importable
+# Make the applire package importable
 _backend = Path(__file__).parent.parent.parent / "backend"
 if str(_backend) not in sys.path:
     sys.path.insert(0, str(_backend))
 
-from apliqa.services.cv import _slugify
+from applire.services.cv import _slugify
 
 
 def test_slugify_lowercases():
@@ -67,16 +67,16 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 @pytest_asyncio.fixture
 async def db():
     """In-memory SQLite session with all models registered."""
-    from apliqa.db.session import Base
-    import apliqa.models.user
-    import apliqa.models.job
-    import apliqa.models.profile
-    import apliqa.models.gap
-    import apliqa.models.cv
-    import apliqa.models.session
-    import apliqa.models.application
-    import apliqa.models.flow
-    import apliqa.models.uploads
+    from applire.db.session import Base
+    import applire.models.user
+    import applire.models.job
+    import applire.models.profile
+    import applire.models.gap
+    import applire.models.cv
+    import applire.models.session
+    import applire.models.application
+    import applire.models.flow
+    import applire.models.uploads
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -90,7 +90,7 @@ async def db():
 
 
 def _make_cv(job_id: uuid.UUID, status: str = "ready", deleted: bool = False, offset_seconds: int = 0):
-    from apliqa.models.cv import GeneratedCV
+    from applire.models.cv import GeneratedCV
     return GeneratedCV(
         id=uuid.uuid4(),
         job_analysis_id=job_id,
@@ -105,14 +105,14 @@ def _make_cv(job_id: uuid.UUID, status: str = "ready", deleted: bool = False, of
 
 @pytest.mark.asyncio
 async def test_list_cvs_empty_for_unknown_job(db):
-    from apliqa.services.cv import list_cvs_for_job
+    from applire.services.cv import list_cvs_for_job
     result = await list_cvs_for_job(uuid.uuid4(), db, "http://localhost:8001")
     assert result == []
 
 
 @pytest.mark.asyncio
 async def test_list_cvs_sorted_by_created_at_desc(db):
-    from apliqa.services.cv import list_cvs_for_job
+    from applire.services.cv import list_cvs_for_job
     job_id = uuid.uuid4()
     older = _make_cv(job_id, offset_seconds=0)
     newer = _make_cv(job_id, offset_seconds=10)
@@ -128,7 +128,7 @@ async def test_list_cvs_sorted_by_created_at_desc(db):
 
 @pytest.mark.asyncio
 async def test_list_cvs_excludes_soft_deleted(db):
-    from apliqa.services.cv import list_cvs_for_job
+    from applire.services.cv import list_cvs_for_job
     job_id = uuid.uuid4()
     active = _make_cv(job_id)
     deleted = _make_cv(job_id, deleted=True)
@@ -143,7 +143,7 @@ async def test_list_cvs_excludes_soft_deleted(db):
 
 @pytest.mark.asyncio
 async def test_list_cvs_urls_only_when_ready(db):
-    from apliqa.services.cv import list_cvs_for_job
+    from applire.services.cv import list_cvs_for_job
     job_id = uuid.uuid4()
     ready_cv = _make_cv(job_id, status="ready")
     pending_cv = _make_cv(job_id, status="pending")
@@ -164,9 +164,9 @@ async def test_list_cvs_urls_only_when_ready(db):
 @pytest.mark.asyncio
 async def test_get_pdf_filename_contains_role_slug(db):
     """get_pdf_filename returns lebenslauf-{slug}-{id[:8]}.pdf."""
-    from apliqa.models.job import JobAnalysis
-    from apliqa.models.cv import GeneratedCV
-    from apliqa.services.cv import get_pdf_filename
+    from applire.models.job import JobAnalysis
+    from applire.models.cv import GeneratedCV
+    from applire.services.cv import get_pdf_filename
     import uuid as _uuid
     from datetime import datetime, timezone, timedelta
 

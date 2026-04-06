@@ -164,7 +164,7 @@ export function Dashboard() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="font-heading text-2xl font-bold text-neutral-dark">Apliqa</h1>
+          <h1 className="font-heading text-2xl font-bold text-neutral-dark">Applire</h1>
           {profile && (
             <span
               className={cn(

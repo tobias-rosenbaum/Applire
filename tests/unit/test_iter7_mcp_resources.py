@@ -42,15 +42,15 @@ def _mock_result(**kwargs) -> MagicMock:
 
 @pytest.mark.asyncio
 async def test_resource_profile_happy_path():
-    from apliqa.mcp.server import resource_profile
+    from applire.mcp.server import resource_profile
 
     cm, _ = _mock_db()
     mock_result = _mock_result(id=str(uuid.uuid4()), completeness=75)
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.profile_svc.get_profile",
+            "applire.mcp.server.profile_svc.get_profile",
             AsyncMock(return_value=mock_result),
         ),
     ):
@@ -62,14 +62,14 @@ async def test_resource_profile_happy_path():
 
 @pytest.mark.asyncio
 async def test_resource_profile_not_found_raises():
-    from apliqa.mcp.server import resource_profile
+    from applire.mcp.server import resource_profile
 
     cm, _ = _mock_db()
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.get_db", return_value=cm),
         patch(
-            "apliqa.mcp.server.profile_svc.get_profile",
+            "applire.mcp.server.profile_svc.get_profile",
             AsyncMock(return_value=None),
         ),
     ):
@@ -103,7 +103,7 @@ def _make_job_orm_mock(job_id: uuid.UUID) -> MagicMock:
 
 @pytest.mark.asyncio
 async def test_resource_job_happy_path():
-    from apliqa.mcp.server import resource_job
+    from applire.mcp.server import resource_job
 
     job_id = uuid.uuid4()
     cm, mock_session = _mock_db()
@@ -116,8 +116,8 @@ async def test_resource_job_happy_path():
     mock_response = _mock_result(id=str(job_id), role_title="Software Engineer")
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.JobAnalysisResponse") as mock_schema,
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.JobAnalysisResponse") as mock_schema,
     ):
         mock_schema.model_validate.return_value = mock_response
         raw = await resource_job(job_id=str(job_id))
@@ -128,7 +128,7 @@ async def test_resource_job_happy_path():
 
 @pytest.mark.asyncio
 async def test_resource_job_not_found_raises():
-    from apliqa.mcp.server import resource_job
+    from applire.mcp.server import resource_job
 
     job_id = uuid.uuid4()
     cm, mock_session = _mock_db()
@@ -137,7 +137,7 @@ async def test_resource_job_not_found_raises():
     mock_scalar_result.scalar_one_or_none.return_value = None
     mock_session.execute = AsyncMock(return_value=mock_scalar_result)
 
-    with patch("apliqa.mcp.server.get_db", return_value=cm):
+    with patch("applire.mcp.server.get_db", return_value=cm):
         with pytest.raises(McpError) as exc_info:
             await resource_job(job_id=str(job_id))
 
@@ -146,7 +146,7 @@ async def test_resource_job_not_found_raises():
 
 @pytest.mark.asyncio
 async def test_resource_job_invalid_uuid_raises():
-    from apliqa.mcp.server import resource_job
+    from applire.mcp.server import resource_job
 
     with pytest.raises(McpError) as exc_info:
         await resource_job(job_id="not-a-uuid")
@@ -172,7 +172,7 @@ def _make_cv_orm_mock(cv_id: uuid.UUID) -> MagicMock:
 
 @pytest.mark.asyncio
 async def test_resource_cv_happy_path():
-    from apliqa.mcp.server import resource_cv
+    from applire.mcp.server import resource_cv
 
     cv_id = uuid.uuid4()
     cm, mock_session = _mock_db()
@@ -184,8 +184,8 @@ async def test_resource_cv_happy_path():
     mock_response = _mock_result(id=str(cv_id), job_analysis_id=str(uuid.uuid4()))
 
     with (
-        patch("apliqa.mcp.server.get_db", return_value=cm),
-        patch("apliqa.mcp.server.GeneratedCVResponse") as mock_schema,
+        patch("applire.mcp.server.get_db", return_value=cm),
+        patch("applire.mcp.server.GeneratedCVResponse") as mock_schema,
     ):
         mock_schema.model_validate.return_value = mock_response
         raw = await resource_cv(cv_id=str(cv_id))
@@ -196,7 +196,7 @@ async def test_resource_cv_happy_path():
 
 @pytest.mark.asyncio
 async def test_resource_cv_not_found_raises():
-    from apliqa.mcp.server import resource_cv
+    from applire.mcp.server import resource_cv
 
     cv_id = uuid.uuid4()
     cm, mock_session = _mock_db()
@@ -205,7 +205,7 @@ async def test_resource_cv_not_found_raises():
     mock_scalar_result.scalar_one_or_none.return_value = None
     mock_session.execute = AsyncMock(return_value=mock_scalar_result)
 
-    with patch("apliqa.mcp.server.get_db", return_value=cm):
+    with patch("applire.mcp.server.get_db", return_value=cm):
         with pytest.raises(McpError) as exc_info:
             await resource_cv(cv_id=str(cv_id))
 
@@ -214,7 +214,7 @@ async def test_resource_cv_not_found_raises():
 
 @pytest.mark.asyncio
 async def test_resource_cv_invalid_uuid_raises():
-    from apliqa.mcp.server import resource_cv
+    from applire.mcp.server import resource_cv
 
     with pytest.raises(McpError) as exc_info:
         await resource_cv(cv_id="not-a-uuid")

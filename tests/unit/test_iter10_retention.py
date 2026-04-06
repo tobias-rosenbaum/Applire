@@ -126,7 +126,7 @@ async def db():
 
 @pytest.mark.asyncio
 async def test_purge_uploads_returns_zero_when_table_absent(db):
-    from apliqa.retention.worker import _purge_uploads
+    from applire.retention.worker import _purge_uploads
 
     result = await _purge_uploads(db)
     assert result == 0
@@ -154,7 +154,7 @@ async def _seed_session(db: AsyncSession, *, updated_at: datetime) -> str:
 
 @pytest.mark.asyncio
 async def test_purge_sessions_deletes_old_sessions(db):
-    from apliqa.retention.worker import _purge_sessions
+    from applire.retention.worker import _purge_sessions
 
     await _seed_session(db, updated_at=_ago(days=31))
     await _seed_session(db, updated_at=_ago(days=5))
@@ -165,7 +165,7 @@ async def test_purge_sessions_deletes_old_sessions(db):
 
 @pytest.mark.asyncio
 async def test_purge_sessions_spares_recent_sessions(db):
-    from apliqa.retention.worker import _purge_sessions
+    from applire.retention.worker import _purge_sessions
 
     await _seed_session(db, updated_at=_ago(days=10))
 
@@ -196,7 +196,7 @@ async def _seed_cv(db: AsyncSession, *, expires_at: datetime, deleted_at: dateti
 
 @pytest.mark.asyncio
 async def test_purge_cvs_deletes_expired(db):
-    from apliqa.retention.worker import _purge_cvs
+    from applire.retention.worker import _purge_cvs
 
     await _seed_cv(db, expires_at=_ago(days=1))
     await _seed_cv(db, expires_at=_now() + timedelta(days=89))
@@ -207,7 +207,7 @@ async def test_purge_cvs_deletes_expired(db):
 
 @pytest.mark.asyncio
 async def test_purge_cvs_spares_unexpired(db):
-    from apliqa.retention.worker import _purge_cvs
+    from applire.retention.worker import _purge_cvs
 
     await _seed_cv(db, expires_at=_now() + timedelta(days=45))
 
@@ -236,7 +236,7 @@ async def _seed_profile(db: AsyncSession, *, updated_at: datetime, deleted_at: d
 
 @pytest.mark.asyncio
 async def test_tombstone_inactive_profiles(db):
-    from apliqa.retention.worker import _tombstone_inactive_profiles
+    from applire.retention.worker import _tombstone_inactive_profiles
 
     inactive_id = await _seed_profile(db, updated_at=_ago(days=731))
     active_id = await _seed_profile(db, updated_at=_ago(days=100))
@@ -253,7 +253,7 @@ async def test_tombstone_inactive_profiles(db):
 
 @pytest.mark.asyncio
 async def test_tombstone_skips_already_deleted_profiles(db):
-    from apliqa.retention.worker import _tombstone_inactive_profiles
+    from applire.retention.worker import _tombstone_inactive_profiles
 
     await _seed_profile(db, updated_at=_ago(days=800), deleted_at=_ago(days=5))
 
@@ -282,7 +282,7 @@ async def _seed_user(db: AsyncSession, *, created_at: datetime, deleted_at: date
 
 @pytest.mark.asyncio
 async def test_tombstone_inactive_users(db):
-    from apliqa.retention.worker import _tombstone_inactive_users
+    from applire.retention.worker import _tombstone_inactive_users
 
     inactive_id = await _seed_user(db, created_at=_ago(days=731))
     recent_id = await _seed_user(db, created_at=_ago(days=100))
@@ -299,7 +299,7 @@ async def test_tombstone_inactive_users(db):
 
 @pytest.mark.asyncio
 async def test_tombstone_skips_already_deleted_users(db):
-    from apliqa.retention.worker import _tombstone_inactive_users
+    from applire.retention.worker import _tombstone_inactive_users
 
     await _seed_user(db, created_at=_ago(days=800), deleted_at=_ago(days=10))
 

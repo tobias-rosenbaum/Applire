@@ -12,9 +12,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from apliqa.auth import get_auth_provider
-from apliqa.db.session import get_db
-from apliqa.routers.cv import router
+from applire.auth import get_auth_provider
+from applire.db.session import get_db
+from applire.routers.cv import router
 
 _CV_ID = str(uuid.UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"))
 
@@ -38,10 +38,10 @@ def client():
 
 
 def test_post_assist_question_generated(client):
-    from apliqa.schemas.cv_sections import AssistStartResponse
+    from applire.schemas.cv_sections import AssistStartResponse
 
     with patch(
-        "apliqa.routers.cv.start_assist_session",
+        "applire.routers.cv.start_assist_session",
         new_callable=AsyncMock,
         return_value=AssistStartResponse(
             session_id="s1", question="Wie lange nutzen Sie Python?"
@@ -57,7 +57,7 @@ def test_post_assist_question_generated(client):
 
 def test_post_assist_422_on_invalid_gap_id(client):
     with patch(
-        "apliqa.routers.cv.start_assist_session",
+        "applire.routers.cv.start_assist_session",
         new_callable=AsyncMock,
         side_effect=ValueError("gap_id not found"),
     ):
@@ -75,10 +75,10 @@ def test_post_assist_422_on_invalid_gap_id(client):
 
 
 def test_patch_assist_suggestion_returned(client):
-    from apliqa.schemas.cv_sections import AssistAnswerResponse
+    from applire.schemas.cv_sections import AssistAnswerResponse
 
     with patch(
-        "apliqa.routers.cv.submit_assist_answer",
+        "applire.routers.cv.submit_assist_answer",
         new_callable=AsyncMock,
         return_value=AssistAnswerResponse(
             suggestion="Erfahrener Python-Entwickler mit 5 Jahren."
@@ -94,7 +94,7 @@ def test_patch_assist_suggestion_returned(client):
 
 def test_patch_assist_422_on_invalid_session_id(client):
     with patch(
-        "apliqa.routers.cv.submit_assist_answer",
+        "applire.routers.cv.submit_assist_answer",
         new_callable=AsyncMock,
         side_effect=ValueError("Invalid session_id"),
     ):
@@ -112,10 +112,10 @@ def test_patch_assist_422_on_invalid_session_id(client):
 
 
 def test_patch_section_resolved_gaps_returned_when_keyword_present(client):
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
 
     with patch(
-        "apliqa.routers.cv.patch_cv_section",
+        "applire.routers.cv.patch_cv_section",
         new_callable=AsyncMock,
         return_value=SectionPatchResponse(
             html="<html/>",
@@ -132,10 +132,10 @@ def test_patch_section_resolved_gaps_returned_when_keyword_present(client):
 
 
 def test_patch_section_resolved_gaps_empty_when_keyword_absent(client):
-    from apliqa.schemas.cv_sections import SectionPatchResponse
+    from applire.schemas.cv_sections import SectionPatchResponse
 
     with patch(
-        "apliqa.routers.cv.patch_cv_section",
+        "applire.routers.cv.patch_cv_section",
         new_callable=AsyncMock,
         return_value=SectionPatchResponse(
             html="<html/>",

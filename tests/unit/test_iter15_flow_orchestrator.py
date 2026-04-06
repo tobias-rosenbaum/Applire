@@ -26,7 +26,7 @@ import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from apliqa.services.flow.orchestrator import (
+from applire.services.flow.orchestrator import (
     VALID_TRANSITIONS,
     ArtifactRequiredError,
     InvalidTransitionError,
@@ -34,7 +34,7 @@ from apliqa.services.flow.orchestrator import (
     advance_flow,
     create_flow,
 )
-from apliqa.schemas.flow import AdvanceFlowRequest, CreateFlowRequest
+from applire.schemas.flow import AdvanceFlowRequest, CreateFlowRequest
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -46,15 +46,15 @@ _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 @pytest_asyncio.fixture
 async def db():
     """In-memory SQLite session with all models registered."""
-    from apliqa.db.session import Base  # noqa: F401
-    import apliqa.models.user       # noqa: F401
-    import apliqa.models.job        # noqa: F401
-    import apliqa.models.profile    # noqa: F401
-    import apliqa.models.gap        # noqa: F401
-    import apliqa.models.cv         # noqa: F401
-    import apliqa.models.session    # noqa: F401
-    import apliqa.models.flow       # noqa: F401
-    import apliqa.models.uploads    # noqa: F401
+    from applire.db.session import Base  # noqa: F401
+    import applire.models.user       # noqa: F401
+    import applire.models.job        # noqa: F401
+    import applire.models.profile    # noqa: F401
+    import applire.models.gap        # noqa: F401
+    import applire.models.cv         # noqa: F401
+    import applire.models.session    # noqa: F401
+    import applire.models.flow       # noqa: F401
+    import applire.models.uploads    # noqa: F401
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -70,12 +70,12 @@ async def db():
 @pytest_asyncio.fixture
 async def user_and_job(db):
     """Insert a stub user and job analysis; return (user, job)."""
-    from apliqa.models.user import User
-    from apliqa.models.job import JobAnalysis
+    from applire.models.user import User
+    from applire.models.job import JobAnalysis
 
     user = User(
         id=_STUB_USER_ID,
-        email="local@apliqa.community",
+        email="local@applire.community",
         created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     job = JobAnalysis(
@@ -197,7 +197,7 @@ async def test_create_flow_returning_user(db, user_and_job):
     _, job = user_and_job
 
     # Insert a profile with high completeness
-    from apliqa.models.profile import MasterProfile
+    from applire.models.profile import MasterProfile
     profile = MasterProfile(
         profile_json={
             "work_experience": [{"company": "Acme", "role": "Dev", "start_date": "2020-01"}],
@@ -265,7 +265,7 @@ async def test_advance_flow_valid_transition(db, user_and_job):
 @pytest.mark.asyncio
 async def test_advance_flow_writes_artifact_fk(db, user_and_job):
     """artifact_id is stored on the flow record atomically."""
-    from apliqa.models.flow import FlowSession
+    from applire.models.flow import FlowSession
     from sqlalchemy import select
 
     _, job = user_and_job
@@ -288,7 +288,7 @@ async def test_advance_flow_writes_artifact_fk(db, user_and_job):
 @pytest.mark.asyncio
 async def test_advance_flow_sets_completed_at(db, user_and_job):
     """Advancing to 'complete' sets completed_at."""
-    from apliqa.models.flow import FlowSession
+    from applire.models.flow import FlowSession
     from sqlalchemy import select
 
     _, job = user_and_job
@@ -382,7 +382,7 @@ async def test_advance_flow_flow_not_found(db, user_and_job):
 @pytest.mark.asyncio
 async def test_flow_session_sqlite_persistence(db, user_and_job):
     """FlowSession CRUD round-trip via SQLite."""
-    from apliqa.models.flow import FlowSession
+    from applire.models.flow import FlowSession
     from sqlalchemy import select
 
     _, job = user_and_job
@@ -405,7 +405,7 @@ async def test_flow_session_sqlite_persistence(db, user_and_job):
 @pytest.mark.asyncio
 async def test_unique_constraint_enforced(db, user_and_job):
     """Inserting a duplicate (user_id, job_id) raises IntegrityError."""
-    from apliqa.models.flow import FlowSession
+    from applire.models.flow import FlowSession
 
     _, job = user_and_job
 

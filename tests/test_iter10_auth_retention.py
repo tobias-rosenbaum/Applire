@@ -46,7 +46,7 @@ _RETENTION_COUNT_KEYS = _RETENTION_KEYS - {"run_at"}
 def _run_retention() -> dict:
     """Run the retention worker inside the backend container and return parsed JSON."""
     result = subprocess.run(
-        ["docker", "compose", "exec", "-T", "backend", "python", "-m", "apliqa.retention"],
+        ["docker", "compose", "exec", "-T", "backend", "python", "-m", "applire.retention"],
         capture_output=True,
         text=True,
         timeout=60,
@@ -118,7 +118,7 @@ def test_profile_endpoint_with_fake_token_still_not_401(api):
     reason="Set INTEGRATION_RETENTION=1 to enable retention subprocess smoke tests",
 )
 def test_retention_worker_exits_zero():
-    """python -m apliqa.retention must exit with code 0."""
+    """python -m applire.retention must exit with code 0."""
     result = _run_retention()
     assert result.returncode == 0, (
         f"Retention worker exited {result.returncode}.\nstdout: {result.stdout}\nstderr: {result.stderr}"

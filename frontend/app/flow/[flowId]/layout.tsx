@@ -146,7 +146,7 @@ export default function FlowLayout({
     <div style={s.shell}>
       <div style={s.topBar}>
         <a href="/" style={s.logo}>
-          Apliqa
+          Applire
         </a>
 
         <div style={s.stepper}>

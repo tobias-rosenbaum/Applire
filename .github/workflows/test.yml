@@ -8,6 +8,9 @@ jobs:
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -28,15 +31,16 @@ jobs:
           pip install pytest pytest-cov pytest-asyncio pytest-mock requests
 
       - name: Run unit tests with coverage
-        working-directory: backend
         run: |
-          pytest tests/unit/ \
+          PYTHONPATH=backend pytest tests/unit/ backend/tests/unit/ \
             --ignore=tests/conftest.py \
-            --cov=apliqa \
+            --ignore=backend/tests/conftest.py \
+            --cov=applire \
+            --cov-config=backend/.coveragerc \
             --cov-report=term-missing \
-            --cov-report=html \
+            --cov-report=html:backend/htmlcov \
             --cov-fail-under=70 \
-            --junitxml=test-results.xml \
+            --junitxml=backend/test-results.xml \
             -v
 
       - name: Upload coverage report
@@ -68,6 +72,9 @@ jobs:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      checks: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -89,6 +96,18 @@ jobs:
 
       - name: Create .env.dev from CI template
         run: cp .env.ci .env.dev
+
+      - name: Start Docker services
+        run: docker compose up -d --build
+
+      - name: Wait for backend to be ready
+        run: |
+          echo "Waiting for backend..."
+          timeout 180 bash -c 'until curl -sf http://localhost:8001/health; do sleep 2; done'
+          echo "Backend ready."
+
+      - name: Run database migrations
+        run: docker compose exec backend python -m alembic upgrade head
 
       - name: Run integration tests
         run: |

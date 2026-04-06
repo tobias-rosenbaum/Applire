@@ -31,7 +31,7 @@ test.describe('Marcus Persona - CV Upload Journey', () => {
 
   test('should display landing page with upload functionality', async ({ page }) => {
     // Verify landing page elements
-    await expect(page).toHaveTitle(/Apliqa/i);
+    await expect(page).toHaveTitle(/Applire/i);
     
     // Check for upload area using data-testid
     const uploadArea = page.getByTestId('upload-area');

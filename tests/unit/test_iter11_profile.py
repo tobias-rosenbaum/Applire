@@ -41,13 +41,13 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 @pytest_asyncio.fixture
 async def sqlite_session():
     """In-memory SQLite session.  JSONB.with_variant(JSON) lets create_all work directly."""
-    from apliqa.db.session import Base  # noqa: F401 — ensures all models are registered
-    import apliqa.models.profile  # noqa: F401
-    import apliqa.models.job     # noqa: F401
-    import apliqa.models.cv      # noqa: F401
-    import apliqa.models.gap     # noqa: F401
-    import apliqa.models.session  # noqa: F401
-    import apliqa.models.user    # noqa: F401
+    from applire.db.session import Base  # noqa: F401 — ensures all models are registered
+    import applire.models.profile  # noqa: F401
+    import applire.models.job     # noqa: F401
+    import applire.models.cv      # noqa: F401
+    import applire.models.gap     # noqa: F401
+    import applire.models.session  # noqa: F401
+    import applire.models.user    # noqa: F401
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -66,13 +66,13 @@ async def sqlite_session():
 
 
 def _work_entry(**kwargs):
-    from apliqa.schemas.profile import WorkEntry
+    from applire.schemas.profile import WorkEntry
     defaults = {"company": "Acme GmbH", "role": "Software Developer", "start_date": "2020-01"}
     return WorkEntry(**{**defaults, **kwargs})
 
 
 def _profile(**kwargs):
-    from apliqa.schemas.profile import MasterProfileData
+    from applire.schemas.profile import MasterProfileData
     return MasterProfileData(**kwargs)
 
 
@@ -98,7 +98,7 @@ class TestSchemaDefaults:
         assert e.budget_managed is None
 
     def test_skill_default_proficiency_and_category(self):
-        from apliqa.schemas.profile import Skill
+        from applire.schemas.profile import Skill
         s = Skill(name="Python")
         assert s.proficiency == "intermediate"
         assert s.category == "technical"
@@ -114,38 +114,38 @@ class TestSchemaDefaults:
         assert p.volunteer_activities == []
 
     def test_personal_info_name_defaults_to_empty_string(self):
-        from apliqa.schemas.profile import PersonalInfo
+        from applire.schemas.profile import PersonalInfo
         pi = PersonalInfo()
         assert pi.name == ""
         assert pi.email is None
         assert pi.phone is None
 
     def test_conflict_resolved_defaults_to_false(self):
-        from apliqa.schemas.profile import Conflict
+        from applire.schemas.profile import Conflict
         c = Conflict(section="work_experience", field="start_date",
                      existing_value="2020-01", incoming_value="2020-03", source="cv_upload")
         assert c.resolved is False
 
     def test_conflict_has_auto_generated_uuid(self):
-        from apliqa.schemas.profile import Conflict
+        from applire.schemas.profile import Conflict
         c1 = Conflict(section="s", field="f", existing_value="a", incoming_value="b", source="x")
         c2 = Conflict(section="s", field="f", existing_value="a", incoming_value="b", source="x")
         assert c1.conflict_id != c2.conflict_id
         uuid.UUID(c1.conflict_id)  # must be valid UUID — raises if not
 
     def test_conflict_resolution_request_accepts_valid_literals(self):
-        from apliqa.schemas.profile import ConflictResolutionRequest
+        from applire.schemas.profile import ConflictResolutionRequest
         for resolution in ("existing", "incoming", "manual"):
             req = ConflictResolutionRequest(resolution=resolution)
             assert req.resolution == resolution
 
     def test_conflict_resolution_request_manual_value_can_be_none(self):
-        from apliqa.schemas.profile import ConflictResolutionRequest
+        from applire.schemas.profile import ConflictResolutionRequest
         req = ConflictResolutionRequest(resolution="manual", value=None)
         assert req.value is None
 
     def test_conflict_resolution_request_manual_value_can_be_set(self):
-        from apliqa.schemas.profile import ConflictResolutionRequest
+        from applire.schemas.profile import ConflictResolutionRequest
         req = ConflictResolutionRequest(resolution="manual", value="2020-02")
         assert req.value == "2020-02"
 
@@ -157,33 +157,33 @@ class TestSchemaDefaults:
 
 class TestLegacyMigration:
     def test_work_history_migrates_to_work_experience(self):
-        from apliqa.schemas.profile import MasterProfileData
+        from applire.schemas.profile import MasterProfileData
         data = {"work_history": [{"company": "Old Corp", "role": "Dev"}]}
         p = MasterProfileData(**data)
         assert len(p.work_experience) == 1
         assert p.work_experience[0].company == "Old Corp"
 
     def test_bullets_migrates_to_responsibilities(self):
-        from apliqa.schemas.profile import MasterProfileData
+        from applire.schemas.profile import MasterProfileData
         data = {"work_history": [{"company": "X", "role": "Y", "bullets": ["Task A", "Task B"]}]}
         p = MasterProfileData(**data)
         assert p.work_experience[0].responsibilities == ["Task A", "Task B"]
 
     def test_contact_migrates_to_personal_info(self):
-        from apliqa.schemas.profile import MasterProfileData
+        from applire.schemas.profile import MasterProfileData
         data = {"contact": {"name": "Alice", "email": "alice@example.com"}}
         p = MasterProfileData(**data)
         assert p.personal_info.name == "Alice"
         assert p.personal_info.email == "alice@example.com"
 
     def test_linkedin_key_migrates_to_linkedin_url(self):
-        from apliqa.schemas.profile import MasterProfileData
+        from applire.schemas.profile import MasterProfileData
         data = {"contact": {"name": "Bob", "linkedin": "https://linkedin.com/in/bob"}}
         p = MasterProfileData(**data)
         assert p.personal_info.linkedin_url == "https://linkedin.com/in/bob"
 
     def test_skills_str_list_migrates_to_skill_objects(self):
-        from apliqa.schemas.profile import MasterProfileData, Skill
+        from applire.schemas.profile import MasterProfileData, Skill
         data = {"skills": ["Python", "Docker"]}
         p = MasterProfileData(**data)
         assert len(p.skills) == 2
@@ -208,7 +208,7 @@ class TestCompletenessScore:
         assert p.calculate_completeness() == 0.30
 
     def test_profile_with_work_and_education_scores_0_50(self):
-        from apliqa.schemas.profile import EducationEntry
+        from applire.schemas.profile import EducationEntry
         p = _profile(
             work_experience=[_work_entry()],
             education=[EducationEntry(institution="TU Berlin", degree="B.Sc.")],
@@ -216,7 +216,7 @@ class TestCompletenessScore:
         assert p.calculate_completeness() == 0.50
 
     def test_fully_populated_profile_score_is_near_1(self):
-        from apliqa.schemas.profile import (
+        from applire.schemas.profile import (
             Certification, EducationEntry, Language, MasterProfileData,
             PersonalInfo, ProfessionalSummary, Publication, Skill, VolunteerActivity,
         )
@@ -235,7 +235,7 @@ class TestCompletenessScore:
         assert 0.95 <= score <= 1.0
 
     def test_completeness_returns_float_rounded_to_two_decimals(self):
-        from apliqa.schemas.profile import Skill
+        from applire.schemas.profile import Skill
         p = _profile(skills=[Skill(name="Python")])
         score = p.calculate_completeness()
         assert isinstance(score, float)
@@ -249,15 +249,15 @@ class TestCompletenessScore:
 
 class TestDateHelpers:
     def _overlap(self, *args):
-        from apliqa.services.profile.merge import _dates_overlap
+        from applire.services.profile.merge import _dates_overlap
         return _dates_overlap(*args)
 
     def _contradict(self, a, b):
-        from apliqa.services.profile.merge import _dates_contradict
+        from applire.services.profile.merge import _dates_contradict
         return _dates_contradict(a, b)
 
     def _merge_lists(self, a, b):
-        from apliqa.services.profile.merge import _merge_str_lists
+        from applire.services.profile.merge import _merge_str_lists
         return _merge_str_lists(a, b)
 
     def test_same_period_overlaps(self):
@@ -321,7 +321,7 @@ class TestDateHelpers:
 
 class TestMergeWorkExperience:
     def _merge(self, existing, incoming, source="cv_upload"):
-        from apliqa.services.profile.merge import _merge_work_experience
+        from applire.services.profile.merge import _merge_work_experience
         return _merge_work_experience(existing, incoming, source)
 
     def test_same_company_same_period_accumulates_into_one_entry(self):
@@ -425,11 +425,11 @@ class TestMergeWorkExperience:
 
 class TestMergeSkills:
     def _merge(self, existing, incoming, source="cv_upload"):
-        from apliqa.services.profile.merge import _merge_skills
+        from applire.services.profile.merge import _merge_skills
         return _merge_skills(existing, incoming, source)
 
     def _skill(self, name, proficiency="intermediate", years=None):
-        from apliqa.schemas.profile import Skill
+        from applire.schemas.profile import Skill
         return Skill(name=name, proficiency=proficiency, years_experience=years)
 
     def test_higher_proficiency_wins(self):
@@ -483,11 +483,11 @@ class TestMergeSkills:
 
 class TestMergeProfiles:
     def _merge(self, existing, incoming, source="cv_upload"):
-        from apliqa.services.profile.merge import merge_profiles
+        from applire.services.profile.merge import merge_profiles
         return merge_profiles(existing, incoming, source)
 
     def test_education_dedup_same_institution_and_degree(self):
-        from apliqa.schemas.profile import EducationEntry
+        from applire.schemas.profile import EducationEntry
         edu = EducationEntry(institution="TU Berlin", degree="B.Sc. Informatik")
         existing = _profile(education=[edu])
         incoming = _profile(education=[edu])
@@ -495,14 +495,14 @@ class TestMergeProfiles:
         assert len(result.merged_profile.education) == 1
 
     def test_education_different_degree_is_appended(self):
-        from apliqa.schemas.profile import EducationEntry
+        from applire.schemas.profile import EducationEntry
         existing = _profile(education=[EducationEntry(institution="TU", degree="B.Sc.")])
         incoming = _profile(education=[EducationEntry(institution="TU", degree="M.Sc.")])
         result = self._merge(existing, incoming)
         assert len(result.merged_profile.education) == 2
 
     def test_language_dedup_keeps_existing_level(self):
-        from apliqa.schemas.profile import Language
+        from applire.schemas.profile import Language
         existing = _profile(languages=[Language(language="German", level="C2")])
         incoming = _profile(languages=[Language(language="German", level="B2")])
         result = self._merge(existing, incoming)
@@ -510,14 +510,14 @@ class TestMergeProfiles:
         assert result.merged_profile.languages[0].level == "C2"
 
     def test_new_language_is_appended(self):
-        from apliqa.schemas.profile import Language
+        from applire.schemas.profile import Language
         existing = _profile(languages=[Language(language="German", level="C2")])
         incoming = _profile(languages=[Language(language="English", level="C1")])
         result = self._merge(existing, incoming)
         assert len(result.merged_profile.languages) == 2
 
     def test_certification_dedup_by_name(self):
-        from apliqa.schemas.profile import Certification
+        from applire.schemas.profile import Certification
         cert = Certification(name="AWS Certified", issuing_organization="Amazon")
         existing = _profile(certifications=[cert])
         incoming = _profile(certifications=[cert])
@@ -525,28 +525,28 @@ class TestMergeProfiles:
         assert len(result.merged_profile.certifications) == 1
 
     def test_personal_info_gap_fill_empty_email(self):
-        from apliqa.schemas.profile import PersonalInfo
+        from applire.schemas.profile import PersonalInfo
         existing = _profile(personal_info=PersonalInfo(name="Ana", email=None))
         incoming = _profile(personal_info=PersonalInfo(name="Ana", email="ana@example.com"))
         result = self._merge(existing, incoming)
         assert result.merged_profile.personal_info.email == "ana@example.com"
 
     def test_personal_info_conflict_on_different_email(self):
-        from apliqa.schemas.profile import PersonalInfo
+        from applire.schemas.profile import PersonalInfo
         existing = _profile(personal_info=PersonalInfo(email="old@example.com"))
         incoming = _profile(personal_info=PersonalInfo(email="new@example.com"))
         result = self._merge(existing, incoming)
         assert any(c.field == "email" for c in result.conflicts)
 
     def test_personal_info_no_conflict_when_existing_is_empty(self):
-        from apliqa.schemas.profile import PersonalInfo
+        from applire.schemas.profile import PersonalInfo
         existing = _profile(personal_info=PersonalInfo(email=None))
         incoming = _profile(personal_info=PersonalInfo(email="new@example.com"))
         result = self._merge(existing, incoming)
         assert not any(c.field == "email" for c in result.conflicts)
 
     def test_professional_summary_fills_missing_de(self):
-        from apliqa.schemas.profile import ProfessionalSummary
+        from applire.schemas.profile import ProfessionalSummary
         existing = _profile(professional_summary=ProfessionalSummary(en="Summary", de=None))
         incoming = _profile(professional_summary=ProfessionalSummary(de="Zusammenfassung"))
         result = self._merge(existing, incoming)
@@ -554,14 +554,14 @@ class TestMergeProfiles:
         assert result.merged_profile.professional_summary.en == "Summary"
 
     def test_professional_summary_fills_missing_en(self):
-        from apliqa.schemas.profile import ProfessionalSummary
+        from applire.schemas.profile import ProfessionalSummary
         existing = _profile(professional_summary=ProfessionalSummary(de="Zusammenfassung", en=None))
         incoming = _profile(professional_summary=ProfessionalSummary(en="Summary"))
         result = self._merge(existing, incoming)
         assert result.merged_profile.professional_summary.en == "Summary"
 
     def test_publications_dedup_by_title(self):
-        from apliqa.schemas.profile import Publication
+        from applire.schemas.profile import Publication
         pub = Publication(title="My Paper")
         existing = _profile(publications=[pub])
         incoming = _profile(publications=[pub])
@@ -569,7 +569,7 @@ class TestMergeProfiles:
         assert len(result.merged_profile.publications) == 1
 
     def test_volunteer_activities_dedup_by_role_and_organization(self):
-        from apliqa.schemas.profile import VolunteerActivity
+        from applire.schemas.profile import VolunteerActivity
         act = VolunteerActivity(role="Mentor", organization="Code4Good")
         existing = _profile(volunteer_activities=[act])
         incoming = _profile(volunteer_activities=[act])
@@ -577,7 +577,7 @@ class TestMergeProfiles:
         assert len(result.merged_profile.volunteer_activities) == 1
 
     def test_merge_result_added_list_reflects_new_items(self):
-        from apliqa.schemas.profile import Skill
+        from applire.schemas.profile import Skill
         existing = _profile(skills=[Skill(name="Python")])
         incoming = _profile(skills=[Skill(name="Docker")])
         result = self._merge(existing, incoming)
@@ -593,7 +593,7 @@ class TestSQLitePersistence:
     @pytest.mark.asyncio
     async def test_create_and_read_master_profile(self, sqlite_session):
         from sqlalchemy import select
-        from apliqa.models.profile import MasterProfile
+        from applire.models.profile import MasterProfile
 
         profile_data = {"personal_info": {"name": "Alice"}, "work_experience": []}
         record = MasterProfile(profile_json=profile_data)
@@ -608,7 +608,7 @@ class TestSQLitePersistence:
     @pytest.mark.asyncio
     async def test_profile_json_round_trips_role_aliases(self, sqlite_session):
         from sqlalchemy import select
-        from apliqa.models.profile import MasterProfile
+        from applire.models.profile import MasterProfile
 
         data = {
             "work_experience": [{
@@ -631,7 +631,7 @@ class TestSQLitePersistence:
     @pytest.mark.asyncio
     async def test_profile_json_round_trips_enrichment_history(self, sqlite_session):
         from sqlalchemy import select
-        from apliqa.models.profile import MasterProfile
+        from applire.models.profile import MasterProfile
 
         data = {
             "metadata": {
@@ -656,7 +656,7 @@ class TestSQLitePersistence:
     @pytest.mark.asyncio
     async def test_profile_json_round_trips_pending_conflicts(self, sqlite_session):
         from sqlalchemy import select
-        from apliqa.models.profile import MasterProfile
+        from applire.models.profile import MasterProfile
 
         conflict_id = str(uuid.uuid4())
         data = {
@@ -685,7 +685,7 @@ class TestSQLitePersistence:
 
     @pytest.mark.asyncio
     async def test_deleted_at_defaults_to_null(self, sqlite_session):
-        from apliqa.models.profile import MasterProfile
+        from applire.models.profile import MasterProfile
 
         record = MasterProfile(profile_json={})
         sqlite_session.add(record)
@@ -695,7 +695,7 @@ class TestSQLitePersistence:
     @pytest.mark.asyncio
     async def test_soft_delete_sets_deleted_at(self, sqlite_session):
         from sqlalchemy import select
-        from apliqa.models.profile import MasterProfile
+        from applire.models.profile import MasterProfile
 
         record = MasterProfile(profile_json={})
         sqlite_session.add(record)
