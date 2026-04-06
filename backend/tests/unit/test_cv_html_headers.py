@@ -29,20 +29,20 @@ def client():
     return TestClient(app, raise_server_exceptions=True)
 
 
-def test_html_endpoint_has_no_x_frame_options_header(client):
+def test_html_endpoint_has_x_frame_options_header(client):
     with patch("applire.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
         response = client.get(f"/api/cv/{_TEST_CV_ID}/html")
 
     assert response.status_code == 200
-    assert "x-frame-options" not in response.headers
+    assert response.headers.get("x-frame-options") == "SAMEORIGIN"
 
 
-def test_html_endpoint_has_no_csp_frame_ancestors_header(client):
+def test_html_endpoint_has_csp_frame_ancestors_header(client):
     with patch("applire.routers.cv.get_cv_html", new_callable=AsyncMock, return_value=_TEST_HTML):
         response = client.get(f"/api/cv/{_TEST_CV_ID}/html")
 
     assert response.status_code == 200
-    assert "content-security-policy" not in response.headers
+    assert "frame-ancestors 'self'" in response.headers.get("content-security-policy", "")
 
 
 def test_html_endpoint_returns_html_content_type(client):
