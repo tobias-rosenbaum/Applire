@@ -39,7 +39,7 @@ jobs:
             --cov-config=backend/.coveragerc \
             --cov-report=term-missing \
             --cov-report=html:backend/htmlcov \
-            --cov-fail-under=70 \
+            --cov-fail-under=75 \
             --junitxml=backend/test-results.xml \
             -v
 
