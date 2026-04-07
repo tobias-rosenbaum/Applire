@@ -62,7 +62,7 @@ class TailoredContact(BaseModel):
     phone: str | None = None
     location: str | None = None
     linkedin: str | None = None
-    photo_url: str | None = None  # file path; resolved to base64 URI at render time
+    photo_url: str | None = None  # ADR-021; file path resolved to base64 URI at render time
 
 
 class TailoredCVData(BaseModel):
