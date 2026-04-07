@@ -117,6 +117,18 @@ npx playwright show-report
 
 ---
 
+## Module System
+
+Apliqa uses **ES modules** (`"type": "module"`) for all JavaScript/TypeScript code.
+
+- Use `import` statements — never `require()`
+- Vitest and Playwright are ES module-native; they require `"type": "module"` in `package.json`
+- All test files (`.spec.ts`, `.test.ts`) must use ES module syntax
+- Both `package.json` (root) and `frontend/package.json` declare `"type": "module"`
+- A CI/CD gate (`module-system-check` job) enforces this on every push
+
+---
+
 ## CI/CD Pipeline
 
 ### GitHub Actions Workflow
@@ -127,7 +139,7 @@ npx playwright show-report
 #### 1. Backend Unit Tests
 - **Trigger**: Push to `main`, `develop`, `sprint-4`
 - **Runtime**: ~2 minutes
-- **Coverage Threshold**: 70%
+- **Coverage Threshold**: 75%
 - **Artifacts**: HTML coverage report
 
 #### 2. Backend Integration Tests

@@ -39,7 +39,7 @@ jobs:
             --cov-config=backend/.coveragerc \
             --cov-report=term-missing \
             --cov-report=html:backend/htmlcov \
-            --cov-fail-under=70 \
+            --cov-fail-under=75 \
             --junitxml=backend/test-results.xml \
             -v
 
@@ -139,10 +139,79 @@ jobs:
           reporter: 'java-junit'
           fail-on-error: false
 
+  frontend-unit-tests:
+    name: Frontend Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Vitest unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-unit-test-results
+          path: frontend/test-results/
+          retention-days: 30
+
+  module-system-check:
+    name: Module System Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify ES module mode in root package.json
+        run: |
+          echo "Checking root package.json..."
+          if ! grep -q '"type": "module"' package.json; then
+            echo "❌ Root package.json must declare '\"type\": \"module\"'"
+            exit 1
+          fi
+          echo "✅ Root package.json declares ES module mode"
+
+      - name: Verify ES module mode in frontend package.json
+        run: |
+          echo "Checking frontend package.json..."
+          if ! grep -q '"type": "module"' frontend/package.json; then
+            echo "❌ Frontend package.json must declare '\"type\": \"module\"'"
+            exit 1
+          fi
+          echo "✅ Frontend package.json declares ES module mode"
+
+      - name: Check for CommonJS require() in test files
+        run: |
+          echo "Scanning for CommonJS require() statements in test files..."
+          if grep -r "require(" tests/ frontend/ --include="*.ts" --include="*.tsx" --include="*.spec.ts" | grep -v node_modules; then
+            echo "❌ Found CommonJS require() statements in test files"
+            exit 1
+          fi
+          echo "✅ No CommonJS require() statements found"
+
   e2e-tests:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    needs: [backend-unit-tests, backend-integration-tests]
+    needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, module-system-check]
 
     steps:
       - name: Checkout code
@@ -211,7 +280,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [backend-unit-tests, backend-integration-tests, e2e-tests]
+    needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, module-system-check, e2e-tests]
     if: always()
 
     steps:
@@ -233,11 +302,15 @@ jobs:
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Backend Unit Tests | ${{ needs.backend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend Integration Tests | ${{ needs.backend-integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Unit Tests (Vitest) | ${{ needs.frontend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Module System Check | ${{ needs.module-system-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.backend-unit-tests.result }}" != "success" ] || \
              [ "${{ needs.backend-integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.frontend-unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.module-system-check.result }}" != "success" ] || \
              [ "${{ needs.e2e-tests.result }}" != "success" ]; then
             echo "**Test suite failed**" >> $GITHUB_STEP_SUMMARY
             exit 1
@@ -252,9 +325,13 @@ jobs:
           script: |
             const unitTestsResult = '${{ needs.backend-unit-tests.result }}';
             const integrationTestsResult = '${{ needs.backend-integration-tests.result }}';
+            const frontendUnitTestsResult = '${{ needs.frontend-unit-tests.result }}';
+            const moduleCheckResult = '${{ needs.module-system-check.result }}';
             const e2eTestsResult = '${{ needs.e2e-tests.result }}';
             const allPassed = unitTestsResult === 'success' &&
                               integrationTestsResult === 'success' &&
+                              frontendUnitTestsResult === 'success' &&
+                              moduleCheckResult === 'success' &&
                               e2eTestsResult === 'success';
             const body = allPassed
               ? '**All tests passed!** This PR is ready to merge.'
@@ -262,6 +339,8 @@ jobs:
                   '**Test failures detected**\n',
                   unitTestsResult !== 'success' ? `- Backend Unit Tests: ${unitTestsResult}` : '',
                   integrationTestsResult !== 'success' ? `- Backend Integration Tests: ${integrationTestsResult}` : '',
+                  frontendUnitTestsResult !== 'success' ? `- Frontend Unit Tests (Vitest): ${frontendUnitTestsResult}` : '',
+                  moduleCheckResult !== 'success' ? `- Module System Check: ${moduleCheckResult}` : '',
                   e2eTestsResult !== 'success' ? `- E2E Tests: ${e2eTestsResult}` : '',
                 ].filter(Boolean).join('\n');
             github.rest.issues.createComment({
