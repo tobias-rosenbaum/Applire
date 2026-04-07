@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import fs from 'fs';
 
 /**
  * Marcus Persona E2E Test
@@ -174,7 +175,6 @@ test.describe('Marcus Persona - CV Upload Journey', () => {
     await download.saveAs(downloadPath);
     
     // Verify file exists
-    const fs = require('fs');
     expect(fs.existsSync(downloadPath)).toBeTruthy();
   });
 
