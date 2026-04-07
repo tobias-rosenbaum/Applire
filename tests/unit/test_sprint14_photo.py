@@ -76,10 +76,8 @@ def test_tailored_cv_data_has_show_photo():
 # Task 4 — Photo service
 # ---------------------------------------------------------------------------
 
-import tempfile
 import uuid as _uuid
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine

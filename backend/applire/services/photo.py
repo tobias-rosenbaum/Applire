@@ -47,7 +47,7 @@ async def upload_photo(
     content_type: str,
     db: AsyncSession,
     storage: StorageProvider,
-) -> dict:
+) -> dict[str, str]:
     """Validate, store, and record GDPR consent for a profile photo.
 
     Returns ``{"photo_url": str, "consent_at": str}`` on success.
@@ -115,6 +115,7 @@ async def get_photo_bytes(
     storage: StorageProvider,
 ) -> bytes:
     """Return raw photo bytes for the user. Raises LookupError if no photo."""
+    await _get_user(user_id, db)
     profile = await _get_profile(db)
     profile_data = MasterProfileData.model_validate(profile.profile_json)
     path = profile_data.personal_info.photo_url
