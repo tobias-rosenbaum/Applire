@@ -21,7 +21,7 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
 
 **Änderungen:**
 
-1. **Neuer Router-Endpoint** in [`backend/apliqa/routers/profile.py`](backend/apliqa/routers/profile.py):
+1. **Neuer Router-Endpoint** in [`backend/applire/routers/profile.py`](backend/applire/routers/profile.py):
    ```python
    @router.get("/exists")
    async def profile_exists(
@@ -31,7 +31,7 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
        """Lightweight check: exists + completeness_score (no full profile payload)."""
    ```
 
-2. **Service-Funktion** in [`backend/apliqa/services/profile.py`](backend/apliqa/services/profile.py):
+2. **Service-Funktion** in [`backend/applire/services/profile.py`](backend/applire/services/profile.py):
    - Query `MasterProfile` für aktuellen User
    - Wenn vorhanden: `MasterProfileData.calculate_completeness()` aufrufen
    - Return: `{ exists: bool, completeness_score: float }`
@@ -46,7 +46,7 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
 
 **Änderungen:**
 
-1. **[`backend/apliqa/services/application.py`](backend/apliqa/services/application.py)** — `list_applications()`:
+1. **[`backend/applire/services/application.py`](backend/applire/services/application.py)** — `list_applications()`:
    - `selectinload` für `job_analysis` und `flow_session` hinzufügen
    - Import: `from sqlalchemy.orm import selectinload`
    - Query anpassen:
@@ -61,7 +61,7 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
      )
      ```
 
-2. **Response-Schema erweitern** in [`backend/apliqa/schemas/application.py`](backend/apliqa/schemas/application.py):
+2. **Response-Schema erweitern** in [`backend/applire/schemas/application.py`](backend/applire/schemas/application.py):
    - `ApplicationResponse` um `job_summary` (role_title, company_name) erweitern
    - Optional: `flow_summary` (current_step) hinzufügen
 
@@ -73,11 +73,11 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
 
 **Änderungen:**
 
-1. **Router** [`backend/apliqa/routers/application.py`](backend/apliqa/routers/application.py):
+1. **Router** [`backend/applire/routers/application.py`](backend/applire/routers/application.py):
    - `q: str | None = Query(default=None)` zu `list_pipeline()` hinzufügen
    - An `list_applications()` durchreichen
 
-2. **Service** [`backend/apliqa/services/application.py`](backend/apliqa/services/application.py):
+2. **Service** [`backend/applire/services/application.py`](backend/applire/services/application.py):
    - `list_applications()` um `q: str | None = None` erweitern
    - ILIKE-Filter hinzufügen:
      ```python
@@ -100,7 +100,7 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
 
 **Änderungen:**
 
-1. **[`backend/apliqa/mcp/server.py`](backend/apliqa/mcp/server.py)**:
+1. **[`backend/applire/mcp/server.py`](backend/applire/mcp/server.py)**:
    - Zwei neue Tools hinzufügen:
      ```python
      @mcp.tool(description="List user's application pipeline.")
@@ -111,7 +111,7 @@ Lieferung der Emma-Power-User-Erfahrung: Dashboard mit aktiven Applikationen, Re
      async def get_application(application_id: str) -> dict:
          ...
      ```
-   - Importe: `from apliqa.services.application import list_applications, get_application`
+   - Importe: `from applire.services.application import list_applications, get_application`
 
 2. **MCP Tool Registry Dokument** aktualisieren (aus Iteration 17.15).
 

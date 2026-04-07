@@ -1,6 +1,6 @@
 # Test Fixtures
 
-This directory contains test data files used by the Apliqa automated test suite.
+This directory contains test data files used by the Applire automated test suite.
 
 ## Directory Structure
 

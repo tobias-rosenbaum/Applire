@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright Configuration for Apliqa E2E Tests
+ * Playwright Configuration for Applire E2E Tests
  * 
  * This config is designed to work in both local development and CI/CD (GitHub Actions) environments.
  * Key settings:

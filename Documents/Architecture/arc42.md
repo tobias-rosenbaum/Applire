@@ -427,7 +427,7 @@ Proprietary
 
 Managed hosting, Auth enforcement (OIDC via Zitadel), Recruiter Intelligence (GxP/Pharma), premium templates, B2B multi-tenancy (ADR 011), priority rendering, analytics dashboard, Paddle billing
 
-**Edition Gating:** Feature-flag based (`APLIQA_EDITION=community|cloud`) checked at the service layer. Cloud-only modules reside in `applire.cloud.*` namespace and are excluded from the AGPL-3.0 distribution.
+**Edition Gating:** Feature-flag based (`APPLIRE_EDITION=community|cloud`) checked at the service layer. Cloud-only modules reside in `applire.cloud.*` namespace and are excluded from the AGPL-3.0 distribution.
 
 ### 4.2 Core Architectural Patterns
 
@@ -625,7 +625,7 @@ Infer skills from employment context (e.g., blood bank → 21 CFR Part 11). Infe
 
 Gating
 
-Cloud-only feature (`APLIQA_EDITION=cloud`); returns 402 on Community.
+Cloud-only feature (`APPLIRE_EDITION=cloud`); returns 402 on Community.
 
 #### 5.3.6 MCP Server [Split: Community + Cloud Layer]
 
@@ -665,7 +665,7 @@ Resources
 
 URL base
 
-`APLIQA_BASE_URL` env var — backend base URL for download links returned by `get_cv_status`
+`APPLIRE_BASE_URL` env var — backend base URL for download links returned by `get_cv_status`
 
 Auth
 
@@ -815,7 +815,7 @@ Gate Cloud-only features at runtime while maintaining license separation between
 
 Mechanism
 
-`APLIQA_EDITION` environment variable (`community` | `cloud`) checked at runtime.
+`APPLIRE_EDITION` environment variable (`community` | `cloud`) checked at runtime.
 
 Implementation
 
@@ -1011,7 +1011,7 @@ The Applire project implements a feature-gated testing strategy across three tie
 --- | --- | ---
 Backend Unit Test Coverage | ≥75% | Blocking gate: `pytest --cov-fail-under=75`
 E2E Test Coverage (Scope) | Marcus persona happy path: CV upload → JD input → Processing → Results → Download | Blocking: E2E tests must pass for rollout
-LLM Provider Mocking | All CI/CD tests mock providers (Mistral, OpenAI, Ollama, OpenRouter) | Configuration via `APLIQA_EDITION=community` and test env vars
+LLM Provider Mocking | All CI/CD tests mock providers (Mistral, OpenAI, Ollama, OpenRouter) | Configuration via `APPLIRE_EDITION=community` and test env vars
 
 ### 8.4 Test Data Strategy
 
@@ -1043,7 +1043,7 @@ Solution/tests/fixtures/
 **Pre-Rollout Validation (Tier 3)**:
 - E2E tests must pass for the feature's critical user journey
 - Manual QA validates acceptance criteria from user stories
-- Feature flag (`APLIQA_EDITION` or custom flag) verified to be in correct state before rollout
+- Feature flag (`APPLIRE_EDITION` or custom flag) verified to be in correct state before rollout
 
 **Edition Gating (Community vs. Cloud)**:
 - Community Edition: Tested via CI/CD; covers open-core features only

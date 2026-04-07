@@ -1,8 +1,8 @@
-# 🧪 Apliqa Test Infrastructure
+# 🧪 Applire Test Infrastructure
 
 ## Overview
 
-Apliqa has a comprehensive three-tier testing strategy:
+Applire has a comprehensive three-tier testing strategy:
 
 1. **Unit Tests** - Fast, isolated component testing
 2. **Integration Tests** - API and service interaction testing
@@ -18,7 +18,7 @@ Apliqa has a comprehensive three-tier testing strategy:
 ### Running Locally
 ```bash
 cd Solution
-pytest tests/unit/ -v --cov=apliqa --cov-report=html
+pytest tests/unit/ -v --cov=applire --cov-report=html
 ```
 
 ### Test Files
@@ -309,7 +309,7 @@ backend/tests/
 - **Artifacts**: Automatically uploaded for 30 days
 
 ### Monitoring
-1. Check workflow runs: https://github.com/tobias-rosenbaum/Apliqa/actions
+1. Check workflow runs: https://github.com/tobias-rosenbaum/Applire/actions
 2. Review coverage reports in artifacts
 3. Monitor test trends over time
 4. Set up notifications for failures

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Apliqa CI/CD pipeline automatically runs tests on every push and pull request. **Test failures are now reported directly in your PR** — no need to visit GitHub Actions!
+The Applire CI/CD pipeline automatically runs tests on every push and pull request. **Test failures are now reported directly in your PR** — no need to visit GitHub Actions!
 
 ---
 
@@ -142,7 +142,7 @@ npx playwright test marcus-persona.spec.ts --debug
 ### Backend Unit Tests
 ```bash
 cd Solution/backend
-pytest tests/unit/ -v --cov=apliqa --cov-report=html
+pytest tests/unit/ -v --cov=applire --cov-report=html
 # View coverage: open htmlcov/index.html
 ```
 
@@ -243,7 +243,7 @@ npx playwright test
 ### 3. Check Coverage
 Make sure your changes don't drop coverage below 70%:
 ```bash
-pytest tests/unit/ --cov=apliqa --cov-fail-under=70
+pytest tests/unit/ --cov=applire --cov-fail-under=70
 ```
 
 ### 4. Read Error Messages Carefully
@@ -307,7 +307,7 @@ cd Solution && docker-compose up -d && pytest tests/ --ignore=tests/e2e -v
 cd Solution/frontend && npx playwright test
 
 # Check coverage
-pytest tests/unit/ --cov=apliqa --cov-report=html
+pytest tests/unit/ --cov=applire --cov-report=html
 
 # Debug a specific test
 pytest tests/unit/test_iter11_profile.py::TestSchemaModels::test_profile_schema -vv
