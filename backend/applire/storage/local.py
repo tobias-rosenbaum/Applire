@@ -43,7 +43,7 @@ class LocalStorageProvider(StorageProvider):
 
         def _read() -> bytes:
             if not path.exists():
-                raise FileNotFoundError(f"Photo not found: {file_path}")
+                raise FileNotFoundError(f"File not found: {file_path}")
             return path.read_bytes()
 
-        return await asyncio.get_event_loop().run_in_executor(None, _read)
+        return await asyncio.get_running_loop().run_in_executor(None, _read)

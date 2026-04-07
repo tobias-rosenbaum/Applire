@@ -3,9 +3,7 @@
 Run:
     pytest tests/unit/test_sprint14_photo.py -v
 """
-import asyncio
 import tempfile
-from pathlib import Path
 
 import pytest
 
