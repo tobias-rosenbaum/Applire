@@ -25,6 +25,10 @@ from applire.schemas.profile import (
     WorkEntry,
 )
 
+# Personal-info fields that are user-managed and must never be flagged as
+# LLM-import conflicts. Gap-fill (empty → value) is still applied normally.
+_GAP_FILL_ONLY: frozenset[str] = frozenset({"photo_url"})
+
 
 @dataclass
 class MergeResult:
@@ -269,7 +273,6 @@ def merge_profiles(
     # Personal info — fill gaps; flag only populated-vs-different values
     merged_pi = existing.personal_info.model_copy(deep=True)
     inc_pi = incoming.personal_info
-    _GAP_FILL_ONLY = {"photo_url"}  # user-managed; never flag as conflict
 
     for attr in ("name", "email", "phone", "location", "address",
                  "nationality", "linkedin_url", "xing_url", "website_url",

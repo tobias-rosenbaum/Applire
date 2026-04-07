@@ -227,3 +227,4 @@ def test_merge_does_not_overwrite_existing_photo_url():
     result = merge_profiles(existing, incoming, source="test")
     # photo_url is user-managed, not LLM-extracted — never overwrite
     assert result.merged_profile.personal_info.photo_url == "/uploads/my_photo.jpg"
+    assert result.conflicts == [], "photo_url conflict must never be raised — it is user-managed"
