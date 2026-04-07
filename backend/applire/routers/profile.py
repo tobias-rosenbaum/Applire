@@ -40,6 +40,7 @@ from applire.services.profile import (
 )
 from applire.storage import get_storage
 from applire.storage.base import StorageProvider
+from applire.services.photo import delete_photo, get_photo_bytes, upload_photo
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -200,6 +201,98 @@ async def import_profile(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         )
+
+
+# ---------------------------------------------------------------------------
+# Photo endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/photo", status_code=status.HTTP_200_OK)
+async def upload_photo_endpoint(
+    file: UploadFile,
+    request: Request,
+    consent: bool = Query(description="Must be True — GDPR Art. 9(2)(a) explicit consent"),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageProvider = Depends(_get_storage),
+    auth: AuthProvider = Depends(get_auth_provider),
+) -> dict[str, str]:
+    """Upload a profile photo. Consent must be explicitly provided.
+
+    Accepted formats: JPEG, PNG, WebP. Max 5 MB.
+    Photo is stored and photo_url is set in the Master Profile personal_info.
+    Re-uploading replaces the existing photo and refreshes consent_at.
+    """
+    user = await auth.get_current_user(request)
+    if not consent:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Consent is required to store your photo (GDPR Art. 9).",
+        )
+    file_bytes = await file.read()
+    content_type = file.content_type or "application/octet-stream"
+    try:
+        return await upload_photo(
+            user_id=user.id,
+            file_bytes=file_bytes,
+            content_type=content_type,
+            db=db,
+            storage=storage,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.delete("/photo", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_photo_endpoint(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    storage: StorageProvider = Depends(_get_storage),
+    auth: AuthProvider = Depends(get_auth_provider),
+) -> None:
+    """Delete the profile photo and clear GDPR consent."""
+    user = await auth.get_current_user(request)
+    await delete_photo(user_id=user.id, db=db, storage=storage)
+
+
+@router.get("/photo")
+async def get_photo_endpoint(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    storage: StorageProvider = Depends(_get_storage),
+    auth: AuthProvider = Depends(get_auth_provider),
+):
+    """Return the raw photo bytes (GDPR data portability). 404 if no photo on file."""
+    import mimetypes
+    from fastapi.responses import Response as FastAPIResponse
+
+    from applire.models.profile import MasterProfile
+    from applire.schemas.profile import MasterProfileData
+
+    user = await auth.get_current_user(request)
+    try:
+        photo_bytes = await get_photo_bytes(user_id=user.id, db=db, storage=storage)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No profile photo on file",
+        )
+
+    # Resolve MIME type from stored path (single-user pattern — no user_id filter)
+    profile_result = await db.execute(
+        select(MasterProfile)
+        .where(MasterProfile.deleted_at.is_(None))
+        .order_by(MasterProfile.created_at.desc())
+        .limit(1)
+    )
+    profile = profile_result.scalar_one_or_none()
+    photo_url = (
+        MasterProfileData.model_validate(profile.profile_json).personal_info.photo_url
+        if profile
+        else ""
+    )
+    mt = mimetypes.guess_type(photo_url or "")[0] or "image/jpeg"
+    return FastAPIResponse(content=photo_bytes, media_type=mt)
 
 
 @router.get("/exists")
