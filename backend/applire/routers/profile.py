@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import JSONResponse
+import mimetypes
+
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -212,7 +214,7 @@ async def import_profile(
 async def upload_photo_endpoint(
     file: UploadFile,
     request: Request,
-    consent: bool = Query(description="Must be True — GDPR Art. 9(2)(a) explicit consent"),
+    consent: bool = Query(default=False, description="Must be True — GDPR Art. 9(2)(a) explicit consent"),
     db: AsyncSession = Depends(get_db),
     storage: StorageProvider = Depends(_get_storage),
     auth: AuthProvider = Depends(get_auth_provider),
@@ -255,44 +257,23 @@ async def delete_photo_endpoint(
     await delete_photo(user_id=user.id, db=db, storage=storage)
 
 
-@router.get("/photo")
+@router.get("/photo", status_code=status.HTTP_200_OK)
 async def get_photo_endpoint(
     request: Request,
     db: AsyncSession = Depends(get_db),
     storage: StorageProvider = Depends(_get_storage),
     auth: AuthProvider = Depends(get_auth_provider),
-):
+) -> Response:
     """Return the raw photo bytes (GDPR data portability). 404 if no photo on file."""
-    import mimetypes
-    from fastapi.responses import Response as FastAPIResponse
-
-    from applire.models.profile import MasterProfile
-    from applire.schemas.profile import MasterProfileData
-
     user = await auth.get_current_user(request)
     try:
-        photo_bytes = await get_photo_bytes(user_id=user.id, db=db, storage=storage)
+        photo_bytes, media_type = await get_photo_bytes(user_id=user.id, db=db, storage=storage)
     except LookupError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No profile photo on file",
         )
-
-    # Resolve MIME type from stored path (single-user pattern — no user_id filter)
-    profile_result = await db.execute(
-        select(MasterProfile)
-        .where(MasterProfile.deleted_at.is_(None))
-        .order_by(MasterProfile.created_at.desc())
-        .limit(1)
-    )
-    profile = profile_result.scalar_one_or_none()
-    photo_url = (
-        MasterProfileData.model_validate(profile.profile_json).personal_info.photo_url
-        if profile
-        else ""
-    )
-    mt = mimetypes.guess_type(photo_url or "")[0] or "image/jpeg"
-    return FastAPIResponse(content=photo_bytes, media_type=mt)
+    return Response(content=photo_bytes, media_type=media_type)
 
 
 @router.get("/exists")

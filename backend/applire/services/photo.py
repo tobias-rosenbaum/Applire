@@ -4,6 +4,7 @@ upload_photo:  Validate, store, update personal_info.photo_url, record GDPR cons
 delete_photo:  Remove stored file, clear photo_url and consent.
 get_photo:     Return raw bytes for the current user photo (GDPR portability).
 """
+import mimetypes
 import uuid
 from datetime import datetime, timezone
 
@@ -113,12 +114,14 @@ async def get_photo_bytes(
     user_id: uuid.UUID,
     db: AsyncSession,
     storage: StorageProvider,
-) -> bytes:
-    """Return raw photo bytes for the user. Raises LookupError if no photo."""
+) -> tuple[bytes, str]:
+    """Return raw photo bytes and MIME type for the user. Raises LookupError if no photo."""
     await _get_user(user_id, db)
     profile = await _get_profile(db)
     profile_data = MasterProfileData.model_validate(profile.profile_json)
     path = profile_data.personal_info.photo_url
     if not path:
         raise LookupError("No profile photo on file")
-    return await storage.read(path)
+    raw = await storage.read(path)
+    content_type = mimetypes.guess_type(path)[0] or "image/jpeg"
+    return raw, content_type
