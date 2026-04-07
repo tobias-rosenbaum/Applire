@@ -192,3 +192,38 @@ async def test_delete_photo_clears_url_and_consent(photo_db):
     await photo_db.refresh(profile)
     profile_data = MasterProfileData.model_validate(profile.profile_json)
     assert profile_data.personal_info.photo_url is None
+
+
+# ---------------------------------------------------------------------------
+# Task 6 — Merge service photo_url gap-fill
+# ---------------------------------------------------------------------------
+
+def test_merge_gap_fills_photo_url():
+    """Merge fills photo_url if existing is empty but incoming has a value."""
+    from applire.schemas.profile import MasterProfileData, PersonalInfo
+    from applire.services.profile.merge import merge_profiles
+
+    existing = MasterProfileData(
+        personal_info=PersonalInfo(name="Anna", photo_url=None)
+    )
+    incoming = MasterProfileData(
+        personal_info=PersonalInfo(name="Anna", photo_url="/uploads/photo.jpg")
+    )
+    result = merge_profiles(existing, incoming, source="test")
+    assert result.merged_profile.personal_info.photo_url == "/uploads/photo.jpg"
+
+
+def test_merge_does_not_overwrite_existing_photo_url():
+    """Merge never overwrites a user-set photo_url with incoming data."""
+    from applire.schemas.profile import MasterProfileData, PersonalInfo
+    from applire.services.profile.merge import merge_profiles
+
+    existing = MasterProfileData(
+        personal_info=PersonalInfo(name="Anna", photo_url="/uploads/my_photo.jpg")
+    )
+    incoming = MasterProfileData(
+        personal_info=PersonalInfo(name="Anna", photo_url="/uploads/other_photo.jpg")
+    )
+    result = merge_profiles(existing, incoming, source="test")
+    # photo_url is user-managed, not LLM-extracted — never overwrite
+    assert result.merged_profile.personal_info.photo_url == "/uploads/my_photo.jpg"

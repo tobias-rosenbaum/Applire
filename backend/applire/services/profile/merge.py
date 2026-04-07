@@ -269,14 +269,19 @@ def merge_profiles(
     # Personal info — fill gaps; flag only populated-vs-different values
     merged_pi = existing.personal_info.model_copy(deep=True)
     inc_pi = incoming.personal_info
+    _GAP_FILL_ONLY = {"photo_url"}  # user-managed; never flag as conflict
+
     for attr in ("name", "email", "phone", "location", "address",
-                 "nationality", "linkedin_url", "xing_url", "website_url"):
+                 "nationality", "linkedin_url", "xing_url", "website_url",
+                 "photo_url"):
         ex_val = getattr(merged_pi, attr)
         inc_val = getattr(inc_pi, attr)
         if inc_val and not ex_val:
             merged_pi = merged_pi.model_copy(update={attr: inc_val})
             all_added.append(f"personal_info.{attr}")
         elif inc_val and ex_val and str(inc_val).strip().lower() != str(ex_val).strip().lower():
+            if attr in _GAP_FILL_ONLY:
+                continue  # photo_url is user-managed; never auto-conflict
             all_conflicts.append(Conflict(
                 section="personal_info",
                 field=attr,
