@@ -27,3 +27,7 @@ class User(Base):
     photo_consent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+    def __init__(self, **kwargs: object) -> None:
+        kwargs.setdefault("photo_consent", False)
+        super().__init__(**kwargs)

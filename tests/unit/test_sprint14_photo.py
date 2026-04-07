@@ -37,3 +37,10 @@ async def test_local_storage_read_raises_for_missing_file():
 
         with pytest.raises(FileNotFoundError):
             await storage.read(f"{tmp}/does_not_exist.jpg")
+
+
+def test_user_photo_consent_defaults():
+    from applire.models.user import User
+    user = User()
+    assert user.photo_consent is False
+    assert user.photo_consent_at is None
