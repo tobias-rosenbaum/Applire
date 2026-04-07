@@ -62,6 +62,7 @@ class TailoredContact(BaseModel):
     phone: str | None = None
     location: str | None = None
     linkedin: str | None = None
+    photo_url: str | None = None  # file path; resolved to base64 URI at render time
 
 
 class TailoredCVData(BaseModel):
@@ -71,6 +72,7 @@ class TailoredCVData(BaseModel):
     skills: list[str] = []
     education: list[TailoredEducationEntry] = []
     languages: list[TailoredLanguage] = []
+    show_photo: bool = True  # country-aware photo rendering hook (ADR-021); True for all DACH jobs
 
 
 class GeneratedCVResponse(BaseModel):
