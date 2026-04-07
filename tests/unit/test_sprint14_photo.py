@@ -121,7 +121,6 @@ async def test_upload_photo_stores_file_and_sets_photo_url(photo_db):
     photo_db.add(user)
 
     profile = MasterProfile(
-        user_id=user_id,
         profile_json=MasterProfileData(
             personal_info=PersonalInfo(name="Anna Bauer")
         ).model_dump(mode="json"),
@@ -178,7 +177,6 @@ async def test_delete_photo_clears_url_and_consent(photo_db):
         path = await storage.save(b"fake-jpeg", "photo.jpg")
 
         profile = MasterProfile(
-            user_id=user_id,
             profile_json=MasterProfileData(
                 personal_info=PersonalInfo(name="Anna Bauer", photo_url=path)
             ).model_dump(mode="json"),

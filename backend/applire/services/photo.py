@@ -27,10 +27,10 @@ async def _get_user(user_id: uuid.UUID, db: AsyncSession) -> User:
     return user
 
 
-async def _get_profile(user_id: uuid.UUID, db: AsyncSession) -> MasterProfile:
+async def _get_profile(db: AsyncSession) -> MasterProfile:
     result = await db.execute(
         select(MasterProfile)
-        .where(MasterProfile.user_id == user_id, MasterProfile.deleted_at.is_(None))
+        .where(MasterProfile.deleted_at.is_(None))
         .order_by(MasterProfile.created_at.desc())
         .limit(1)
     )
@@ -61,7 +61,7 @@ async def upload_photo(
         raise ValueError("Photo exceeds the 5 MB limit. Please use a smaller file.")
 
     user = await _get_user(user_id, db)
-    profile = await _get_profile(user_id, db)
+    profile = await _get_profile(db)
 
     # Delete existing photo if present (replace path)
     profile_data = MasterProfileData.model_validate(profile.profile_json)
@@ -93,7 +93,7 @@ async def delete_photo(
 ) -> None:
     """Remove stored photo file and clear consent. No-op if no photo on file."""
     user = await _get_user(user_id, db)
-    profile = await _get_profile(user_id, db)
+    profile = await _get_profile(db)
 
     profile_data = MasterProfileData.model_validate(profile.profile_json)
     if profile_data.personal_info.photo_url:
@@ -115,7 +115,7 @@ async def get_photo_bytes(
     storage: StorageProvider,
 ) -> bytes:
     """Return raw photo bytes for the user. Raises LookupError if no photo."""
-    profile = await _get_profile(user_id, db)
+    profile = await _get_profile(db)
     profile_data = MasterProfileData.model_validate(profile.profile_json)
     path = profile_data.personal_info.photo_url
     if not path:
