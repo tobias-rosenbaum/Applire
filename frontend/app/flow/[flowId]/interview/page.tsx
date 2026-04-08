@@ -563,7 +563,7 @@ export default function InterviewPage({
                 You have {gapsRemaining} gap{gapsRemaining !== 1 ? "s" : ""} remaining — are you sure you want to end?
               </p>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => void sendAnswer("I'm done with the interview")}>
+                <Button size="sm" variant="outline" onClick={() => void sendAnswer("done")}>
                   End interview
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => setShowDoneConfirm(false)}>
