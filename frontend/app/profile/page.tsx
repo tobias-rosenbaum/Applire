@@ -30,6 +30,7 @@ interface ProfileSection {
   skills?: string[];
   languages?: Array<{ name?: string; level?: string }>;
   certifications?: Array<{ name?: string; issuer?: string; year?: string }>;
+  photo_url?: string | null;
 }
 
 interface EnrichmentRecord {
@@ -102,8 +103,7 @@ export default function ProfilePage() {
           const data: ProfileResponse = await profileRes.json();
           setProfile(data);
           setProfilePhotoUrl(
-            (data.profile.personal_info as (ProfileSection & { photo_url?: string }) | undefined)
-              ?.photo_url ?? null
+            data.profile.personal_info?.photo_url ?? null
           );
         } else {
           setError("No profile found. Please import a CV first.");

@@ -114,6 +114,7 @@ export default function CVPage({
         <PhotoPromptStep
           currentPhotoUrl={profilePhotoUrl}
           onContinue={() => setPhase("template_select")}
+          onPhotoChange={(url) => setProfilePhotoUrl(url)}
         />
       )}
 

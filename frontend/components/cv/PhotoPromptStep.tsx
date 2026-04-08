@@ -9,9 +9,11 @@ interface PhotoPromptStepProps {
   onContinue: () => void;
   /** Current photo_url from the profile. */
   currentPhotoUrl?: string | null;
+  /** Called when photo is uploaded or deleted so the parent can update its state. */
+  onPhotoChange?: (photoUrl: string | null) => void;
 }
 
-export function PhotoPromptStep({ onContinue, currentPhotoUrl }: PhotoPromptStepProps) {
+export function PhotoPromptStep({ onContinue, currentPhotoUrl, onPhotoChange }: PhotoPromptStepProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [photoAdded, setPhotoAdded] = useState(false);
 
@@ -24,7 +26,8 @@ export function PhotoPromptStep({ onContinue, currentPhotoUrl }: PhotoPromptStep
         <PhotoManager
           currentPhotoUrl={currentPhotoUrl}
           onPhotoChange={(url) => {
-            if (url) setPhotoAdded(true);
+            setPhotoAdded(!!url);
+            onPhotoChange?.(url);
           }}
         />
         <Button className="w-full" onClick={onContinue}>

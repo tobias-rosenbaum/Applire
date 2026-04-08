@@ -13,7 +13,8 @@ interface PhotoManagerProps {
 }
 
 export function PhotoManager({ onPhotoChange, currentPhotoUrl }: PhotoManagerProps) {
-  const [consent, setConsent] = useState(false);
+  // Consent defaults to true when the user already has a photo (Replace path — no re-consent needed)
+  const [consent, setConsent] = useState(!!currentPhotoUrl);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
@@ -23,17 +24,24 @@ export function PhotoManager({ onPhotoChange, currentPhotoUrl }: PhotoManagerPro
 
   const hasPhoto = !!(currentPhotoUrl || previewSrc);
 
-  // Load preview via GET /api/profile/photo when a photo exists on the server
+  // Load preview via GET /api/profile/photo when a photo exists on the server.
+  // Revoke the previous object URL to avoid memory leaks.
   useEffect(() => {
-    if (currentPhotoUrl && !previewSrc) {
-      fetch(`${API_BASE}/api/profile/photo`)
-        .then((r) => (r.ok ? r.blob() : null))
-        .then((blob) => {
-          if (blob) setPreviewSrc(URL.createObjectURL(blob));
-        })
-        .catch(() => {/* non-fatal */});
-    }
-  }, [currentPhotoUrl, previewSrc]);
+    if (!currentPhotoUrl) return;
+    let objectUrl: string | null = null;
+    fetch(`${API_BASE}/api/profile/photo`)
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((blob) => {
+        if (blob) {
+          objectUrl = URL.createObjectURL(blob);
+          setPreviewSrc(objectUrl);
+        }
+      })
+      .catch(() => { /* non-fatal */ });
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [currentPhotoUrl]);
 
   async function handleUpload(file: File) {
     setError(null);
@@ -51,14 +59,21 @@ export function PhotoManager({ onPhotoChange, currentPhotoUrl }: PhotoManagerPro
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail ?? "Upload failed");
+        throw new Error((err as { detail?: string }).detail ?? "Upload failed");
       }
-      const data = await res.json();
-      setUploadedAt(new Date(data.consent_at).toLocaleDateString("en-GB", {
-        day: "numeric", month: "short", year: "numeric",
-      }));
-      // Show local preview immediately
-      setPreviewSrc(URL.createObjectURL(file));
+      const data = (await res.json()) as { photo_url: string; consent_at: string };
+      setUploadedAt(
+        new Date(data.consent_at).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+      );
+      // Revoke any previous preview and show new one immediately
+      setPreviewSrc((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
       onPhotoChange?.(data.photo_url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -73,7 +88,10 @@ export function PhotoManager({ onPhotoChange, currentPhotoUrl }: PhotoManagerPro
     try {
       const res = await fetch(`${API_BASE}/api/profile/photo`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
-      setPreviewSrc(null);
+      setPreviewSrc((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setUploadedAt(null);
       setConsent(false);
       onPhotoChange?.(null);
@@ -110,9 +128,7 @@ export function PhotoManager({ onPhotoChange, currentPhotoUrl }: PhotoManagerPro
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-900 truncate">
-              Profile photo
-            </p>
+            <p className="text-xs font-medium text-gray-900 truncate">Profile photo</p>
             {uploadedAt && (
               <p className="text-xs text-gray-500 mt-0.5">Uploaded {uploadedAt}</p>
             )}
@@ -157,10 +173,15 @@ export function PhotoManager({ onPhotoChange, currentPhotoUrl }: PhotoManagerPro
               onChange={(e) => setConsent(e.target.checked)}
               className="mt-0.5 flex-shrink-0"
             />
-            <label htmlFor="photo-consent" className="text-xs text-blue-800 leading-relaxed cursor-pointer">
-              I consent to Applire storing my profile photo to include it in generated CVs.
-              I can delete it at any time.{" "}
-              <a href="/privacy" className="underline">Privacy policy ↗</a>
+            <label
+              htmlFor="photo-consent"
+              className="text-xs text-blue-800 leading-relaxed cursor-pointer"
+            >
+              I consent to Applire storing my profile photo to include it in generated CVs. I can
+              delete it at any time.{" "}
+              <a href="/privacy" className="underline">
+                Privacy policy ↗
+              </a>
             </label>
           </div>
 
