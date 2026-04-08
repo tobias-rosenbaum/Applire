@@ -396,6 +396,20 @@ async def erase_profile(
     )
     upload_paths = [row[0] for row in upload_paths_result.fetchall()]
 
+    # Collect profile photo path (single-user pattern; no user_id on MasterProfile)
+    _photo_url_before_erasure: str | None = None
+    _profile_snap_result = await db.execute(
+        select(MasterProfile)
+        .where(MasterProfile.deleted_at.is_(None))
+        .order_by(MasterProfile.created_at.desc())
+        .limit(1)
+    )
+    _profile_row = _profile_snap_result.scalar_one_or_none()
+    if _profile_row:
+        from applire.schemas.profile import MasterProfileData as _MPD
+        _pdata = _MPD.model_validate(_profile_row.profile_json)
+        _photo_url_before_erasure = _pdata.personal_info.photo_url
+
     # generated_cvs linked via profile_id → master_profiles
     cv_paths: list[str] = []  # PDF files not yet stored separately; no-op for now
 
@@ -494,6 +508,17 @@ async def erase_profile(
             await storage.delete(path)
         except Exception as exc:
             logger.warning("Failed to delete upload file %s: %s (will be reaped)", path, exc)
+
+    # Delete profile photo (GDPR Art. 17)
+    if _photo_url_before_erasure:
+        try:
+            await storage.delete(_photo_url_before_erasure)
+        except Exception as exc:
+            logger.warning(
+                "Failed to delete photo file %s: %s (will be reaped)",
+                _photo_url_before_erasure,
+                exc,
+            )
 
     logger.info(
         "GDPR erasure completed",
