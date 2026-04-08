@@ -40,6 +40,9 @@ class JobAnalysisResponse(BaseModel):
     company_culture_signals: list[str]
     language_requirement: str
     company_name: Optional[str] = None
+    # KldB 2020 (BA-Klassifikation der Berufe 2020) — nullable for pre-migration rows
+    berufsbild_code: Optional[str] = None
+    berufsbild_label: Optional[str] = None
     raw_text_hash: str
     source_url: Optional[str] = None
 

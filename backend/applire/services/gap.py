@@ -8,6 +8,7 @@ Entry points:
 Both call the same internal _run_analysis() function.
 """
 
+import math
 import uuid
 
 from sqlalchemy import select
@@ -82,6 +83,28 @@ async def analyze_gaps_for_session(
 # ---------------------------------------------------------------------------
 
 
+def _cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Compute cosine similarity between two equal-length vectors."""
+    if len(a) != len(b):
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(x * x for x in b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _compute_embedding_similarity(
+    job_embedding: list[float] | None,
+    profile_embedding: list[float] | None,
+) -> float | None:
+    """Return cosine similarity or None if either embedding is absent."""
+    if job_embedding is None or profile_embedding is None:
+        return None
+    return _cosine_similarity(job_embedding, profile_embedding)
+
+
 async def _run_analysis(
     job: JobAnalysis,
     profile: MasterProfile,
@@ -108,10 +131,17 @@ async def _run_analysis(
         temperature=0.1,
     )
 
+    # Compute embedding similarity score (None when noop provider or embeddings absent)
+    embedding_similarity_score = _compute_embedding_similarity(
+        job.embedding,
+        profile.embedding,
+    )
+
     record = GapAnalysis(
         job_analysis_id=job.id,
         profile_id=profile.id,
         match_score=float(data.get("match_score", 0.0)),
+        embedding_similarity_score=embedding_similarity_score,
         critical_gaps=data.get("critical_gaps", []),
         minor_gaps=data.get("minor_gaps", []),
         strengths=data.get("strengths", []),

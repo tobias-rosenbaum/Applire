@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_model: str = "mistralai/mistral-large-latest"
     openrouter_base_url: str = ""          # empty = use https://openrouter.ai/api/v1
+    embedding_provider: str = "noop"
+    embedding_model: str = ""             # empty = use provider default
+    # Combined score weights for GET /api/jobs/match (must sum to 1.0)
+    matching_score_embedding_weight: float = 0.4
+    matching_score_llm_weight: float = 0.6
     auth_provider: str = "none"
     mcp_transport: str = "stdio"
     applire_base_url: str = "http://localhost:8001"

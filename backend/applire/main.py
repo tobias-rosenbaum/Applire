@@ -13,7 +13,7 @@ from sqlalchemy import text
 from applire import __version__
 from applire.config import settings
 from applire.db.session import AsyncSessionLocal
-from applire.routers import application, cv, flow, health, job, profile, session
+from applire.routers import application, cv, flow, health, job, jobs, profile, session
 from applire.services.thumbnails import ensure_thumbnails
 
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -57,6 +57,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(health.router)
 app.include_router(job.router)
+app.include_router(jobs.router)
 app.include_router(profile.router)
 app.include_router(session.router)
 app.include_router(flow.router)

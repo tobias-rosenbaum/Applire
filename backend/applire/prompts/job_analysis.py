@@ -1,4 +1,4 @@
-# Prompt version: v2 (iter17: added company_name)
+# Prompt version: v3 (APP-14: added berufsbild_code/label — KldB 2020 DACH taxonomy)
 # Used by: services/job.py → LLMProvider.aparse_json
 
 SYSTEM_PROMPT = """\
@@ -15,8 +15,14 @@ Schema:
   "keywords": ["ATS-relevant keywords and domain terms from the JD"],
   "seniority_level": "one of: Junior, Mid, Senior, Lead, Executive",
   "company_culture_signals": ["cultural values and work style signals, e.g. 'Mittelstand', 'remote-first', 'hierarchical', 'Startup-Kultur'"],
-  "language_requirement": "primary language required, e.g. 'German (C1)', 'English (B2)', 'Bilingual DE/EN'"
-}"""
+  "language_requirement": "primary language required, e.g. 'German (C1)', 'English (B2)', 'Bilingual DE/EN'",
+  "berufsbild_code": "string or null — KldB 2020 classification code (BA-Klassifikation der Berufe 2020); use the most specific matching 4- or 5-digit code; null if unsure",
+  "berufsbild_label": "string or null — German occupation label from KldB 2020 corresponding to berufsbild_code; null if berufsbild_code is null"
+}
+
+For berufsbild_code, use the Klassifikation der Berufe 2020 (KldB 2020) from the Bundesagentur für Arbeit.
+Examples: '4311' for Softwareentwicklung, '4321' for IT-Systemanalyse, '7121' for Personalmanagement, '7211' for Finanzmanagement und Controlling.
+Only provide a code you are confident about; set both fields to null if the occupation does not clearly map to KldB 2020."""
 
 
 def build_user_prompt(jd_text: str) -> str:

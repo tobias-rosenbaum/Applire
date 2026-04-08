@@ -1,12 +1,58 @@
 import hashlib
+import json
+import logging
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from applire.models.job import JobAnalysis
 from applire.prompts.job_analysis import SYSTEM_PROMPT, build_user_prompt
+from applire.providers.embedding.base import EmbeddingProvider
+from applire.providers.embedding.noop import NoopEmbeddingProvider
 from applire.providers.llm.base import LLMProvider
 from applire.schemas.job import JobAnalysisResponse
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# KldB 2020 validation helpers
+# Source: Bundesagentur für Arbeit — Klassifikation der Berufe 2020 (BA-Klassifikation)
+# ---------------------------------------------------------------------------
+_KLDB_PATH = Path(__file__).parent.parent / "data" / "kldb2020.json"
+
+
+def _load_kldb_codes() -> set[str]:
+    """Load valid KldB 2020 codes from the bundled lookup table (excluding _meta)."""
+    try:
+        raw: dict = json.loads(_KLDB_PATH.read_text(encoding="utf-8"))
+        return {k for k in raw if k != "_meta"}
+    except Exception:
+        logger.warning("Could not load kldb2020.json; berufsbild_code validation disabled.", exc_info=True)
+        return set()
+
+
+_VALID_KLDB_CODES: set[str] = _load_kldb_codes()
+
+
+def _validate_berufsbild(code: str | None, label: str | None) -> tuple[str | None, str | None]:
+    """Validate and normalise berufsbild fields from LLM output.
+
+    Returns (code, label) if the code is present in the KldB 2020 lookup,
+    otherwise (None, None) with a warning log (not fatal).
+    """
+    if not code:
+        return None, None
+    code = code.strip()
+    if _VALID_KLDB_CODES and code not in _VALID_KLDB_CODES:
+        logger.warning(
+            "berufsbild_code %r not found in KldB 2020 lookup; storing as null.", code
+        )
+        return None, None
+    return code, (label.strip() if label else None)
+
+
+_DEFAULT_EMBEDDING_PROVIDER = NoopEmbeddingProvider()
 
 
 def _hash_text(text: str) -> str:
@@ -18,6 +64,7 @@ async def analyze_jd(
     db: AsyncSession,
     provider: LLMProvider,
     source_url: str | None = None,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> JobAnalysisResponse:
     # URL-based deduplication: return existing record for the same URL.
     if source_url:
@@ -43,6 +90,22 @@ async def analyze_jd(
         temperature=0.1,
     )
 
+    emb_provider = embedding_provider or _DEFAULT_EMBEDDING_PROVIDER
+    try:
+        embedding = await emb_provider.embed(text)
+    except Exception:
+        logger.warning("Embedding generation failed for JD; storing NULL.", exc_info=True)
+        embedding = None
+
+    # Don't persist zero-vectors (noop provider) — NULL signals "not computed".
+    if embedding is not None and all(v == 0.0 for v in embedding):
+        embedding = None
+
+    berufsbild_code, berufsbild_label = _validate_berufsbild(
+        data.get("berufsbild_code"),
+        data.get("berufsbild_label"),
+    )
+
     record = JobAnalysis(
         raw_text_hash=raw_hash,
         raw_text=text,
@@ -55,6 +118,9 @@ async def analyze_jd(
         seniority_level=data.get("seniority_level", ""),
         company_culture_signals=data.get("company_culture_signals", []),
         language_requirement=data.get("language_requirement") or "",
+        berufsbild_code=berufsbild_code,
+        berufsbild_label=berufsbild_label,
+        embedding=embedding,
     )
     db.add(record)
     await db.commit()

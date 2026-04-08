@@ -20,6 +20,8 @@ from applire.prompts.cv_extraction import (
     build_jd_aware_prompt,
 )
 from applire.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
+from applire.providers.embedding.base import EmbeddingProvider
+from applire.providers.embedding.noop import NoopEmbeddingProvider
 from applire.providers.llm.base import LLMProvider
 from applire.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from applire.services.profile.merge import merge_profiles
@@ -32,6 +34,56 @@ from applire.schemas.profile import (
     MasterProfileResponse,
     ProfileMetadata,
 )
+
+_DEFAULT_EMBEDDING_PROVIDER = NoopEmbeddingProvider()
+
+
+def _profile_to_embedding_text(profile_json: dict) -> str:
+    """Produce a compact text representation of a profile for embedding."""
+    parts: list[str] = []
+
+    personal = profile_json.get("personal_info") or {}
+    if personal.get("name"):
+        parts.append(personal["name"])
+
+    summary = profile_json.get("professional_summary")
+    if summary:
+        parts.append(str(summary))
+
+    for exp in (profile_json.get("work_experience") or []):
+        role = exp.get("role") or ""
+        company = exp.get("company") or ""
+        if role or company:
+            parts.append(f"{role} at {company}".strip())
+        desc = exp.get("description") or ""
+        if desc:
+            parts.append(desc)
+
+    skills = [s.get("name") or "" for s in (profile_json.get("skills") or [])]
+    if skills:
+        parts.append("Skills: " + ", ".join(s for s in skills if s))
+
+    return "\n".join(parts)
+
+
+async def _compute_embedding(
+    profile_json: dict,
+    embedding_provider: EmbeddingProvider,
+) -> list[float] | None:
+    """Compute an embedding for a profile; returns None for noop/zero vectors."""
+    text = _profile_to_embedding_text(profile_json)
+    if not text.strip():
+        return None
+    try:
+        vector = await embedding_provider.embed(text)
+    except Exception:
+        logger.warning("Profile embedding generation failed; storing NULL.", exc_info=True)
+        return None
+    # Don't persist zero-vectors (noop provider) — NULL signals "not computed".
+    if all(v == 0.0 for v in vector):
+        return None
+    return vector
+
 
 _VALID_SECTIONS = {
     "personal_info",
@@ -113,38 +165,42 @@ async def import_from_pdf(
     file_bytes: bytes,
     db: AsyncSession,
     provider: LLMProvider,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> MasterProfileResponse:
     raw_text = extract_pdf_text(file_bytes)
     if not raw_text:
         raise ValueError("Could not extract text from PDF")
-    return await _import_from_text(raw_text, db, provider, created_via="cv_upload")
+    return await _import_from_text(raw_text, db, provider, created_via="cv_upload", embedding_provider=embedding_provider)
 
 
 async def import_from_linkedin(
     linkedin_json: dict,
     db: AsyncSession,
     provider: LLMProvider,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> MasterProfileResponse:
     raw_text = _linkedin_to_text(linkedin_json)
-    return await _import_from_text(raw_text, db, provider, created_via="linkedin_import")
+    return await _import_from_text(raw_text, db, provider, created_via="linkedin_import", embedding_provider=embedding_provider)
 
 
 async def import_from_linkedin_zip(
     zip_bytes: bytes,
     db: AsyncSession,
     provider: LLMProvider,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> MasterProfileResponse:
     raw_text = parse_linkedin_zip(zip_bytes)
-    return await _import_from_text(raw_text, db, provider, created_via="linkedin_import")
+    return await _import_from_text(raw_text, db, provider, created_via="linkedin_import", embedding_provider=embedding_provider)
 
 
 async def import_from_linkedin_pdf(
     pdf_bytes: bytes,
     db: AsyncSession,
     provider: LLMProvider,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> MasterProfileResponse:
     raw_text = parse_linkedin_pdf(pdf_bytes)
-    return await _import_from_text(raw_text, db, provider, created_via="linkedin_import")
+    return await _import_from_text(raw_text, db, provider, created_via="linkedin_import", embedding_provider=embedding_provider)
 
 
 async def _import_from_text(
@@ -152,7 +208,9 @@ async def _import_from_text(
     db: AsyncSession,
     provider: LLMProvider,
     created_via: str = "cv_upload",
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> MasterProfileResponse:
+    emb_provider = embedding_provider or _DEFAULT_EMBEDDING_PROVIDER
     data: dict = await provider.aparse_json(
         build_user_prompt(raw_text),
         system=SYSTEM_PROMPT,
@@ -190,7 +248,9 @@ async def _import_from_text(
             # Replace pending conflicts with latest round (user resolves via endpoint)
             merged.metadata.pending_conflicts = merge_result.conflicts
 
-        existing.profile_json = merged.model_dump(mode="json")
+        merged_json = merged.model_dump(mode="json")
+        existing.profile_json = merged_json
+        existing.embedding = await _compute_embedding(merged_json, emb_provider)
         existing.updated_at = now
         await db.commit()
         await db.refresh(existing)
@@ -206,7 +266,9 @@ async def _import_from_text(
         enrichment_history=[enrichment],
     )
 
-    record = MasterProfile(profile_json=incoming.model_dump(mode="json"))
+    profile_json = incoming.model_dump(mode="json")
+    embedding = await _compute_embedding(profile_json, emb_provider)
+    record = MasterProfile(profile_json=profile_json, embedding=embedding)
     db.add(record)
     await db.commit()
     await db.refresh(record)
@@ -398,6 +460,7 @@ async def upload_cv(
     ocr_extractor,  # CVImageExtractor
     job_id: uuid.UUID | None = None,
     user_id: uuid.UUID | None = None,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> CVUploadResponse:
     """Parse an uploaded CV file and merge it into the Master Profile (ADR 014).
 
@@ -461,6 +524,7 @@ async def upload_cv(
     data: dict = await provider.aparse_json(prompt, system=system, temperature=0.1, max_tokens=8192)
     incoming = MasterProfileData.model_validate(data)
     now = datetime.now(timezone.utc)
+    emb_provider = embedding_provider or _DEFAULT_EMBEDDING_PROVIDER
 
     # 4. Merge with existing profile (or create first profile)
     enrichment_id = uuid.uuid4()
@@ -495,7 +559,9 @@ async def upload_cv(
             merged.metadata.enrichment_history.append(enrichment)
             merged.metadata.pending_conflicts = merge_result.conflicts
 
-        existing.profile_json = merged.model_dump(mode="json")
+        merged_json = merged.model_dump(mode="json")
+        existing.profile_json = merged_json
+        existing.embedding = await _compute_embedding(merged_json, emb_provider)
         existing.updated_at = now
         await db.commit()
         await db.refresh(existing)
@@ -518,7 +584,9 @@ async def upload_cv(
             enrichment_history=[enrichment],
         )
 
-        record = MasterProfile(profile_json=incoming.model_dump(mode="json"))
+        profile_json = incoming.model_dump(mode="json")
+        embedding = await _compute_embedding(profile_json, emb_provider)
+        record = MasterProfile(profile_json=profile_json, embedding=embedding)
         db.add(record)
         await db.commit()
         await db.refresh(record)

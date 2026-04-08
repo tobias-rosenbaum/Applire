@@ -21,6 +21,9 @@ class GapAnalysis(Base):
         ForeignKey("master_profiles.id"), nullable=False, index=True
     )
     match_score: Mapped[float] = mapped_column(Float, nullable=False)
+    # Cosine similarity of job_analysis.embedding vs master_profile.embedding (migration 0017).
+    # NULL if either embedding is absent or noop provider is active.
+    embedding_similarity_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     critical_gaps: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     minor_gaps: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     strengths: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
