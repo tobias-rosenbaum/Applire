@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { PhotoManager } from "@/components/profile/PhotoManager";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -29,6 +30,7 @@ interface ProfileSection {
   skills?: string[];
   languages?: Array<{ name?: string; level?: string }>;
   certifications?: Array<{ name?: string; issuer?: string; year?: string }>;
+  photo_url?: string | null;
 }
 
 interface EnrichmentRecord {
@@ -87,6 +89,7 @@ export default function ProfilePage() {
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -99,6 +102,9 @@ export default function ProfilePage() {
         if (profileRes.ok) {
           const data: ProfileResponse = await profileRes.json();
           setProfile(data);
+          setProfilePhotoUrl(
+            data.profile.personal_info?.photo_url ?? null
+          );
         } else {
           setError("No profile found. Please import a CV first.");
         }
@@ -221,6 +227,14 @@ export default function ProfilePage() {
               <p className="text-sm text-critical">{error}</p>
             </div>
           )}
+
+          {/* Photo Section */}
+          <Card className="p-4">
+            <PhotoManager
+              currentPhotoUrl={profilePhotoUrl}
+              onPhotoChange={(url) => setProfilePhotoUrl(url)}
+            />
+          </Card>
 
           {/* Profile Sections */}
           {(Object.keys(SECTION_LABELS) as SectionKey[]).map((section) => {

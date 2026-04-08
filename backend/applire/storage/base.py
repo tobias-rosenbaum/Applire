@@ -11,3 +11,7 @@ class StorageProvider(ABC):
     @abstractmethod
     async def delete(self, file_path: str) -> None:
         """Remove the file at *file_path*. No-op if not found."""
+
+    @abstractmethod
+    async def read(self, file_path: str) -> bytes:
+        """Return the raw bytes at *file_path*. Raises FileNotFoundError if absent."""

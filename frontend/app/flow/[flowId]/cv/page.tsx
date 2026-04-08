@@ -6,10 +6,11 @@ import { TemplateSelector } from "@/components/cv/TemplateSelector";
 import { GenerationProgress } from "@/components/cv/GenerationProgress";
 import { CVPreview } from "@/components/cv/CVPreview";
 import { WhatNext } from "@/components/cv/WhatNext";
+import { PhotoPromptStep } from "@/components/cv/PhotoPromptStep";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
-type Phase = "template_select" | "generating" | "preview" | "complete";
+type Phase = "photo_prompt" | "template_select" | "generating" | "preview" | "complete";
 type CVTemplate = "classic_german" | "modern_swiss";
 
 interface FlowState {
@@ -31,6 +32,7 @@ export default function CVPage({
   const [template, setTemplate] = useState<CVTemplate>("classic_german");
   const [flowState, setFlowState] = useState<FlowState | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
 
   // Restore state from server on mount — skip template picker if CV already exists
   useEffect(() => {
@@ -41,8 +43,26 @@ export default function CVPage({
         const fs: FlowState = await res.json();
         setFlowState(fs);
         if (fs.cv_summary?.cv_id) {
+          // CV already exists — go straight to preview
           setCvId(fs.cv_summary.cv_id);
           setPhase("preview");
+          return;
+        }
+        // No existing CV — check if user has a profile photo
+        try {
+          const profileRes = await fetch(`${API_BASE}/api/profile`);
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            const photoUrl: string | null =
+              profileData?.profile?.personal_info?.photo_url ?? null;
+            setProfilePhotoUrl(photoUrl);
+            if (!photoUrl) {
+              // First-time user without photo — prompt them
+              setPhase("photo_prompt");
+            }
+          }
+        } catch {
+          // Non-fatal — fall through to template_select
         }
       } catch {
         // Non-fatal — user sees template picker
@@ -90,6 +110,14 @@ export default function CVPage({
 
   return (
     <div className="p-6 min-h-screen bg-neutral-light" data-testid="cv-page">
+      {phase === "photo_prompt" && (
+        <PhotoPromptStep
+          currentPhotoUrl={profilePhotoUrl}
+          onContinue={() => setPhase("template_select")}
+          onPhotoChange={(url) => setProfilePhotoUrl(url)}
+        />
+      )}
+
       {phase === "template_select" && (
         <TemplateSelector onGenerate={handleGenerate} isLoading={isGenerating} />
       )}
