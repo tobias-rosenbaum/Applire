@@ -228,3 +228,51 @@ def test_merge_does_not_overwrite_existing_photo_url():
     # photo_url is user-managed, not LLM-extracted — never overwrite
     assert result.merged_profile.personal_info.photo_url == "/uploads/my_photo.jpg"
     assert result.conflicts == [], "photo_url conflict must never be raised — it is user-managed"
+
+
+# ---------------------------------------------------------------------------
+# Task 7 — CV service photo injection
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_resolve_photo_data_uri_returns_base64():
+    """_resolve_photo_data_uri() converts a stored path to a data URI."""
+    import tempfile
+    from applire.storage.local import LocalStorageProvider
+    from applire.services.cv import _resolve_photo_data_uri
+
+    with tempfile.TemporaryDirectory() as tmp:
+        storage = LocalStorageProvider(tmp)
+        path = await storage.save(b"\xff\xd8\xff", "photo.jpg")
+        result = await _resolve_photo_data_uri(path, storage)
+
+    assert result is not None
+    assert result.startswith("data:image/jpeg;base64,")
+
+
+@pytest.mark.asyncio
+async def test_resolve_photo_data_uri_returns_none_for_missing_file():
+    """_resolve_photo_data_uri() returns None when the file does not exist."""
+    import tempfile
+    from applire.storage.local import LocalStorageProvider
+    from applire.services.cv import _resolve_photo_data_uri
+
+    with tempfile.TemporaryDirectory() as tmp:
+        storage = LocalStorageProvider(tmp)
+        result = await _resolve_photo_data_uri(f"{tmp}/ghost.jpg", storage)
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_photo_data_uri_returns_none_for_none_input():
+    """_resolve_photo_data_uri() returns None when photo_url is None."""
+    import tempfile
+    from applire.storage.local import LocalStorageProvider
+    from applire.services.cv import _resolve_photo_data_uri
+
+    with tempfile.TemporaryDirectory() as tmp:
+        storage = LocalStorageProvider(tmp)
+        result = await _resolve_photo_data_uri(None, storage)
+
+    assert result is None

@@ -18,6 +18,7 @@ _render_cv_background:
     Creates its own DB session (original request session is closed).
 """
 
+import base64 as _base64
 import logging
 import re
 import uuid
@@ -62,6 +63,33 @@ _jinja_env = Environment(
     loader=FileSystemLoader(str(_TEMPLATES_DIR)),
     autoescape=select_autoescape(["html"]),
 )
+
+_PHOTO_MIME: dict[str, str] = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "webp": "image/webp",
+}
+
+
+async def _resolve_photo_data_uri(
+    photo_path: str | None,
+    storage,  # StorageProvider — avoid circular import
+) -> str | None:
+    """Convert a stored file path to an inline base64 data URI.
+
+    Returns None if photo_path is None or the file has been deleted.
+    The data URI is safe to embed in Jinja2 templates served via Playwright or srcDoc.
+    """
+    if not photo_path:
+        return None
+    try:
+        photo_bytes = await storage.read(photo_path)
+    except FileNotFoundError:
+        return None
+    suffix = Path(photo_path).suffix.lower().lstrip(".")
+    mime = _PHOTO_MIME.get(suffix, "image/jpeg")
+    return f"data:{mime};base64,{_base64.b64encode(photo_bytes).decode()}"
 
 
 # ---------------------------------------------------------------------------
@@ -216,11 +244,22 @@ async def get_pdf_filename(cv_id: uuid.UUID, db: AsyncSession) -> str:
 
 async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
     from applire.services.cv_section_editor import apply_overrides_to_tailored
+    from applire.storage import get_storage
+
     record = await _load_cv_ready(cv_id, db)
     tailored = TailoredCVData.model_validate(record.tailored_data)
     tailored = apply_overrides_to_tailored(
         tailored, record.content_snapshot, record.section_overrides
     )
+
+    # Resolve stored photo path → inline base64 data URI for Playwright / srcDoc.
+    # If the file is missing (deleted after CV was generated) the photo is silently omitted.
+    if tailored.show_photo and tailored.contact.photo_url:
+        data_uri = await _resolve_photo_data_uri(tailored.contact.photo_url, get_storage())
+        tailored = tailored.model_copy(update={
+            "contact": tailored.contact.model_copy(update={"photo_url": data_uri})
+        })
+
     template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
     template = _jinja_env.get_template(template_file)
     return template.render(cv=tailored)
@@ -297,6 +336,15 @@ async def _render_cv_background(
             )
 
             tailored = TailoredCVData.model_validate(tailored_raw)
+
+            # Populate photo_url from master profile's personal_info.
+            # Stored path; resolved to base64 at render time in get_cv_html.
+            profile_json = profile.profile_json or {}
+            photo_url = (profile_json.get("personal_info") or {}).get("photo_url")
+            if photo_url:
+                tailored = tailored.model_copy(update={
+                    "contact": tailored.contact.model_copy(update={"photo_url": photo_url})
+                })
 
             from applire.services.cv_section_editor import build_content_snapshot
             record.content_snapshot = build_content_snapshot(tailored)
