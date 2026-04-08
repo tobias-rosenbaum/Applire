@@ -114,7 +114,6 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        working-directory: frontend
         run: node_modules/.bin/playwright install --with-deps chromium
 
       - name: Set up Docker Buildx
@@ -160,7 +159,6 @@ jobs:
             --tb=short
 
       - name: Run Playwright E2E tests
-        working-directory: frontend
         run: node_modules/.bin/playwright test
         env:
           CI: true
