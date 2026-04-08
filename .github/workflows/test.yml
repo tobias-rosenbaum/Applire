@@ -274,7 +274,6 @@ jobs:
           echo "Frontend is ready!"
 
       - name: Run Playwright E2E tests
-        working-directory: frontend
         run: npx playwright test
         env:
           CI: true
