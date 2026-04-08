@@ -77,6 +77,11 @@ jobs:
       contents: read
 
     steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghclient /opt/hostedtoolcache/CodeQL
+          df -h
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -229,6 +234,11 @@ jobs:
     needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, module-system-check]
 
     steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghclient /opt/hostedtoolcache/CodeQL
+          df -h
+
       - name: Checkout code
         uses: actions/checkout@v4
 

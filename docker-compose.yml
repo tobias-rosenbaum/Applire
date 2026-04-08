@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: applire
       POSTGRES_PASSWORD: applire
