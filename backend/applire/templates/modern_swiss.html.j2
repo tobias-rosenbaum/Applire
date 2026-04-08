@@ -58,6 +58,27 @@
       line-height: 1.7;
     }
 
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14pt;
+    }
+    .header-text { flex: 1; }
+    .header-avatar {
+      flex-shrink: 0;
+      width: 36mm;
+      height: 36mm;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .header-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
     /* ---- Section ---- */
     .section {
       margin-bottom: 16pt;
@@ -178,14 +199,23 @@
 
   <!-- ===== HEADER ===== -->
   <header class="header">
-    <div class="header-name">
-      <h1>{{ cv.contact.name }}</h1>
-    </div>
-    <div class="header-contact">
-      {% if cv.contact.location %}<div>{{ cv.contact.location }}</div>{% endif %}
-      {% if cv.contact.phone %}<div>{{ cv.contact.phone }}</div>{% endif %}
-      {% if cv.contact.email %}<div>{{ cv.contact.email }}</div>{% endif %}
-      {% if cv.contact.linkedin %}<div>{{ cv.contact.linkedin }}</div>{% endif %}
+    <div class="header-inner">
+      <div class="header-text">
+        <div class="header-name">
+          <h1>{{ cv.contact.name }}</h1>
+        </div>
+        <div class="header-contact">
+          {% if cv.contact.location %}<div>{{ cv.contact.location }}</div>{% endif %}
+          {% if cv.contact.phone %}<div>{{ cv.contact.phone }}</div>{% endif %}
+          {% if cv.contact.email %}<div>{{ cv.contact.email }}</div>{% endif %}
+          {% if cv.contact.linkedin %}<div>{{ cv.contact.linkedin }}</div>{% endif %}
+        </div>
+      </div>
+      {% if cv.show_photo and cv.contact.photo_url %}
+      <div class="header-avatar">
+        <img src="{{ cv.contact.photo_url }}" alt="Profile photo">
+      </div>
+      {% endif %}
     </div>
   </header>
 
