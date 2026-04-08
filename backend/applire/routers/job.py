@@ -118,6 +118,49 @@ async def refresh_gap_analysis(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
 
+@router.get(
+    "/{job_id}/gaps",
+    response_model=GapAnalysisResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_latest_gap_analysis(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> GapAnalysisResponse:
+    """Return the most recent stored gap analysis for a job — no LLM call."""
+    from sqlalchemy import select, desc
+    from applire.models.gap import GapAnalysis
+    from applire.models.job import JobAnalysis
+
+    job_result = await db.execute(
+        select(JobAnalysis).where(
+            JobAnalysis.id == job_id,
+            JobAnalysis.deleted_at.is_(None),
+        )
+    )
+    job = job_result.scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} not found")
+
+    gap_result = await db.execute(
+        select(GapAnalysis)
+        .where(
+            GapAnalysis.job_analysis_id == job_id,
+            GapAnalysis.deleted_at.is_(None),
+        )
+        .order_by(desc(GapAnalysis.created_at))
+        .limit(1)
+    )
+    gap = gap_result.scalar_one_or_none()
+    if gap is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No gap analysis found for job {job_id}",
+        )
+    return GapAnalysisResponse.model_validate(gap)
+
+
 @router.post(
     "/{job_id}/gaps",
     response_model=GapAnalysisResponse,

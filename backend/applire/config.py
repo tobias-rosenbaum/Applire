@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_model: str = "mistralai/mistral-large-latest"
     openrouter_base_url: str = ""          # empty = use https://openrouter.ai/api/v1
+    openrouter_disable_thinking: bool = False  # set True for Qwen3/DeepSeek-R1 to skip reasoning overhead
+    llm_timeout: int = 120                 # seconds; raise for thinking/reasoning models (e.g. Qwen3, o3)
     embedding_provider: str = "noop"
     embedding_model: str = ""             # empty = use provider default
     # Combined score weights for GET /api/jobs/match (must sum to 1.0)

@@ -17,19 +17,19 @@ def get_provider() -> LLMProvider:
 
     if provider == "mistral":
         from applire.providers.llm.mistral import MistralProvider
-        return MistralProvider()
+        return MistralProvider(timeout=settings.llm_timeout)
 
     if provider == "openrouter":
         from applire.providers.llm.openrouter import OpenRouterProvider
-        return OpenRouterProvider()
+        return OpenRouterProvider(timeout=settings.llm_timeout)
 
     if provider == "openai":
         from applire.providers.llm.openai import OpenAIProvider
-        return OpenAIProvider()
+        return OpenAIProvider(timeout=settings.llm_timeout)
 
     if provider == "ollama":
         from applire.providers.llm.ollama import OllamaProvider
-        return OllamaProvider()
+        return OllamaProvider(timeout=settings.llm_timeout)
 
     if provider == "mock":
         from applire.providers.llm.mock import MockLLMProvider

@@ -47,6 +47,7 @@ class OpenRouterProvider(LLMProvider):
         model: str | None = None,
         base_url: str | None = None,
         timeout: int = 30,
+        disable_thinking: bool | None = None,
     ) -> None:
         super().__init__(timeout=timeout)
         self._client = openai.AsyncOpenAI(
@@ -58,6 +59,12 @@ class OpenRouterProvider(LLMProvider):
             },
         )
         self._model = model or settings.openrouter_model or "mistralai/mistral-large-latest"
+        # When True, passes enable_thinking=False via extra_body — suppresses Qwen3/DeepSeek-R1
+        # chain-of-thought overhead on deterministic structured-extraction tasks.
+        self._disable_thinking = (
+            disable_thinking if disable_thinking is not None
+            else settings.openrouter_disable_thinking
+        )
 
     async def acomplete(
         self,
@@ -107,6 +114,9 @@ class OpenRouterProvider(LLMProvider):
                 content = content[4:]
         return json.loads(content.strip())
 
+    def _extra_body(self) -> dict | None:
+        return {"enable_thinking": False} if self._disable_thinking else None
+
     @_retry
     async def _complete(self, messages: list, temperature: float, max_tokens: int) -> str:
         response = await self._client.chat.completions.create(
@@ -114,6 +124,7 @@ class OpenRouterProvider(LLMProvider):
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
+            extra_body=self._extra_body(),
         )
         return response.choices[0].message.content
 
@@ -125,6 +136,7 @@ class OpenRouterProvider(LLMProvider):
             temperature=temperature,
             max_tokens=max_tokens,
             response_format={"type": "json_object"},
+            extra_body=self._extra_body(),
         )
         return response.choices[0].message.content
 
