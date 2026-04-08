@@ -241,6 +241,8 @@ async def upload_photo_endpoint(
             db=db,
             storage=storage,
         )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
@@ -254,7 +256,10 @@ async def delete_photo_endpoint(
 ) -> None:
     """Delete the profile photo and clear GDPR consent."""
     user = await auth.get_current_user(request)
-    await delete_photo(user_id=user.id, db=db, storage=storage)
+    try:
+        await delete_photo(user_id=user.id, db=db, storage=storage)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get("/photo", status_code=status.HTTP_200_OK)

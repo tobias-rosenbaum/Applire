@@ -64,13 +64,19 @@ async def upload_photo(
     user = await _get_user(user_id, db)
     profile = await _get_profile(db)
 
-    # Delete existing photo if present (replace path)
     profile_data = MasterProfileData.model_validate(profile.profile_json)
-    if profile_data.personal_info.photo_url:
-        await storage.delete(profile_data.personal_info.photo_url)
+    old_path = profile_data.personal_info.photo_url
 
+    # Save new file first — if this fails, the old file is still intact
     ext = _EXT_MAP[content_type]
     path = await storage.save(file_bytes, f"photo{ext}")
+
+    # Delete old file after the new one is safely stored (best-effort; retention worker cleans up orphans)
+    if old_path:
+        try:
+            await storage.delete(old_path)
+        except Exception:
+            pass
 
     # Persist photo_url in master profile JSONB
     updated_pi = profile_data.personal_info.model_copy(update={"photo_url": path})
