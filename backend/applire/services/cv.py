@@ -24,6 +24,10 @@ import re
 import uuid
 from datetime import timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from applire.storage.base import StorageProvider
 
 from fastapi import BackgroundTasks
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -74,7 +78,7 @@ _PHOTO_MIME: dict[str, str] = {
 
 async def _resolve_photo_data_uri(
     photo_path: str | None,
-    storage,  # StorageProvider — avoid circular import
+    storage: "StorageProvider",
 ) -> str | None:
     """Convert a stored file path to an inline base64 data URI.
 
@@ -256,9 +260,10 @@ async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
     # If the file is missing (deleted after CV was generated) the photo is silently omitted.
     if tailored.show_photo and tailored.contact.photo_url:
         data_uri = await _resolve_photo_data_uri(tailored.contact.photo_url, get_storage())
-        tailored = tailored.model_copy(update={
-            "contact": tailored.contact.model_copy(update={"photo_url": data_uri})
-        })
+        if data_uri is not None:
+            tailored = tailored.model_copy(update={
+                "contact": tailored.contact.model_copy(update={"photo_url": data_uri})
+            })
 
     template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
     template = _jinja_env.get_template(template_file)
