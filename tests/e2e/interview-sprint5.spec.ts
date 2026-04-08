@@ -26,7 +26,19 @@ const JD_TEXT = fs.readFileSync(path.join(__dirname, '../fixtures/JDs/sample_jd.
 // Helper: navigate to gaps page from scratch
 // ---------------------------------------------------------------------------
 
+const API_BASE = 'http://localhost:8001';
+
+async function resetBackendState(page: Page): Promise<void> {
+  // Erase all user data so each test starts from the "new user" state.
+  // DELETE /api/profile keeps the stub User row (required for FK constraints)
+  // but removes uploads, profiles, flows, gap analyses, and generated CVs.
+  await page.request.delete(`${API_BASE}/api/profile`).catch(() => {
+    // Ignore errors (e.g., nothing to delete on first run)
+  });
+}
+
 async function navigateToGapsPage(page: Page): Promise<string> {
+  await resetBackendState(page);
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 

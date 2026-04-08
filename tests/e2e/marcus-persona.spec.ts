@@ -26,9 +26,13 @@ test.describe('Marcus Persona - CV Upload Journey', () => {
   const DOWNLOADS_PATH = path.join(__dirname, '../fixtures/downloads');
 
   test.beforeEach(async ({ page }) => {
+    // Reset backend state so each test starts from the "new user" state.
+    // DELETE /api/profile erases uploads/profiles/flows but keeps the stub User row.
+    await page.request.delete('http://localhost:8001/api/profile').catch(() => {});
+
     // Navigate to the application
     await page.goto('/');
-    
+
     // Wait for page to be ready
     await page.waitForLoadState('networkidle');
   });
