@@ -718,7 +718,12 @@ class TestResponseParser:
         llm_response = {
             "skills_to_add": ["Python", "FastAPI"],
             "work_history_to_add": [],
-            "gap_addressed": True,
+            "certifications_to_add": [],
+            "languages_to_add": [],
+            "education_to_add": [],
+            "gap_resolution": "full",
+            "follow_up_hint": None,
+            "gaps_also_addressed": [],
         }
         provider = _make_mock_provider(llm_response)
 
