@@ -204,23 +204,39 @@ async def response_parser(
     question: str,
     answer: str,
     provider: LLMProvider,
+    remaining_gaps: list[str] | None = None,
 ) -> dict:
     """Extract structured profile data from the user's free-text answer.
 
     Returns a dict with keys:
         skills_to_add: list[str]
         work_history_to_add: list[dict]
-        gap_addressed: bool
+        certifications_to_add: list[dict]
+        languages_to_add: list[dict]
+        education_to_add: list[dict]
+        gap_resolution: "full" | "partial" | "none"
+        follow_up_hint: str | None
+        gaps_also_addressed: list[str]
+        gap_addressed: bool  (backward compat — derived from gap_resolution != "none")
     """
     data = await provider.aparse_json(
-        build_response_parser_prompt(gap, question, answer),
+        build_response_parser_prompt(gap, question, answer, remaining_gaps),
         system=RESPONSE_PARSER_SYSTEM_PROMPT,
         temperature=0.1,
     )
+    gap_resolution = data.get("gap_resolution", "none")
+    if gap_resolution not in ("full", "partial", "none"):
+        gap_resolution = "none"
     return {
         "skills_to_add": data.get("skills_to_add", []),
         "work_history_to_add": data.get("work_history_to_add", []),
-        "gap_addressed": bool(data.get("gap_addressed", False)),
+        "certifications_to_add": data.get("certifications_to_add", []),
+        "languages_to_add": data.get("languages_to_add", []),
+        "education_to_add": data.get("education_to_add", []),
+        "gap_resolution": gap_resolution,
+        "follow_up_hint": data.get("follow_up_hint"),
+        "gaps_also_addressed": data.get("gaps_also_addressed", []),
+        "gap_addressed": gap_resolution != "none",  # backward compat
     }
 
 

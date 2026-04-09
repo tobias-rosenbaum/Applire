@@ -207,20 +207,53 @@ Schema:
       "bullets": ["achievement or responsibility mentioned"]
     }
   ],
-  "gap_addressed": true or false
+  "certifications_to_add": [
+    {"name": "Certification name", "issuing_body": "Issuing body or null", "year": "YYYY or null"}
+  ],
+  "languages_to_add": [
+    {"language": "Language name", "level": "native|fluent|professional|basic"}
+  ],
+  "education_to_add": [
+    {
+      "institution": "Institution name",
+      "degree": "Degree title",
+      "field": "Field of study or null",
+      "graduation_year": "YYYY or null"
+    }
+  ],
+  "gap_resolution": "full or partial or none",
+  "follow_up_hint": "Short suggestion for adjacent domain to probe, or null",
+  "gaps_also_addressed": ["list of other open gaps this answer also resolves"]
 }
 
 Rules:
 - Only include data EXPLICITLY stated in the answer — do not infer or fabricate
-- gap_addressed: true if the answer provides meaningful, concrete information about the gap
-- If the answer is vague, off-topic, or empty: return empty arrays and gap_addressed: false
+- gap_resolution: "full" if the answer provides concrete, specific information about the gap;
+  "partial" if relevant but incomplete or vague; "none" if off-topic or empty
+- follow_up_hint: when gap_resolution is "partial" or "none", suggest a related domain or context
+  the candidate might have experience in (e.g. "ask about GMP or other regulated environments").
+  Set to null when gap_resolution is "full".
+- gaps_also_addressed: list any other open gaps (from the provided list) that this answer also
+  resolves. Empty list if none or if no list was provided.
 - Omit work_history_to_add entries where role is null or empty"""
 
 
-def build_response_parser_prompt(gap: str, question: str, answer: str) -> str:
+def build_response_parser_prompt(
+    gap: str,
+    question: str,
+    answer: str,
+    remaining_gaps: list[str] | None = None,
+) -> str:
+    other_gaps_section = ""
+    if remaining_gaps:
+        gaps_list = "\n".join(f"- {g}" for g in remaining_gaps)
+        other_gaps_section = (
+            f"\n\nOther open gaps (check if this answer also resolves any):\n{gaps_list}"
+        )
     return (
         f"Gap being addressed: {gap}\n\n"
         f"Question asked: {question}\n\n"
-        f"Candidate's answer: {answer}\n\n"
+        f"Candidate's answer: {answer}"
+        f"{other_gaps_section}\n\n"
         "Extract the structured profile data."
     )
