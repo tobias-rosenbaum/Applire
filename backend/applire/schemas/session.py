@@ -59,6 +59,8 @@ class SessionMessageResponse(BaseModel):
     completeness_score: float | None = None
     # Populated when ProfileUpdater detects a merge conflict (19.10)
     pending_conflicts: list[ConflictSummary] | None = None
+    # Populated when cross-gap resolution fires (Sprint 15)
+    gaps_also_addressed: list[str] | None = None
 
 
 class SessionStateResponse(BaseModel):
@@ -98,3 +100,7 @@ class InterviewState(TypedDict):
     messages: list[dict]  # {"role": "assistant"|"user", "content": "..."}
     questions_asked: int
     hard_ceiling: int
+    # Sprint 15 additions (optional — missing keys default to {} / [] / [])
+    questions_per_gap: dict   # gap_str → questions asked so far for this gap
+    skipped_gaps: list[str]   # gaps resolved transitively via cross-gap answer
+    full_gaps: list[str]      # full gap list from analysis; set for micro-sessions only

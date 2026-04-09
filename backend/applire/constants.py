@@ -1,3 +1,5 @@
+import os
+
 # Interview orchestrator thresholds and limits (ADR 004, Iteration 14)
 
 # Mode auto-detection: completeness_score below this → MODE B (Guided Build)
@@ -10,3 +12,10 @@ INTERVIEW_HARD_CEILING_GUIDED: int = 20    # MODE B
 # Soft targets — informational only, used for estimated_questions in response
 INTERVIEW_TARGET_MIN_TARGETED: int = 3
 INTERVIEW_TARGET_MIN_GUIDED: int = 5
+
+# Per-gap question ceiling (Sprint 15): max questions asked for a single gap
+# before force-advancing to the next one. Includes the initial question.
+# Set INTERVIEW_MAX_QUESTIONS_PER_GAP in environment to override (e.g. in docker-compose.yml).
+INTERVIEW_MAX_QUESTIONS_PER_GAP: int = int(
+    os.environ.get("INTERVIEW_MAX_QUESTIONS_PER_GAP", "3")
+)
