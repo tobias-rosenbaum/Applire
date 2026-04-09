@@ -49,10 +49,8 @@ Thumbs.db
 
 # Claude Code
 .claude/
-CLAUDE.md
-claude.md
 
-# Documentation — lives outside Solution/ in Documents/
+# Internal documentation — tracked for project ownership
 Documents/
 
 # Test results and reports

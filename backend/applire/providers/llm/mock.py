@@ -158,6 +158,8 @@ _RESPONSE_PARSER_RESPONSE: dict[str, Any] = {
     "skills_to_add": ["Salesforce", "Veeva Vault", "CRM"],
     "work_history_to_add": [],
     "gap_addressed": True,
+    "gap_resolution": "full",
+    "gaps_also_addressed": [],
 }
 
 _INTERVIEW_QUESTION = (

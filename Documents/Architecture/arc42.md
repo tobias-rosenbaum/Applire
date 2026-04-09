@@ -1,11 +1,22 @@
 # Architecture Documentation — Applire (arc42)
 
-**Version:** 2.10 (Full System Update & Flow Orchestrator)
-**Date:** 24 March 2026
+**Version:** 2.12 (Sprint 16 — CV Template Enhancements)
+**Date:** 09 Apr 2026
 **Author:** Tobias Rosenbaum
 
 **Changelog:**
 
+- v2.12 (09 Apr 2026): Sprint 16 — CV Template Enhancements:
+  - 5.3.4: PDF Generator updated — icon set registry (`none`/`outline`/`filled`),
+    per-template default icon sets, `avoid_page_breaks` toggle. New `CVGenerateRequest`
+    parameters: `icon_set`, `avoid_page_breaks`. Two new columns on `generated_cvs`.
+    ADR-006 amended; ADR-020 added.
+- v2.11 (09 Apr 2026): Sprint 15 — Smart Gap Interview:
+  - 5.3.3: Interview Orchestrator extended with per-gap follow-up questions
+    (lateral-probe style), cross-gap resolution, and expanded profile enrichment
+    (certifications, languages, education). New constant INTERVIEW_MAX_QUESTIONS_PER_GAP
+    (env-var backed). ResponseParser schema extended (gap_resolution, follow_up_hint,
+    gaps_also_addressed). ADR-004 amended.
 - v2.10 (24 Mar 2026): Full System Update:
 
 
@@ -521,7 +532,7 @@ One active session per `(user_id, job_id)` linked to a `flow_session`. `POST /ap
 
 MODE A — Targeted
 
-Consumes `GapAnalysis`. Priority: Category C (exploratory) first, then Category B (confirmation). Soft target 3–8 questions; hard ceiling 12 (`INTERVIEW_HARD_CEILING_TARGETED`).
+Consumes `GapAnalysis`. Priority: Category C (exploratory) first, then Category B (confirmation). Soft target 3–8 questions; hard ceiling 12 (`INTERVIEW_HARD_CEILING_TARGETED`). Per-gap follow-up ceiling: INTERVIEW_MAX_QUESTIONS_PER_GAP (default 3; includes the initial question). If gap_resolution=="full" or ceiling reached, advances to next gap. Cross-gap resolution: ResponseParser identifies other open gaps resolved by the same answer (gaps_also_addressed); those gaps are skipped automatically. Profile enrichment extended to certifications, languages, and education in addition to skills and work history.
 
 MODE B — Guided
 
@@ -529,7 +540,7 @@ No existing `GapAnalysis` required. `GapDetector` generates a section-by-section
 
 Question Types
 
-**Exploratory** (Category C / MODE B): open question. **Confirmation** (Category B): acknowledges inferred experience and asks for specifics.
+**Exploratory** (Category C / MODE B): open question. **Confirmation** (Category B): acknowledges inferred experience and asks for specifics. **Follow-up (Lateral Probe)**: generated when gap_resolution is "partial" or "none" and per-gap ceiling not reached. Probes an adjacent domain suggested by follow_up_hint (e.g. "ask about GMP or other regulated manufacturing environments") rather than re-asking the original question.
 
 Completion Triggers
 
@@ -537,7 +548,7 @@ Completion Triggers
 
 Completion Response
 
-`InterviewCompleteResponse(complete, reason, questions_asked, gaps_resolved, gaps_remaining[], completeness_score)` where `reason ∈ {gaps_resolved, user_ended, max_questions_reached}`
+`InterviewCompleteResponse(complete, reason, questions_asked, gaps_resolved, gaps_remaining[], completeness_score)` where `reason ∈ {gaps_resolved, user_ended, max_questions_reached}`. In-progress responses also include: `gaps_also_addressed: list[str] | None` — gaps resolved transitively by a cross-gap answer; populated when non-empty.
 
 Pause / Resume
 
@@ -553,7 +564,7 @@ Via LLM Provider Abstraction (default: Mistral, `temperature=0.4` for questions,
 
 Constants
 
-`MODE_B_COMPLETENESS_THRESHOLD`, `INTERVIEW_HARD_CEILING_TARGETED`, `INTERVIEW_HARD_CEILING_GUIDED`, `INTERVIEW_TARGET_MIN_TARGETED`, `INTERVIEW_TARGET_MIN_GUIDED` in `applire/constants.py`
+`MODE_B_COMPLETENESS_THRESHOLD`, `INTERVIEW_HARD_CEILING_TARGETED`, `INTERVIEW_HARD_CEILING_GUIDED`, `INTERVIEW_TARGET_MIN_TARGETED`, `INTERVIEW_TARGET_MIN_GUIDED` in `applire/constants.py`. `INTERVIEW_MAX_QUESTIONS_PER_GAP` (int, default 3) — env-var backed (INTERVIEW_MAX_QUESTIONS_PER_GAP); configurable for Docker self-hosters.
 
 MCP Tool
 
@@ -579,7 +590,15 @@ Same Jinja2 HTML served to frontend iframe for live WYSIWYG preview
 
 Templates
 
-CSS-based themes. Community: "Classic German", "Modern Swiss". Cloud: premium themes
+CSS-based themes. Community: "Classic German" (`classic_german`), "Modern Swiss" (`modern_swiss`). Cloud: premium themes. Each template declares a default icon set in `TEMPLATE_DEFAULT_ICON_SET` (`applire/icon_sets.py`).
+
+Icon Sets
+
+Selectable per CV via `icon_set` parameter (`none` | `outline` | `filled`). Resolved at render time: explicit choice overrides template default; `None` falls back to template default. All SVG icons use `currentColor` so icon colour inherits from the template's CSS accent variable — future colour scheme changes recolour icons automatically. Registry is a Python dict (`applire/icon_sets.py`); new sets are added by extending `ICON_SETS` and optionally `TEMPLATE_DEFAULT_ICON_SET`. See ADR-020.
+
+Page Break Control
+
+`avoid_page_breaks` boolean (default `True`) gates CSS rules that prevent entries and section headers from splitting across PDF pages. When `True`, a `.no-breaks` class is applied to `<body>`. See ADR-006 amendment.
 
 Generation Model
 
@@ -591,11 +610,11 @@ PDF bytes stored with `expires_at` timestamp. TTL: 90 days (human channel) / 24 
 
 Formats
 
-`german_lebenslauf` OR `international`
+`classic_german` | `modern_swiss` (Cloud: additional premium templates)
 
 MCP Tool
 
-`generate_cv(job_id, options?) → { cv_id, status: "pending", expires_at: ISO8601 }`
+`generate_cv(job_id, template?, icon_set?, avoid_page_breaks?) → { cv_id, status: "pending", expires_at: ISO8601 }`
 
 MCP Tool
 
