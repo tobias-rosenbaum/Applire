@@ -549,14 +549,14 @@ def _make_state(
         "profile_id": str(uuid.uuid4()),
         "critical_gaps": gaps,
         "gap_categories": {},
-        "addressed_gaps": addressed_gaps or [],
         "current_gap_index": current_index,
         "current_question": "Tell me about your GCP experience.",
         "messages": [{"role": "assistant", "content": "Tell me about your GCP experience."}],
         "questions_asked": questions_asked,
         "hard_ceiling": hard_ceiling,
-        "questions_per_gap": questions_per_gap or {},
-        "skipped_gaps": skipped_gaps or [],
+        "questions_per_gap": dict(questions_per_gap) if questions_per_gap else {},
+        "skipped_gaps": list(skipped_gaps) if skipped_gaps else [],
+        "addressed_gaps": list(addressed_gaps) if addressed_gaps else [],
         "full_gaps": [],
     }
 
@@ -579,3 +579,25 @@ def test_build_state_includes_new_fields():
     assert state["questions_per_gap"] == {}
     assert state["skipped_gaps"] == []
     assert state["full_gaps"] == []
+
+
+def test_send_message_resilient_to_pre_sprint15_state():
+    """State dicts missing Sprint 15 fields don't KeyError during gap logic."""
+    from applire.services.session import _next_valid_index, _count_remaining
+
+    # Simulate a pre-Sprint 15 state (missing the new fields)
+    old_state = {
+        "mode": "targeted",
+        "critical_gaps": ["gap_a", "gap_b"],
+        "current_gap_index": 0,
+    }
+
+    # These helpers must work even if called with values from such a state
+    skipped_set = set(old_state.get("skipped_gaps", []))   # defaults to empty set
+    qpg = old_state.get("questions_per_gap", {}).get("gap_a", 1)  # defaults to 1
+
+    assert skipped_set == set()
+    assert qpg == 1
+    # Verify helpers don't error
+    assert _next_valid_index(old_state["critical_gaps"], 0, skipped_set) == 0
+    assert _count_remaining(old_state["critical_gaps"], 0, skipped_set) == 2

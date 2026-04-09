@@ -590,7 +590,12 @@ async def get_session_state(
     if record.status == "active":
         current_question = state.get("current_question") or None
         idx = state.get("current_gap_index", 0)
-        gaps_remaining = max(0, len(state.get("critical_gaps", [])) - idx)
+        skipped = set(state.get("skipped_gaps", []))
+        gaps_remaining = _count_remaining(
+            state.get("critical_gaps", []),
+            idx,
+            skipped,
+        )
 
     # Treat expired sessions (past expires_at) as "expired" status
     if (
@@ -642,8 +647,9 @@ async def _complete_session(
     all_gaps = state.get("critical_gaps", [])
     idx = state.get("current_gap_index", 0)
     skipped = set(state.get("skipped_gaps", []))
+    addressed_set = set(addressed)
     unresolved = (
-        [g for g in all_gaps[idx:] if g not in skipped]
+        [g for g in all_gaps[idx:] if g not in skipped and g not in addressed_set]
         if reason != "gaps_resolved"
         else []
     )
