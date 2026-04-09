@@ -182,6 +182,7 @@ def test_build_response_parser_prompt_includes_remaining_gaps():
 
     assert "GMP certification" in prompt
     assert "ISO 9001" in prompt
+    assert "Other open gaps" in prompt
 
 
 def test_build_response_parser_prompt_no_remaining_gaps():
@@ -193,3 +194,27 @@ def test_build_response_parser_prompt_no_remaining_gaps():
 
     assert "Other open gaps" not in prompt_none
     assert "Other open gaps" not in prompt_empty
+
+
+@pytest.mark.asyncio
+async def test_response_parser_returns_enrichment_fields():
+    """certifications, languages, education are returned from the parser."""
+    from applire.services.interview_graph import response_parser
+
+    provider = MagicMock()
+    provider.aparse_json = AsyncMock(return_value={
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [{"name": "Certified Mediator", "issuing_body": "IHK", "year": "2022"}],
+        "languages_to_add": [{"language": "Spanish", "level": "professional"}],
+        "education_to_add": [{"institution": "TU Berlin", "degree": "M.Sc.", "field": "Informatik", "graduation_year": "2019"}],
+        "gap_resolution": "full",
+        "follow_up_hint": None,
+        "gaps_also_addressed": [],
+    })
+
+    result = await response_parser("mediation skills", "Tell me about certifications.", "I'm a certified mediator.", provider)
+
+    assert result["certifications_to_add"] == [{"name": "Certified Mediator", "issuing_body": "IHK", "year": "2022"}]
+    assert result["languages_to_add"] == [{"language": "Spanish", "level": "professional"}]
+    assert result["education_to_add"] == [{"institution": "TU Berlin", "degree": "M.Sc.", "field": "Informatik", "graduation_year": "2019"}]

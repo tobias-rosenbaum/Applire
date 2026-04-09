@@ -1,5 +1,11 @@
-# Prompt version: v3
+# Prompt version: v4
 # Used by: services/interview_graph.py
+#
+# v4 changes vs v3 (Sprint 15):
+#   - RESPONSE_PARSER_SYSTEM_PROMPT: schema extended with certifications_to_add,
+#     languages_to_add, education_to_add, gap_resolution ("full"|"partial"|"none"),
+#     follow_up_hint, gaps_also_addressed. gap_addressed bool replaced by gap_resolution enum.
+#   - build_response_parser_prompt: accepts optional remaining_gaps list for cross-gap context
 #
 # v3 changes vs v2:
 #   - Add GUIDED_QUESTION_SYSTEM_PROMPT for MODE B (section-building questions)

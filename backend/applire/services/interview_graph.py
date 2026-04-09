@@ -234,7 +234,7 @@ async def response_parser(
         "languages_to_add": data.get("languages_to_add", []),
         "education_to_add": data.get("education_to_add", []),
         "gap_resolution": gap_resolution,
-        "follow_up_hint": data.get("follow_up_hint"),
+        "follow_up_hint": data.get("follow_up_hint") if isinstance(data.get("follow_up_hint"), str) else None,
         "gaps_also_addressed": data.get("gaps_also_addressed", []),
         "gap_addressed": gap_resolution != "none",  # backward compat
     }
