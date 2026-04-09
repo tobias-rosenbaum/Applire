@@ -462,3 +462,64 @@ def test_profile_updater_missing_new_fields_safe():
 
     assert "Python" in [s if isinstance(s, str) else s.get("name") for s in updated["skills"]]
     assert conflicts == []
+
+
+# ---------------------------------------------------------------------------
+# Task 5: _next_valid_index and _count_remaining
+# ---------------------------------------------------------------------------
+
+
+def test_next_valid_index_no_skipped():
+    """Returns from_index unchanged when nothing is skipped."""
+    from applire.services.session import _next_valid_index
+
+    gaps = ["gap_a", "gap_b", "gap_c"]
+    assert _next_valid_index(gaps, 1, set()) == 1
+
+
+def test_next_valid_index_skips_one():
+    """Skips a single skipped gap."""
+    from applire.services.session import _next_valid_index
+
+    gaps = ["gap_a", "gap_b", "gap_c"]
+    assert _next_valid_index(gaps, 1, {"gap_b"}) == 2
+
+
+def test_next_valid_index_skips_multiple():
+    """Skips consecutive skipped gaps."""
+    from applire.services.session import _next_valid_index
+
+    gaps = ["gap_a", "gap_b", "gap_c", "gap_d"]
+    assert _next_valid_index(gaps, 1, {"gap_b", "gap_c"}) == 3
+
+
+def test_next_valid_index_all_remaining_skipped():
+    """Returns len(gaps) when all remaining gaps are skipped (signals exhaustion)."""
+    from applire.services.session import _next_valid_index
+
+    gaps = ["gap_a", "gap_b", "gap_c"]
+    assert _next_valid_index(gaps, 1, {"gap_b", "gap_c"}) == 3
+
+
+def test_count_remaining_no_skipped():
+    """Counts all gaps from from_index when nothing is skipped."""
+    from applire.services.session import _count_remaining
+
+    gaps = ["gap_a", "gap_b", "gap_c"]
+    assert _count_remaining(gaps, 1, set()) == 2
+
+
+def test_count_remaining_with_skipped():
+    """Excludes skipped gaps from count."""
+    from applire.services.session import _count_remaining
+
+    gaps = ["gap_a", "gap_b", "gap_c", "gap_d"]
+    assert _count_remaining(gaps, 1, {"gap_c"}) == 2  # gap_b and gap_d
+
+
+def test_count_remaining_all_skipped():
+    """Returns 0 when all remaining gaps are skipped."""
+    from applire.services.session import _count_remaining
+
+    gaps = ["gap_a", "gap_b", "gap_c"]
+    assert _count_remaining(gaps, 1, {"gap_b", "gap_c"}) == 0

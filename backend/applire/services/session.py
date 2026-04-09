@@ -678,3 +678,30 @@ async def _load_job_context(job_id: str, db: AsyncSession) -> dict:
         "role_title": job.role_title or "",
         "seniority_level": job.seniority_level or "",
     }
+
+
+def _next_valid_index(
+    critical_gaps: list[str],
+    from_index: int,
+    skipped_gaps: set[str],
+) -> int:
+    """Return the first index >= from_index whose gap is not in skipped_gaps.
+
+    Returns len(critical_gaps) if all remaining gaps are skipped (signals exhaustion).
+    """
+    idx = from_index
+    while idx < len(critical_gaps) and critical_gaps[idx] in skipped_gaps:
+        idx += 1
+    return idx
+
+
+def _count_remaining(
+    critical_gaps: list[str],
+    from_index: int,
+    skipped_gaps: set[str],
+) -> int:
+    """Count non-skipped gaps from from_index onwards (inclusive)."""
+    return sum(
+        1 for g in critical_gaps[from_index:]
+        if g not in skipped_gaps
+    )
