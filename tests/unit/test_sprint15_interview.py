@@ -218,3 +218,94 @@ async def test_response_parser_returns_enrichment_fields():
     assert result["certifications_to_add"] == [{"name": "Certified Mediator", "issuing_body": "IHK", "year": "2022"}]
     assert result["languages_to_add"] == [{"language": "Spanish", "level": "professional"}]
     assert result["education_to_add"] == [{"institution": "TU Berlin", "degree": "M.Sc.", "field": "Informatik", "graduation_year": "2019"}]
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Follow-up question generation
+# ---------------------------------------------------------------------------
+
+
+def test_build_follow_up_question_prompt_contains_hint():
+    """Follow-up prompt includes the gap and the hint."""
+    from applire.prompts.interview import build_follow_up_question_prompt
+
+    prompt = build_follow_up_question_prompt(
+        gap="GCP certification",
+        follow_up_hint="ask about GMP or other regulated manufacturing environments",
+        profile={"skills": [], "work_history": []},
+        recent_messages=[],
+    )
+
+    assert "GCP certification" in prompt
+    assert "GMP or other regulated" in prompt
+
+
+def test_build_follow_up_question_prompt_includes_conversation_history():
+    """Last 4 messages appear in the follow-up prompt."""
+    from applire.prompts.interview import build_follow_up_question_prompt
+
+    messages = [
+        {"role": "assistant", "content": "Tell me about your GCP experience."},
+        {"role": "user", "content": "I've worked in pharma."},
+    ]
+    prompt = build_follow_up_question_prompt(
+        gap="GCP certification",
+        follow_up_hint="ask about GMP",
+        profile={},
+        recent_messages=messages,
+    )
+
+    assert "I've worked in pharma." in prompt
+
+
+@pytest.mark.asyncio
+async def test_question_generator_routes_to_followup_when_hint_present():
+    """question_generator_with_profile calls follow-up prompt when follow_up_hint is set."""
+    from applire.services.interview_graph import question_generator_with_profile
+
+    provider = MagicMock()
+    provider.acomplete = AsyncMock(return_value="Have you worked in GMP-regulated environments?")
+
+    state = {
+        "mode": "targeted",
+        "critical_gaps": ["GCP certification"],
+        "current_gap_index": 0,
+        "messages": [],
+    }
+
+    result = await question_generator_with_profile(
+        state,
+        profile={},
+        provider=provider,
+        follow_up_hint="ask about GMP or other regulated environments",
+    )
+
+    assert result == "Have you worked in GMP-regulated environments?"
+    # Confirm it was called with the follow-up system prompt
+    call_kwargs = provider.acomplete.call_args.kwargs
+    assert "follow" in call_kwargs.get("system", "").lower() or "adjacent" in call_kwargs.get("system", "").lower()
+
+
+@pytest.mark.asyncio
+async def test_question_generator_routes_to_standard_when_no_hint():
+    """question_generator_with_profile uses standard prompt when follow_up_hint is None."""
+    from applire.services.interview_graph import question_generator_with_profile
+
+    provider = MagicMock()
+    provider.acomplete = AsyncMock(return_value="Tell me about your GCP experience.")
+
+    state = {
+        "mode": "targeted",
+        "critical_gaps": ["GCP certification"],
+        "current_gap_index": 0,
+        "messages": [],
+    }
+
+    result = await question_generator_with_profile(
+        state,
+        profile={},
+        provider=provider,
+        follow_up_hint=None,
+    )
+
+    assert result == "Tell me about your GCP experience."

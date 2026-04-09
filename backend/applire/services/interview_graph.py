@@ -22,9 +22,11 @@ import hashlib
 from applire.models.gap import GapAnalysis
 from applire.models.job import JobAnalysis
 from applire.prompts.interview import (
+    FOLLOW_UP_QUESTION_SYSTEM_PROMPT,
     GUIDED_QUESTION_SYSTEM_PROMPT,
     QUESTION_SYSTEM_PROMPT,
     RESPONSE_PARSER_SYSTEM_PROMPT,
+    build_follow_up_question_prompt,
     build_guided_question_prompt,
     build_question_prompt,
     build_response_parser_prompt,
@@ -141,18 +143,35 @@ async def question_generator_with_profile(
     provider: LLMProvider,
     gap_category: str | None = None,
     job_context: dict | None = None,
+    follow_up_hint: str | None = None,
 ) -> str:
-    """Generate the next question based on mode.
+    """Generate the next question based on mode and context.
 
     MODE A: gap-targeted question (exploratory C or confirmation B)
     MODE B: section-building question
+    Follow-up: lateral-probe question when follow_up_hint is provided
 
     gap_category: "B" | "C" | None (MODE A only)
     job_context: {"role_title": str, "seniority_level": str} (MODE B, optional)
+    follow_up_hint: adjacent domain to probe (Sprint 15, overrides standard question)
     """
     mode = state.get("mode", "targeted")
 
-    if mode == "guided":
+    if follow_up_hint:
+        gap = state["critical_gaps"][state["current_gap_index"]]
+        question = await provider.acomplete(
+            build_follow_up_question_prompt(
+                gap,
+                follow_up_hint,
+                profile,
+                state["messages"],
+                gap_category=gap_category,
+            ),
+            system=FOLLOW_UP_QUESTION_SYSTEM_PROMPT,
+            temperature=0.4,
+            max_tokens=256,
+        )
+    elif mode == "guided":
         section = state["critical_gaps"][state["current_gap_index"]]
         question = await provider.acomplete(
             build_guided_question_prompt(

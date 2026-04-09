@@ -194,6 +194,63 @@ def build_guided_question_prompt(
 
 
 # ---------------------------------------------------------------------------
+# QuestionGenerator node — Follow-up (lateral probe, Sprint 15)
+# ---------------------------------------------------------------------------
+
+FOLLOW_UP_QUESTION_SYSTEM_PROMPT = """\
+You are an expert career coach specialised in the DACH (Germany, Austria, Switzerland) job market.
+The candidate has not yet fully addressed a specific gap in their profile.
+Do NOT re-ask the original question. Instead, probe an adjacent domain or analogous
+context that is likely to surface the missing experience indirectly.
+
+Requirements:
+- Lead with the adjacent domain suggested in the follow-up hint
+- Be concrete: name the technology, regulation, industry, or context to explore
+- Remain encouraging — the candidate may simply not have recognised the connection
+- Output ONLY the question text — no preamble, no numbering, no explanation"""
+
+
+def build_follow_up_question_prompt(
+    gap: str,
+    follow_up_hint: str,
+    profile: dict,
+    recent_messages: list[dict],
+    gap_category: str | None = None,
+) -> str:
+    """Build the prompt for a lateral-probe follow-up question.
+
+    gap: the gap that was not fully addressed
+    follow_up_hint: suggested adjacent domain (from ResponseParser)
+    profile: candidate's current profile dict
+    recent_messages: last N messages from the conversation
+    gap_category: "B" | "C" | None
+    """
+    history = ""
+    if recent_messages:
+        lines = [f"{m['role'].capitalize()}: {m['content']}" for m in recent_messages[-4:]]
+        history = "\n\nRecent conversation:\n" + "\n".join(lines)
+
+    profile_summary = json.dumps(
+        {
+            "skills": profile.get("skills", []),
+            "work_history": [
+                {"company": e.get("company"), "role": e.get("role")}
+                for e in profile.get("work_history", [])
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+    return (
+        f"Gap not yet addressed: {gap}\n"
+        f"Follow-up direction: {follow_up_hint}\n\n"
+        f"Candidate profile summary:\n{profile_summary}"
+        f"{history}\n\n"
+        "Generate the follow-up question probing the adjacent domain."
+    )
+
+
+# ---------------------------------------------------------------------------
 # ResponseParser node
 # ---------------------------------------------------------------------------
 
