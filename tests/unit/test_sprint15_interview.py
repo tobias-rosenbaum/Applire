@@ -601,3 +601,30 @@ def test_send_message_resilient_to_pre_sprint15_state():
     # Verify helpers don't error
     assert _next_valid_index(old_state["critical_gaps"], 0, skipped_set) == 0
     assert _count_remaining(old_state["critical_gaps"], 0, skipped_set) == 2
+
+
+# ---------------------------------------------------------------------------
+# Task 7: Cross-gap resolution — integration through pure helpers
+# ---------------------------------------------------------------------------
+
+
+def test_count_remaining_reflects_skipped_gaps():
+    """gaps_remaining drops when skipped_gaps are added."""
+    from applire.services.session import _count_remaining
+
+    gaps = ["gap_a", "gap_b", "gap_c", "gap_d"]
+    # No skips: 3 remaining after index 1
+    assert _count_remaining(gaps, 1, set()) == 3
+    # gap_c skipped: 2 remaining
+    assert _count_remaining(gaps, 1, {"gap_c"}) == 2
+    # gap_b and gap_c skipped: 1 remaining
+    assert _count_remaining(gaps, 1, {"gap_b", "gap_c"}) == 1
+
+
+def test_next_valid_index_skips_to_end():
+    """_next_valid_index returns len(gaps) when all remaining are skipped."""
+    from applire.services.session import _next_valid_index
+
+    gaps = ["gap_a", "gap_b", "gap_c"]
+    result = _next_valid_index(gaps, 1, {"gap_b", "gap_c"})
+    assert result == 3  # past end → gaps exhausted
