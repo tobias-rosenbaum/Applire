@@ -309,3 +309,156 @@ async def test_question_generator_routes_to_standard_when_no_hint():
     )
 
     assert result == "Tell me about your GCP experience."
+
+
+# ---------------------------------------------------------------------------
+# Task 4: profile_updater — certifications, languages, education
+# ---------------------------------------------------------------------------
+
+
+def test_profile_updater_adds_certification():
+    """New certification is appended to profile."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {"skills": [], "work_experience": [], "certifications": []}
+    patch = {
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [
+            {"name": "Certified Mediator", "issuing_body": "IHK", "year": "2022"}
+        ],
+        "languages_to_add": [],
+        "education_to_add": [],
+    }
+
+    updated, conflicts = profile_updater(profile, patch)
+
+    assert len(updated["certifications"]) == 1
+    assert updated["certifications"][0]["name"] == "Certified Mediator"
+    assert conflicts == []
+
+
+def test_profile_updater_skips_duplicate_certification():
+    """Certification with same name (case-insensitive) is not duplicated."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {
+        "skills": [],
+        "work_experience": [],
+        "certifications": [{"name": "Certified Mediator", "issuing_body": "IHK", "year": "2022"}],
+    }
+    patch = {
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [{"name": "certified mediator", "issuing_body": None, "year": None}],
+        "languages_to_add": [],
+        "education_to_add": [],
+    }
+
+    updated, _ = profile_updater(profile, patch)
+
+    assert len(updated["certifications"]) == 1  # no duplicate
+
+
+def test_profile_updater_adds_language():
+    """New language is appended to profile."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {"skills": [], "work_experience": [], "languages": []}
+    patch = {
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [],
+        "languages_to_add": [{"language": "Spanish", "level": "professional"}],
+        "education_to_add": [],
+    }
+
+    updated, _ = profile_updater(profile, patch)
+
+    assert len(updated["languages"]) == 1
+    assert updated["languages"][0]["language"] == "Spanish"
+
+
+def test_profile_updater_skips_duplicate_language():
+    """Existing language is not duplicated (existing level kept)."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {
+        "skills": [],
+        "work_experience": [],
+        "languages": [{"language": "German", "level": "native"}],
+    }
+    patch = {
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [],
+        "languages_to_add": [{"language": "german", "level": "basic"}],
+        "education_to_add": [],
+    }
+
+    updated, _ = profile_updater(profile, patch)
+
+    assert len(updated["languages"]) == 1
+    assert updated["languages"][0]["level"] == "native"  # existing level preserved
+
+
+def test_profile_updater_adds_education():
+    """New education entry is appended."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {"skills": [], "work_experience": [], "education": []}
+    patch = {
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [],
+        "languages_to_add": [],
+        "education_to_add": [
+            {"institution": "TU Berlin", "degree": "M.Sc.", "field": "Informatik", "graduation_year": "2019"}
+        ],
+    }
+
+    updated, _ = profile_updater(profile, patch)
+
+    assert len(updated["education"]) == 1
+    assert updated["education"][0]["degree"] == "M.Sc."
+
+
+def test_profile_updater_skips_duplicate_education():
+    """Same institution+degree pair is not duplicated (case-insensitive)."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {
+        "skills": [],
+        "work_experience": [],
+        "education": [{"institution": "TU Berlin", "degree": "M.Sc.", "field": "Informatik", "graduation_year": "2019"}],
+    }
+    patch = {
+        "skills_to_add": [],
+        "work_history_to_add": [],
+        "certifications_to_add": [],
+        "languages_to_add": [],
+        "education_to_add": [
+            {"institution": "tu berlin", "degree": "m.sc.", "field": None, "graduation_year": None}
+        ],
+    }
+
+    updated, _ = profile_updater(profile, patch)
+
+    assert len(updated["education"]) == 1
+
+
+def test_profile_updater_missing_new_fields_safe():
+    """profile_updater handles patches without new fields (old format)."""
+    from applire.services.interview_graph import profile_updater
+
+    profile = {"skills": [], "work_experience": []}
+    patch = {
+        "skills_to_add": ["Python"],
+        "work_history_to_add": [],
+        # No certifications_to_add / languages_to_add / education_to_add
+    }
+
+    updated, conflicts = profile_updater(profile, patch)
+
+    assert "Python" in [s if isinstance(s, str) else s.get("name") for s in updated["skills"]]
+    assert conflicts == []

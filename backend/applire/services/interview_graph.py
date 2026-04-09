@@ -322,6 +322,40 @@ def profile_updater(
     if additions:
         profile["work_experience"] = list(existing_work) + additions
 
+    # --- Certifications: append if name not already present (case-insensitive) ---
+    existing_cert_names = {
+        (c.get("name") or "").lower() for c in profile.get("certifications", [])
+    }
+    new_certs = [
+        c for c in patch.get("certifications_to_add", [])
+        if (c.get("name") or "").lower() not in existing_cert_names
+    ]
+    if new_certs:
+        profile["certifications"] = list(profile.get("certifications", [])) + new_certs
+
+    # --- Languages: append if language not present; keep existing level ---
+    existing_lang_names = {
+        (l.get("language") or "").lower() for l in profile.get("languages", [])
+    }
+    new_langs = [
+        l for l in patch.get("languages_to_add", [])
+        if (l.get("language") or "").lower() not in existing_lang_names
+    ]
+    if new_langs:
+        profile["languages"] = list(profile.get("languages", [])) + new_langs
+
+    # --- Education: append if (institution, degree) pair not present (case-insensitive) ---
+    existing_edu_keys = {
+        (_norm(e.get("institution")), _norm(e.get("degree")))
+        for e in profile.get("education", [])
+    }
+    new_edu = [
+        e for e in patch.get("education_to_add", [])
+        if (_norm(e.get("institution")), _norm(e.get("degree"))) not in existing_edu_keys
+    ]
+    if new_edu:
+        profile["education"] = list(profile.get("education", [])) + new_edu
+
     return profile, conflicts
 
 
