@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from applire.constants import (
     INTERVIEW_HARD_CEILING_GUIDED,
     INTERVIEW_HARD_CEILING_TARGETED,
+    INTERVIEW_MAX_QUESTIONS_PER_GAP,
     INTERVIEW_TARGET_MIN_GUIDED,
     INTERVIEW_TARGET_MIN_TARGETED,
     MODE_B_COMPLETENESS_THRESHOLD,
@@ -419,11 +420,23 @@ async def send_message(
     if is_termination_signal(message):
         return await _complete_session(record, state, db, "user_ended")
 
-    current_gap = state["critical_gaps"][state["current_gap_index"]]
+    current_idx = state["current_gap_index"]
+    current_gap = state["critical_gaps"][current_idx]
     current_question = state["current_question"]
 
+    # Compute open gaps for cross-gap context (micro-sessions use full_gaps)
+    skipped_set = set(state.get("skipped_gaps", []))
+    addressed_set = set(state.get("addressed_gaps", []))
+    full_gaps = state.get("full_gaps") or state["critical_gaps"]
+    remaining_gaps = [
+        g for g in full_gaps
+        if g != current_gap and g not in skipped_set and g not in addressed_set
+    ]
+
     # --- ResponseParser ---
-    patch = await response_parser(current_gap, current_question, message, provider)
+    patch = await response_parser(
+        current_gap, current_question, message, provider, remaining_gaps
+    )
 
     # --- ProfileUpdater ---
     profile_record = await _load_profile(state["profile_id"], db)
@@ -431,52 +444,119 @@ async def send_message(
     profile_record.profile_json = updated_profile
     profile_record.updated_at = datetime.now(timezone.utc)
 
-    # Advance state
-    state["addressed_gaps"] = state.get("addressed_gaps", []) + [current_gap]
-    next_index = state["current_gap_index"] + 1
+    # --- Cross-gap resolution ---
+    newly_skipped: list[str] = []
+    for also_gap in patch.get("gaps_also_addressed", []):
+        if (
+            also_gap in state["critical_gaps"]
+            and also_gap != current_gap
+            and also_gap not in state.get("addressed_gaps", [])
+            and also_gap not in state.get("skipped_gaps", [])
+        ):
+            state.setdefault("skipped_gaps", []).append(also_gap)
+            state.setdefault("addressed_gaps", []).append(also_gap)
+            newly_skipped.append(also_gap)
+
+    # Increment questions_asked
     questions_asked = state.get("questions_asked", 1) + 1
     state["questions_asked"] = questions_asked
-    state["current_gap_index"] = next_index
     record.questions_asked = questions_asked
-
-    gaps_remaining = len(state["critical_gaps"]) - next_index
 
     # --- Hard ceiling check ---
     if questions_asked >= state["hard_ceiling"]:
-        return await _complete_session(record, state, db, "max_questions_reached", profile_record)
+        state["addressed_gaps"] = state.get("addressed_gaps", []) + [current_gap]
+        return await _complete_session(
+            record, state, db, "max_questions_reached", profile_record
+        )
 
-    # --- Gap exhaustion check ---
-    if gaps_remaining <= 0:
-        return await _complete_session(record, state, db, "gaps_resolved", profile_record)
+    # --- Advance decision ---
+    gap_resolution = patch.get("gap_resolution", "none")
+    questions_for_gap = state.get("questions_per_gap", {}).get(current_gap, 1)
 
-    # --- Next question ---
-    next_gap = state["critical_gaps"][next_index]
-    next_category = (state.get("gap_categories") or {}).get(next_gap)
+    if gap_resolution == "full" or questions_for_gap >= INTERVIEW_MAX_QUESTIONS_PER_GAP:
+        # Advance to next gap
+        state["addressed_gaps"] = state.get("addressed_gaps", []) + [current_gap]
+        skipped_set_updated = set(state.get("skipped_gaps", []))
+        next_index = _next_valid_index(
+            state["critical_gaps"], current_idx + 1, skipped_set_updated
+        )
+        state["current_gap_index"] = next_index
+        gaps_remaining = _count_remaining(
+            state["critical_gaps"], next_index, skipped_set_updated
+        )
 
-    job_context: dict | None = None
-    if state.get("mode") == "guided":
-        job_context = await _load_job_context(state["job_id"], db)
+        # Gap exhaustion check
+        if gaps_remaining <= 0:
+            return await _complete_session(
+                record, state, db, "gaps_resolved", profile_record
+            )
 
-    next_question = await question_generator_with_profile(
-        state,
-        updated_profile,
-        provider,
-        gap_category=next_category,
-        job_context=job_context,
-    )
-    state["current_question"] = next_question
-    state["messages"].append({"role": "assistant", "content": next_question})
+        # Generate next question
+        next_gap = state["critical_gaps"][next_index]
+        next_category = (state.get("gap_categories") or {}).get(next_gap)
+        job_context: dict | None = None
+        if state.get("mode") == "guided":
+            job_context = await _load_job_context(state["job_id"], db)
 
-    record.state = state
-    record.updated_at = datetime.now(timezone.utc)
-    await db.commit()
+        next_question = await question_generator_with_profile(
+            state,
+            updated_profile,
+            provider,
+            gap_category=next_category,
+            job_context=job_context,
+        )
+        state["current_question"] = next_question
+        state["messages"].append({"role": "assistant", "content": next_question})
+        record.state = state
+        record.updated_at = datetime.now(timezone.utc)
+        await db.commit()
 
-    return SessionMessageResponse(
-        complete=False,
-        question=next_question,
-        gaps_remaining=gaps_remaining,
-        pending_conflicts=merge_conflicts if merge_conflicts else None,
-    )
+        return SessionMessageResponse(
+            complete=False,
+            question=next_question,
+            gaps_remaining=gaps_remaining,
+            pending_conflicts=merge_conflicts if merge_conflicts else None,
+            gaps_also_addressed=newly_skipped if newly_skipped else None,
+        )
+
+    else:
+        # Follow-up: stay on current gap
+        qpg = dict(state.get("questions_per_gap", {}))
+        qpg[current_gap] = questions_for_gap + 1
+        state["questions_per_gap"] = qpg
+
+        follow_up_hint = (
+            patch.get("follow_up_hint")
+            or f"ask for a more specific or concrete example related to {current_gap}"
+        )
+        gap_category = (state.get("gap_categories") or {}).get(current_gap)
+
+        follow_up_question = await question_generator_with_profile(
+            state,
+            updated_profile,
+            provider,
+            gap_category=gap_category,
+            follow_up_hint=follow_up_hint,
+        )
+        state["current_question"] = follow_up_question
+        state["messages"].append({"role": "assistant", "content": follow_up_question})
+        record.state = state
+        record.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        gaps_remaining = _count_remaining(
+            state["critical_gaps"],
+            current_idx,
+            set(state.get("skipped_gaps", [])),
+        )
+
+        return SessionMessageResponse(
+            complete=False,
+            question=follow_up_question,
+            gaps_remaining=gaps_remaining,
+            pending_conflicts=merge_conflicts if merge_conflicts else None,
+            gaps_also_addressed=newly_skipped if newly_skipped else None,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -561,7 +641,12 @@ async def _complete_session(
     addressed = state.get("addressed_gaps", [])
     all_gaps = state.get("critical_gaps", [])
     idx = state.get("current_gap_index", 0)
-    unresolved = all_gaps[idx:] if reason != "gaps_resolved" else []
+    skipped = set(state.get("skipped_gaps", []))
+    unresolved = (
+        [g for g in all_gaps[idx:] if g not in skipped]
+        if reason != "gaps_resolved"
+        else []
+    )
 
     return SessionMessageResponse(
         complete=True,
@@ -616,6 +701,9 @@ def _build_state(
         "messages": [],
         "questions_asked": 0,
         "hard_ceiling": hard_ceiling,
+        "questions_per_gap": {},
+        "skipped_gaps": [],
+        "full_gaps": [],
     }
 
 

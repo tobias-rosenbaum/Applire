@@ -523,3 +523,59 @@ def test_count_remaining_all_skipped():
 
     gaps = ["gap_a", "gap_b", "gap_c"]
     assert _count_remaining(gaps, 1, {"gap_b", "gap_c"}) == 0
+
+
+# ---------------------------------------------------------------------------
+# Task 6: send_message advance logic (Feature 1 — multi-question per gap)
+# ---------------------------------------------------------------------------
+
+import uuid
+
+
+def _make_state(
+    gaps: list[str],
+    current_index: int = 0,
+    questions_asked: int = 1,
+    hard_ceiling: int = 12,
+    questions_per_gap: dict | None = None,
+    skipped_gaps: list[str] | None = None,
+    addressed_gaps: list[str] | None = None,
+) -> dict:
+    """Build a minimal InterviewState for testing send_message logic."""
+    return {
+        "mode": "targeted",
+        "job_id": str(uuid.uuid4()),
+        "gap_analysis_id": None,
+        "profile_id": str(uuid.uuid4()),
+        "critical_gaps": gaps,
+        "gap_categories": {},
+        "addressed_gaps": addressed_gaps or [],
+        "current_gap_index": current_index,
+        "current_question": "Tell me about your GCP experience.",
+        "messages": [{"role": "assistant", "content": "Tell me about your GCP experience."}],
+        "questions_asked": questions_asked,
+        "hard_ceiling": hard_ceiling,
+        "questions_per_gap": questions_per_gap or {},
+        "skipped_gaps": skipped_gaps or [],
+        "full_gaps": [],
+    }
+
+
+def test_build_state_includes_new_fields():
+    """_build_state initialises questions_per_gap, skipped_gaps, full_gaps."""
+    from applire.services.session import _build_state
+
+    state = _build_state(
+        mode="targeted",
+        job_id=uuid.uuid4(),
+        gap_analysis_id=None,
+        profile_id=uuid.uuid4(),
+        critical_gaps=["gap_a"],
+        gap_categories={},
+        current_question="",
+        hard_ceiling=12,
+    )
+
+    assert state["questions_per_gap"] == {}
+    assert state["skipped_gaps"] == []
+    assert state["full_gaps"] == []
