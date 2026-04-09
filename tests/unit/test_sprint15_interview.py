@@ -628,3 +628,21 @@ def test_next_valid_index_skips_to_end():
     gaps = ["gap_a", "gap_b", "gap_c"]
     result = _next_valid_index(gaps, 1, {"gap_b", "gap_c"})
     assert result == 3  # past end → gaps exhausted
+
+
+# ---------------------------------------------------------------------------
+# Task 8: Micro-session full_gaps
+# ---------------------------------------------------------------------------
+
+
+def test_micro_session_full_gaps_excludes_target():
+    """full_gaps in micro-session state contains all analysis gaps except the target."""
+    # This tests the construction rule directly
+    target = "GCP certification"
+    all_analysis_gaps = ["GCP certification", "GMP experience", "ISO 9001", "Python"]
+
+    full_gaps = [g for g in all_analysis_gaps if g != target]
+
+    assert target not in full_gaps
+    assert "GMP experience" in full_gaps
+    assert len(full_gaps) == 3

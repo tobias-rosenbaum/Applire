@@ -337,6 +337,12 @@ async def _create_micro_session(
         elif target_gap in (gap_analysis.category_c or []):
             gap_category = "C"
 
+    # Build full gap list for cross-gap context in send_message
+    full_gaps: list[str] = []
+    if gap_analysis is not None:
+        all_gaps = list(gap_analysis.category_c or []) + list(gap_analysis.category_b or [])
+        full_gaps = [g for g in all_gaps if g and g != target_gap]
+
     _MICRO_CEILING = 1
     state: InterviewState = _build_state(
         mode="targeted",
@@ -348,6 +354,7 @@ async def _create_micro_session(
         current_question="",
         hard_ceiling=_MICRO_CEILING,
     )
+    state["full_gaps"] = full_gaps
     first_question = await question_generator_with_profile(
         state, profile_record.profile_json, provider, gap_category=gap_category
     )
