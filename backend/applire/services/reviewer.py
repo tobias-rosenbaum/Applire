@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 async def review_and_refine(
     source: str,
     draft: dict[str, Any],
-    generator_prompt_fn: Callable[[str, dict, str], str],
+    generator_prompt_fn: Callable[[str, dict[str, Any], str], str],
     generator_system: str,
-    reviewer_prompt_fn: Callable[[str, dict], str],
+    reviewer_prompt_fn: Callable[[str, dict[str, Any]], str],
     reviewer_system: str,
     provider: LLMProvider,
     max_retries: int,
@@ -44,7 +44,7 @@ async def review_and_refine(
     Returns:
         The approved draft, or the last generated draft if retries are exhausted.
     """
-    if max_retries == 0:
+    if max_retries <= 0:
         return draft
 
     current_draft = draft
@@ -75,6 +75,9 @@ async def review_and_refine(
             temperature=0.1,
         )
 
+    # Exhausted all retries — return the last generated draft unreviewed.
+    # This is intentional: degraded output is preferable to a broken flow
+    # (spec: ADR-021; worst-case call count = 2 * max_retries).
     logger.warning(
         "review_and_refine: %d retries exhausted. Last known issues: %r",
         max_retries,
