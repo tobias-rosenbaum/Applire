@@ -1,4 +1,4 @@
-// tests/e2e/cv-preview.spec.ts
+// tests/e2e/oq/cv-preview.spec.ts
 import { test, expect } from '@playwright/test';
 
 const TEST_FLOW_ID = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';

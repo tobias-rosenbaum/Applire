@@ -1,4 +1,4 @@
-// tests/e2e/photo-sprint14.spec.ts
+// tests/e2e/oq/photo-management.spec.ts
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
