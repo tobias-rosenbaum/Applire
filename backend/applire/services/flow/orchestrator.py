@@ -58,8 +58,8 @@ VALID_TRANSITIONS: dict[str, list[str]] = {
 _ARTIFACT_FIELD: dict[str, str] = {
     "gap_analysis":   "gap_analysis_id",
     "interview":      "interview_session_id",
-    # cv_generation records the generated_cv_id when the caller advances to this step.
-    "cv_generation":  "generated_cv_id",
+    # generated_cv_id is recorded when the CV page advances to complete
+    "complete":       "generated_cv_id",
 }
 
 

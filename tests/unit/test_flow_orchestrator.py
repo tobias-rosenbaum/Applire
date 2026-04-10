@@ -54,6 +54,7 @@ async def db():
     import applire.models.cv         # noqa: F401
     import applire.models.session    # noqa: F401
     import applire.models.flow       # noqa: F401
+    import applire.models.application  # noqa: F401
     import applire.models.uploads    # noqa: F401
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
@@ -286,6 +287,61 @@ async def test_advance_flow_writes_artifact_fk(db, user_and_job):
 
 
 @pytest.mark.asyncio
+async def test_advance_flow_cv_generation_no_artifact_succeeds(db, user_and_job):
+    """interview → cv_generation requires no artifact_id."""
+    _, job = user_and_job
+    flow_resp = await create_flow(CreateFlowRequest(job_id=job.id), _STUB_USER_ID, db)
+    flow_id = flow_resp.flow_id
+
+    await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
+
+    # cv_generation must succeed without artifact_id
+    result = await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+    assert result.current_step == "cv_generation"
+
+
+@pytest.mark.asyncio
+async def test_advance_flow_complete_requires_artifact(db, user_and_job):
+    """cv_generation → complete requires artifact_id (generated_cv_id)."""
+    _, job = user_and_job
+    flow_resp = await create_flow(CreateFlowRequest(job_id=job.id), _STUB_USER_ID, db)
+    flow_id = flow_resp.flow_id
+
+    await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+
+    with pytest.raises(ArtifactRequiredError) as exc_info:
+        await advance_flow(flow_id, AdvanceFlowRequest(step="complete"), db)
+
+    assert exc_info.value.step == "complete"
+    assert exc_info.value.field == "generated_cv_id"
+
+
+@pytest.mark.asyncio
+async def test_advance_flow_complete_writes_generated_cv_id(db, user_and_job):
+    """generated_cv_id is persisted on the flow record when advancing to complete."""
+    from applire.models.flow import FlowSession
+    from sqlalchemy import select
+
+    _, job = user_and_job
+    flow_resp = await create_flow(CreateFlowRequest(job_id=job.id), _STUB_USER_ID, db)
+    flow_id = flow_resp.flow_id
+    cv_id = uuid.uuid4()
+
+    await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="complete", artifact_id=cv_id), db)
+
+    result = await db.execute(select(FlowSession).where(FlowSession.id == flow_id))
+    flow = result.scalar_one()
+    assert flow.generated_cv_id == cv_id
+    assert flow.completed_at is not None
+
+
+@pytest.mark.asyncio
 async def test_advance_flow_sets_completed_at(db, user_and_job):
     """Advancing to 'complete' sets completed_at."""
     from applire.models.flow import FlowSession
@@ -295,11 +351,11 @@ async def test_advance_flow_sets_completed_at(db, user_and_job):
     flow_resp = await create_flow(CreateFlowRequest(job_id=job.id), _STUB_USER_ID, db)
     flow_id = flow_resp.flow_id
 
-    # Drive to cv_generation step (cv_generation now requires artifact_id = generated_cv_id)
+    # Drive to complete step; cv_generation requires no artifact, complete requires generated_cv_id
     await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
     await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="complete"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="complete", artifact_id=uuid.uuid4()), db)
 
     result = await db.execute(select(FlowSession).where(FlowSession.id == flow_id))
     flow = result.scalar_one()
@@ -338,11 +394,11 @@ async def test_advance_flow_from_complete_raises(db, user_and_job):
     flow_resp = await create_flow(CreateFlowRequest(job_id=job.id), _STUB_USER_ID, db)
     flow_id = flow_resp.flow_id
 
-    # Reach complete (cv_generation requires artifact_id = generated_cv_id)
+    # Reach complete; cv_generation requires no artifact, complete requires generated_cv_id
     await advance_flow(flow_id, AdvanceFlowRequest(step="gap_analysis", artifact_id=uuid.uuid4()), db)
     await advance_flow(flow_id, AdvanceFlowRequest(step="interview", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation", artifact_id=uuid.uuid4()), db)
-    await advance_flow(flow_id, AdvanceFlowRequest(step="complete"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)
+    await advance_flow(flow_id, AdvanceFlowRequest(step="complete", artifact_id=uuid.uuid4()), db)
 
     with pytest.raises(InvalidTransitionError) as exc_info:
         await advance_flow(flow_id, AdvanceFlowRequest(step="cv_generation"), db)

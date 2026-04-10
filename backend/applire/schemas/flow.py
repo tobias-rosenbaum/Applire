@@ -66,7 +66,7 @@ class AdvanceFlowRequest(BaseModel):
     # Required when advancing into a step that produces an artifact:
     #   gap_analysis    → gap_analysis_id
     #   interview       → interview_session_id
-    #   cv_generation   → generated_cv_id
+    #   complete        → generated_cv_id
     artifact_id: uuid.UUID | None = None
 
 
