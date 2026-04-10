@@ -14,7 +14,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  
+  testIgnore: ['**/pq/**'], // PQ tests require real LLM — run via workflow_dispatch only
+
   /**
    * Test execution settings
    */
