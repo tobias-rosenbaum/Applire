@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from applire.models.cv import CVGenerationStatus
 
@@ -35,34 +35,47 @@ class CVStatusResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+def _coerce_none_str(cls, v):
+    """Coerce None to empty string for CV tailoring string fields."""
+    return v if v is not None else ""
+
+
 class TailoredWorkEntry(BaseModel):
-    company: str
-    role: str
-    start_date: str
+    company: str = ""
+    role: str = ""
+    start_date: str = ""
     end_date: str | None = None
     bullets: list[str] = []
 
+    _coerce_fields = field_validator("company", "role", "start_date", mode="before")(_coerce_none_str)
+
 
 class TailoredEducationEntry(BaseModel):
-    institution: str
-    degree: str
+    institution: str = ""
+    degree: str = ""
     field: str = ""
     start_date: str = ""
     end_date: str | None = None
 
+    _coerce_fields = field_validator("institution", "degree", "field", "start_date", mode="before")(_coerce_none_str)
+
 
 class TailoredLanguage(BaseModel):
-    language: str
-    level: str
+    language: str = ""
+    level: str = ""
+
+    _coerce_fields = field_validator("language", "level", mode="before")(_coerce_none_str)
 
 
 class TailoredContact(BaseModel):
     name: str = ""
     email: str | None = None
     phone: str | None = None
-    location: str | None = None
+    location: str = ""
     linkedin: str | None = None
     photo_url: str | None = None  # ADR-021; file path resolved to base64 URI at render time
+
+    _coerce_fields = field_validator("name", "location", mode="before")(_coerce_none_str)
 
 
 class TailoredCVData(BaseModel):
