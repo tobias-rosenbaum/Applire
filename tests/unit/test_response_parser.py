@@ -929,7 +929,8 @@ class TestNewProfileServiceDB:
         from applire.services.profile import import_from_linkedin
 
         provider = _make_mock_provider(_minimal_llm_profile_data())
-        result = await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
+        with patch("applire.services.profile.LLM_REVIEW_MAX_RETRIES", 0):
+            result = await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
 
         assert result is not None
         provider.aparse_json.assert_called_once()
@@ -940,10 +941,11 @@ class TestNewProfileServiceDB:
 
         provider = _make_mock_provider(_minimal_llm_profile_data())
 
-        # First import
-        await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
-        # Second import — should merge
-        result = await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
+        with patch("applire.services.profile.LLM_REVIEW_MAX_RETRIES", 0):
+            # First import
+            await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
+            # Second import — should merge
+            result = await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
 
         assert result is not None
         assert provider.aparse_json.call_count == 2

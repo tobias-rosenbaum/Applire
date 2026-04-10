@@ -19,6 +19,7 @@ _render_cv_background:
 """
 
 import base64 as _base64
+import json as _json
 import logging
 import re
 import uuid
@@ -40,10 +41,20 @@ from applire.models.cv import CVGenerationStatus, GeneratedCV
 from applire.models.gap import GapAnalysis
 from applire.models.job import JobAnalysis
 from applire.models.profile import MasterProfile
-from applire.prompts.cv_tailoring import SYSTEM_PROMPT, build_user_prompt
+from applire.prompts.cv_tailoring import (
+    SYSTEM_PROMPT,
+    build_retry_prompt as _build_cv_retry_prompt,
+    build_user_prompt,
+)
+from applire.prompts.review_cv_tailoring import (
+    REVIEW_SYSTEM_PROMPT as _CV_REVIEW_SYSTEM_PROMPT,
+    build_review_prompt as _build_cv_review_prompt,
+)
 from applire.providers import get_provider
 from applire.providers.llm.base import LLMProvider
 from applire.schemas.cv import CVGenerateResponse, CVStatusResponse, CVTemplate, TailoredCVData
+from applire.services.reviewer import review_and_refine
+from applire.constants import LLM_REVIEW_MAX_RETRIES
 
 logger = logging.getLogger(__name__)
 
@@ -338,6 +349,22 @@ async def _render_cv_background(
                 system=SYSTEM_PROMPT,
                 temperature=0.3,
                 max_tokens=8192,
+            )
+
+            source_material = _json.dumps(profile.profile_json, ensure_ascii=False, indent=2)
+
+            def _cv_retry_prompt(source: str, draft: dict, feedback: str) -> str:
+                return _build_cv_retry_prompt(job_dict, source, draft, feedback)
+
+            tailored_raw = await review_and_refine(
+                source=source_material,
+                draft=tailored_raw,
+                generator_prompt_fn=_cv_retry_prompt,
+                generator_system=SYSTEM_PROMPT,
+                reviewer_prompt_fn=_build_cv_review_prompt,
+                reviewer_system=_CV_REVIEW_SYSTEM_PROMPT,
+                provider=provider,
+                max_retries=LLM_REVIEW_MAX_RETRIES,
             )
 
             tailored = TailoredCVData.model_validate(tailored_raw)
