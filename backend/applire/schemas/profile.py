@@ -127,6 +127,8 @@ class Skill(BaseModel):
     @field_validator("proficiency", mode="before")
     @classmethod
     def normalize_proficiency(cls, v: object) -> object:
+        if v is None:
+            return "intermediate"
         if isinstance(v, str):
             normalized = _PROFICIENCY_ALIASES.get(v.lower())
             if normalized:
