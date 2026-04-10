@@ -1,3 +1,4 @@
+// tests/e2e/pq/marcus-new-user-journey.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
@@ -6,21 +7,20 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Sprint 5 (Iteration 19) E2E Tests
+ * Marcus — New User Journey (PQ)
  *
- * Covers:
- *  - Full Interview Mode: start → answer questions → completion screen → CTA
- *  - Gap-Click Mode: click gap → answer one question → gap resolves visually
- *  - Done-signal UX: "I'm done" button + confirmation
- *  - Session resume banner
- *  - Conflict resolution inline card
+ * Covers the full happy path for a new Marcus-persona user:
+ *   CV upload → JD analysis → gap detection → interview → CV generation
  *
- * These tests require the full stack to be running (docker compose up).
- * LLM calls go through the mock provider (LLM_PROVIDER=mock) — no real API key required.
+ * PQ tier: requires the full Docker stack AND a real LLM via OpenRouter.
+ * Run locally:   OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts
+ * Run in CI:     Trigger the "PQ Tests" workflow_dispatch in GitHub Actions.
+ *
+ * DO NOT run this file with the standard `npx playwright test` command.
  */
 
-const CV_PATH = path.join(__dirname, '../fixtures/profiles/sample_cv.pdf');
-const JD_TEXT = fs.readFileSync(path.join(__dirname, '../fixtures/JDs/sample_jd.txt'), 'utf-8');
+const CV_PATH = path.join(__dirname, '../../fixtures/profiles/sample_cv.pdf');
+const JD_TEXT = fs.readFileSync(path.join(__dirname, '../../fixtures/JDs/sample_jd.txt'), 'utf-8');
 
 // ---------------------------------------------------------------------------
 // Helper: navigate to gaps page from scratch
