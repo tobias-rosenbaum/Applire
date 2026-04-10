@@ -60,3 +60,34 @@ class TestProfileExtractionReviewPrompts:
 
         assert isinstance(REVIEW_SYSTEM_PROMPT, str)
         assert len(REVIEW_SYSTEM_PROMPT) > 100
+
+
+class TestProfileExtractionGeneratorPrompts:
+    def test_build_user_prompt_includes_raw_text(self):
+        from applire.prompts.profile_extraction import build_user_prompt
+
+        result = build_user_prompt("Max Muster — Acme GmbH")
+        assert "Max Muster" in result
+        assert "exactly once" in result  # grounding reminder
+
+    def test_build_retry_prompt_includes_feedback(self):
+        from applire.prompts.profile_extraction import build_retry_prompt
+
+        result = build_retry_prompt(
+            raw_text="Acme GmbH 2020-2022",
+            previous_draft={"work_history": []},
+            feedback="Remove duplicate at index 1",
+        )
+        assert "Remove duplicate at index 1" in result
+        assert "Acme GmbH 2020-2022" in result
+
+    def test_build_retry_prompt_includes_previous_draft(self):
+        from applire.prompts.profile_extraction import build_retry_prompt
+
+        previous = {"work_history": [{"company": "Acme"}]}
+        result = build_retry_prompt(
+            raw_text="source",
+            previous_draft=previous,
+            feedback="fix it",
+        )
+        assert "Acme" in result

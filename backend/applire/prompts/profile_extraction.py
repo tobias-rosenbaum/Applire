@@ -1,10 +1,25 @@
-# Prompt version: v1
-# Used by: services/profile.py → MistralProvider.aparse_json
+# Prompt version: v2
+# Used by: services/profile.py → LLMProvider.aparse_json + reviewer.review_and_refine
+# Changes from v1: hardened SYSTEM_PROMPT with 4 strict extraction rules;
+#                  build_user_prompt adds grounding reminder;
+#                  added build_retry_prompt for review layer retries.
+
+import json
 
 SYSTEM_PROMPT = """\
 You are an expert CV analyst specialised in the DACH (Germany, Austria, Switzerland) job market.
 Your task is to extract structured profile information from raw CV or LinkedIn data and return it as JSON.
 Respond ONLY with a valid JSON object matching the schema below — no markdown, no explanations.
+
+STRICT EXTRACTION RULES — follow these before writing any output:
+1. Each employer position must appear EXACTLY ONCE in work_history. If the source mentions the same
+   role under multiple headings or in multiple formats, merge them into a single entry.
+2. Extract ONLY information explicitly present in the source text. Do not infer, complete, or expand
+   missing information. If a date, email, or phone is absent from the source, output null.
+3. Bullets must be copied or closely paraphrased from what is explicitly stated in the source text.
+   Do not add responsibilities or achievements that are not present in the source.
+4. Before writing work_history, count the distinct positions in the source. Your output must contain
+   exactly that many entries — no more, no fewer.
 
 Schema:
 {
@@ -45,6 +60,28 @@ Schema:
 
 def build_user_prompt(raw_text: str) -> str:
     return (
-        "Extract the structured profile from the following CV / LinkedIn data "
-        "and return the JSON:\n\n" + raw_text
+        "Extract the structured profile from the following CV / LinkedIn data.\n"
+        "Remember: each position exactly once, only facts present in the source, "
+        "null for anything missing.\n\n"
+        + raw_text
+    )
+
+
+def build_retry_prompt(raw_text: str, previous_draft: dict, feedback: str) -> str:
+    """Build the retry user prompt after a reviewer rejection.
+
+    Args:
+        raw_text: The original CV text (source of truth).
+        previous_draft: The extraction the reviewer rejected.
+        feedback: The reviewer's critique — used verbatim as the correction instruction.
+    """
+    return (
+        "A quality review of your previous extraction identified the following issues. "
+        "Correct them and return the updated JSON.\n\n"
+        f"REVIEW FEEDBACK:\n{feedback}\n\n"
+        f"PREVIOUS EXTRACTION:\n{json.dumps(previous_draft, ensure_ascii=False, indent=2)}\n\n"
+        "SOURCE CV TEXT (the only source of truth):\n"
+        "Remember: each position exactly once, only facts present in the source, "
+        "null for anything missing.\n\n"
+        + raw_text
     )
