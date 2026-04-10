@@ -5,6 +5,7 @@
 #                  added build_retry_prompt for review layer retries.
 
 import json
+from typing import Any
 
 SYSTEM_PROMPT = """\
 You are an expert CV analyst specialised in the DACH (Germany, Austria, Switzerland) job market.
@@ -67,7 +68,7 @@ def build_user_prompt(raw_text: str) -> str:
     )
 
 
-def build_retry_prompt(raw_text: str, previous_draft: dict, feedback: str) -> str:
+def build_retry_prompt(raw_text: str, previous_draft: dict[str, Any], feedback: str) -> str:
     """Build the retry user prompt after a reviewer rejection.
 
     Args:
@@ -82,6 +83,7 @@ def build_retry_prompt(raw_text: str, previous_draft: dict, feedback: str) -> st
         f"PREVIOUS EXTRACTION:\n{json.dumps(previous_draft, ensure_ascii=False, indent=2)}\n\n"
         "SOURCE CV TEXT (the only source of truth):\n"
         "Remember: each position exactly once, only facts present in the source, "
-        "null for anything missing.\n\n"
+        "null for anything missing. Count the distinct positions again before writing work_history.\n\n"
+        "---\n\n"
         + raw_text
     )

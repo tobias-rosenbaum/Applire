@@ -80,6 +80,7 @@ class TestProfileExtractionGeneratorPrompts:
         )
         assert "Remove duplicate at index 1" in result
         assert "Acme GmbH 2020-2022" in result
+        assert "return the updated JSON" in result
 
     def test_build_retry_prompt_includes_previous_draft(self):
         from applire.prompts.profile_extraction import build_retry_prompt
