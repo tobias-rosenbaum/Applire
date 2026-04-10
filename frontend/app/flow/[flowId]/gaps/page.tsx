@@ -472,7 +472,7 @@ export default function GapsPage({
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-warning mt-2 shrink-0" />
+                    <div data-testid="gap-c-severity-dot" className="w-2 h-2 rounded-full bg-critical mt-2 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-neutral-dark">{gap}</p>
                       <p className="text-sm text-gray-500 italic mt-0.5">
@@ -505,7 +505,7 @@ export default function GapsPage({
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-teal mt-2 shrink-0" />
+                    <div data-testid="gap-b-severity-dot" className="w-2 h-2 rounded-full bg-warning mt-2 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-neutral-dark">{gap}</p>
