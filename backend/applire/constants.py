@@ -19,3 +19,9 @@ INTERVIEW_TARGET_MIN_GUIDED: int = 5
 INTERVIEW_MAX_QUESTIONS_PER_GAP: int = int(
     os.environ.get("INTERVIEW_MAX_QUESTIONS_PER_GAP", "3")
 )
+
+# LLM review layer — retry ceiling (ADR-021, Sprint 20)
+# Set LLM_REVIEW_MAX_RETRIES=0 to disable the review layer entirely.
+LLM_REVIEW_MAX_RETRIES: int = int(
+    os.environ.get("LLM_REVIEW_MAX_RETRIES", "2")
+)

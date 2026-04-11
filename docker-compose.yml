@@ -21,6 +21,9 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env.dev
+    # LLM review layer — max generator retries per reviewed step (0 = disabled).
+    # Increase to 3 for higher quality at the cost of more LLM tokens.
+    # LLM_REVIEW_MAX_RETRIES=2
     ports:
       - "8001:8000"
     depends_on:

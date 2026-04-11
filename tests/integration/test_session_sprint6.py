@@ -134,12 +134,15 @@ class TestSprint6FullFlow:
         assert len(flow_and_cv["cv_id"]) == 36
 
     def test_flow_state_has_cv_summary_after_advance(self, api, flow_and_cv):
-        """After advance to cv_generation, flow state has cv_summary (20.9)."""
+        """At cv_generation step, cv_summary is None — generated_cv_id is only written
+        when the flow advances to complete (commit 56daf05)."""
         r = requests.get(f"{api}/api/flow/{flow_and_cv['flow_id']}/state", timeout=10)
         assert r.status_code == 200
         state = r.json()
-        assert state.get("cv_summary") is not None, "cv_summary should be set after advance"
-        assert state["cv_summary"]["cv_id"] == flow_and_cv["cv_id"]
+        assert state.get("current_step") == "cv_generation"
+        assert state.get("cv_summary") is None, (
+            "cv_summary should be None at cv_generation — it is populated after advancing to complete"
+        )
 
     def test_flow_state_current_step_is_cv_generation(self, api, flow_and_cv):
         r = requests.get(f"{api}/api/flow/{flow_and_cv['flow_id']}/state", timeout=10)
@@ -149,7 +152,7 @@ class TestSprint6FullFlow:
     def test_advance_to_complete_finalizes_flow(self, api, flow_and_cv):
         r = requests.post(
             f"{api}/api/flow/{flow_and_cv['flow_id']}/advance",
-            json={"step": "complete"},
+            json={"step": "complete", "artifact_id": flow_and_cv["cv_id"]},
             timeout=10,
         )
         assert r.status_code == 200

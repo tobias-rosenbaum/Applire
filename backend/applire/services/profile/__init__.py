@@ -11,6 +11,7 @@ from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from applire.constants import LLM_REVIEW_MAX_RETRIES
 from applire.models.profile import MasterProfile
 from applire.models.uploads import UploadRecord
 from applire.prompts.cv_extraction import (
@@ -19,12 +20,21 @@ from applire.prompts.cv_extraction import (
     build_generic_prompt,
     build_jd_aware_prompt,
 )
-from applire.prompts.profile_extraction import SYSTEM_PROMPT, build_user_prompt
+from applire.prompts.profile_extraction import (
+    SYSTEM_PROMPT,
+    build_retry_prompt as _build_extraction_retry_prompt,
+    build_user_prompt,
+)
+from applire.prompts.review_profile_extraction import (
+    REVIEW_SYSTEM_PROMPT as _EXTRACTION_REVIEW_SYSTEM_PROMPT,
+    build_review_prompt as _build_extraction_review_prompt,
+)
 from applire.providers.embedding.base import EmbeddingProvider
 from applire.providers.embedding.noop import NoopEmbeddingProvider
 from applire.providers.llm.base import LLMProvider
 from applire.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from applire.services.profile.merge import merge_profiles
+from applire.services.reviewer import review_and_refine
 from applire.schemas.profile import (
     ConflictSummary,
     CVUploadResponse,
@@ -215,6 +225,16 @@ async def _import_from_text(
         build_user_prompt(raw_text),
         system=SYSTEM_PROMPT,
         temperature=0.1,
+    )
+    data = await review_and_refine(
+        source=raw_text,
+        draft=data,
+        generator_prompt_fn=_build_extraction_retry_prompt,
+        generator_system=SYSTEM_PROMPT,
+        reviewer_prompt_fn=_build_extraction_review_prompt,
+        reviewer_system=_EXTRACTION_REVIEW_SYSTEM_PROMPT,
+        provider=provider,
+        max_retries=LLM_REVIEW_MAX_RETRIES,
     )
     incoming = MasterProfileData.model_validate(data)
     now = datetime.now(timezone.utc)
