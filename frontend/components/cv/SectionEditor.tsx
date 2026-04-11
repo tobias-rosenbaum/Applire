@@ -25,9 +25,10 @@ interface SectionEditorProps {
   section: SectionItem;
   onSaved: (updatedHtml: string, savedContent: string, resolvedGaps: string[]) => void;
   onUnsavedChange: (hasUnsaved: boolean) => void;
+  onAddressGap?: (gapId: string) => void;
 }
 
-export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: SectionEditorProps) {
+export function SectionEditor({ cvId, section, onSaved, onUnsavedChange, onAddressGap }: SectionEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(section.content);
   const [savedContent, setSavedContent] = useState(section.content);
@@ -109,14 +110,6 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
     setVisibleGaps((prev) => prev.filter((g) => g.id !== gapId));
   }
 
-  function handleAcceptSuggestion(suggestion: string, focus: boolean) {
-    setContent(suggestion);
-    onUnsavedChange(suggestion !== savedContent);
-    if (focus) {
-      setTimeout(() => textareaRef.current?.focus(), 0);
-    }
-  }
-
   const hasUnsaved = content !== savedContent;
 
   return (
@@ -174,10 +167,8 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange }: Secti
             <GapHint
               key={gap.id}
               gap={gap}
-              cvId={cvId}
-              sectionId={section.section_id}
               onDismiss={handleDismissGap}
-              onAcceptSuggestion={handleAcceptSuggestion}
+              onAddressGap={onAddressGap ?? (() => {})}
             />
           ))}
         </div>
