@@ -1,10 +1,12 @@
 // frontend/app/flow/[flowId]/cv/page.tsx
 "use client";
 
+import { useRef } from "react";
 import { use, useEffect, useState } from "react";
 import { TemplateSelector } from "@/components/cv/TemplateSelector";
 import { GenerationProgress } from "@/components/cv/GenerationProgress";
-import { CVPreview } from "@/components/cv/CVPreview";
+import { CVDocument, type CVDocumentHandle } from "@/components/cv/CVDocument";
+import { RefinementPanel } from "@/components/cv/RefinementPanel";
 import { WhatNext } from "@/components/cv/WhatNext";
 import { PhotoPromptStep } from "@/components/cv/PhotoPromptStep";
 
@@ -16,7 +18,7 @@ type CVTemplate = "classic_german" | "modern_swiss";
 interface FlowState {
   job_id: string;
   job_summary?: { role_title: string } | null;
-  gap_summary?: { match_score: number } | null;
+  gap_summary?: { match_score: number; gaps?: Array<{ id: string; label: string }>; sections?: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }> } | null;
   cv_summary?: { cv_id: string; pdf_url: string; expires_at: string } | null;
 }
 
@@ -34,6 +36,8 @@ export default function CVPage({
   const [isGenerating, setIsGenerating] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
 
+  const cvDocRef = useRef<CVDocumentHandle>(null);
+
   // Restore state from server on mount — skip template picker if CV already exists
   useEffect(() => {
     async function init() {
@@ -43,7 +47,6 @@ export default function CVPage({
         const fs: FlowState = await res.json();
         setFlowState(fs);
         if (fs.cv_summary?.cv_id) {
-          // CV already exists — go straight to preview
           setCvId(fs.cv_summary.cv_id);
           setPhase("preview");
           return;
@@ -57,7 +60,6 @@ export default function CVPage({
               profileData?.profile?.personal_info?.photo_url ?? null;
             setProfilePhotoUrl(photoUrl);
             if (!photoUrl) {
-              // First-time user without photo — prompt them
               setPhase("photo_prompt");
             }
           }
@@ -82,7 +84,6 @@ export default function CVPage({
         body: JSON.stringify({ job_id: flowState.job_id, template: tpl }),
       });
       if (!res.ok) return;
-      // Only cv_id, status, expires_at are returned — NOT html_url/pdf_url
       const data: { cv_id: string; status: string; expires_at: string } = await res.json();
       setCvId(data.cv_id);
       setPhase("generating");
@@ -93,9 +94,6 @@ export default function CVPage({
 
   function handleReady(readyCvId: string) {
     setCvId(readyCvId);
-    // Advance flow to "complete", recording the generated_cv_id as the artifact.
-    // Then refresh flow state so cv_summary (pdf_url, expires_at) is populated
-    // for CVPreview.
     fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -106,6 +104,76 @@ export default function CVPage({
       .then((fs: FlowState) => setFlowState(fs))
       .catch(() => {});
     setPhase("preview");
+  }
+
+  async function handleDownloadPdf() {
+    try {
+      const res = await fetch(`${API_BASE}/api/cv/${cvId}/pdf`);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `lebenslauf-${cvId!.slice(0, 8)}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail
+    }
+  }
+
+  // --- Preview phase: 70/30 split ---
+  if (phase === "preview" && cvId) {
+    const isExpired = flowState?.cv_summary
+      ? new Date(flowState.cv_summary.expires_at) < new Date()
+      : false;
+
+    const expiryWarning = isExpired
+      ? { level: "critical" as const, expiresIn: "Abgelaufen" }
+      : flowState?.cv_summary
+        ? { level: "warning" as const, expiresIn: `VerfÃ¼gbar bis ${new Date(flowState.cv_summary.expires_at).toLocaleDateString("de-DE")}` }
+        : null;
+
+    return (
+      <div className="p-6 min-h-screen bg-neutral-light" data-testid="cv-page">
+        <div className="flex w-full h-[calc(100vh-56px)] gap-0">
+          <div className="flex-1 flex flex-col min-w-0 px-6 py-4 gap-3 bg-neutral-light overflow-hidden">
+            {flowState?.job_summary && (
+              <h2 className="text-lg font-heading font-bold text-neutral-dark leading-snug">
+                {flowState.job_summary.role_title}
+              </h2>
+            )}
+            <CVDocument
+              cvId={cvId}
+              ref={cvDocRef}
+              className="flex-1"
+            />
+          </div>
+          <RefinementPanel
+            cvId={cvId}
+            jobSummary={flowState?.job_summary?.role_title ?? null}
+            gapSummary={{
+              gaps: (flowState?.gap_summary as any)?.gaps ?? [],
+              sections: (flowState?.gap_summary as any)?.sections ?? [],
+            }}
+            cvSummary={{
+              sections: (flowState?.cv_summary as any)?.sections ?? [],
+            }}
+            template={{ label: template === "classic_german" ? "Klassischer Lebenslauf" : "Modern Swiss CV" }}
+            matchScore={flowState?.gap_summary?.match_score ?? null}
+            expiryWarning={expiryWarning}
+            onHtmlRefresh={() => cvDocRef.current?.refresh()}
+            onRegenerateSame={() => void handleGenerate(template)}
+            onRegenerateDifferent={() => setPhase("template_select")}
+            onNext={() => setPhase("complete")}
+            onDownloadPdf={() => void handleDownloadPdf()}
+          />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -128,21 +196,6 @@ export default function CVPage({
           flowId={flowId}
           onReady={handleReady}
           onRetry={() => setPhase("template_select")}
-        />
-      )}
-
-      {phase === "preview" && cvId && (
-        <CVPreview
-          cvId={cvId}
-          template={template}
-          jobSummary={flowState?.job_summary ?? null}
-          gapSummary={flowState?.gap_summary ?? null}
-          cvSummary={flowState?.cv_summary ?? null}
-          onRegenerateDifferent={() => setPhase("template_select")}
-          onRegenerateSame={() => {
-            if (flowState) void handleGenerate(template);
-          }}
-          onNext={() => setPhase("complete")}
         />
       )}
 
