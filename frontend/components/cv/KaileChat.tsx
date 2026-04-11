@@ -1,0 +1,168 @@
+// frontend/components/cv/KaileChat.tsx
+"use client";
+
+import { useState, type ChangeEvent } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
+interface GapItem {
+  id: string;
+  label: string;
+}
+
+interface KaileChatProps {
+  cvId: string;
+  sectionId: string;
+  gaps: GapItem[];
+  preSelectedGapIds: string[];
+  onApply: (suggestion: string) => void;
+  onEditFirst: (suggestion: string) => void;
+  onCancel: () => void;
+}
+
+export function KaileChat({
+  cvId,
+  sectionId,
+  gaps,
+  preSelectedGapIds,
+  onApply,
+  onEditFirst,
+  onCancel,
+}: KaileChatProps) {
+  const [directions, setDirections] = useState("");
+  const [selectedGaps, setSelectedGaps] = useState<Set<string>>(
+    new Set(preSelectedGapIds),
+  );
+  const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+
+  const toggleGap = (gapId: string) => {
+    setSelectedGaps((prev) => {
+      const next = new Set(prev);
+      if (next.has(gapId)) {
+        next.delete(gapId);
+      } else {
+        next.add(gapId);
+      }
+      return next;
+    });
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setSuggestion(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/cv/${cvId}/sections/${sectionId}/rewrite`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            directions,
+            gap_ids: Array.from(selectedGaps),
+          }),
+        },
+      );
+      const data = await res.json();
+      setSuggestion(data.suggestion);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (suggestion) {
+    return (
+      <div className="border border-neutral-medium rounded-lg p-3 bg-white">
+        <h4 className="text-sm font-medium text-neutral-dark mb-2">
+          Kailes Vorschlag
+        </h4>
+        <p
+          className="text-sm text-neutral-darker bg-neutral-light p-3 rounded whitespace-pre-wrap"
+          data-testid="kaile-suggestion"
+        >
+          {suggestion}
+        </p>
+        <div className="flex gap-2 mt-3">
+          <button
+            type="button"
+            onClick={() => onApply(suggestion)}
+            className="text-xs bg-teal text-white px-3 py-1.5 rounded hover:opacity-90 transition-opacity"
+            data-testid="apply-suggestion-btn"
+          >
+            Anwenden
+          </button>
+          <button
+            type="button"
+            onClick={() => onEditFirst(suggestion)}
+            className="text-xs border border-teal text-teal px-3 py-1.5 rounded hover:bg-teal hover:text-white transition-colors"
+            data-testid="edit-first-btn"
+          >
+            Erst bearbeiten
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs text-gray-500 underline"
+            data-testid="discard-suggestion-btn"
+          >
+            Verwerfen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-neutral-medium rounded-lg p-3 bg-white">
+      <h4 className="text-sm font-medium text-neutral-dark mb-2">
+        Anweisungen an Kaile
+      </h4>
+      {gaps.length > 0 && (
+        <>
+          <p className="text-xs text-neutral-dark mb-2">
+            L&uuml;cken ber&uuml;cksichtigen:
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {gaps.map((gap) => (
+              <button
+                key={gap.id}
+                type="button"
+                onClick={() => toggleGap(gap.id)}
+                data-selected={selectedGaps.has(gap.id) ? "true" : "false"}
+                data-testid={`gap-chip-${gap.label}`}
+                className="text-xs px-2 py-1 rounded border transition-colors data-[selected=true]:bg-teal data-[selected=true]:text-white data-[selected=true]:border-teal data-[selected=false]:border-neutral-medium text-neutral-darker"
+              >
+                {gap.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <textarea
+        value={directions}
+        onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+          setDirections(e.target.value)
+        }
+        placeholder="z.B. Erwaehne, dass ich auch Chromatografie-Analyse gemacht habe..."
+        className="w-full text-sm border border-neutral-medium rounded p-2 resize-none focus:outline-none focus:ring-2 focus:ring-teal/50"
+        rows={3}
+        data-testid="kaile-directions-input"
+      />
+      <div className="flex gap-2 mt-3">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={loading}
+          data-testid="kaile-rewrite-btn"
+          className="text-xs bg-teal text-white px-3 py-1.5 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {loading ? (
+            <span data-testid="kaile-loading">Wird umgeschrieben...</span>
+          ) : (
+            "\u21bb Abschnitt umschreiben"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
