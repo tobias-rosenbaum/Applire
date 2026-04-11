@@ -1,8 +1,14 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
 import { GapHint } from "../GapHint";
 
 const GAP = { id: "Python", label: "Python" };
+
+const BASE_PROPS = {
+  gap: GAP,
+  onDismiss: vi.fn(),
+  onAddressGap: vi.fn(),
+};
 
 describe("GapHint", () => {
   afterEach(() => {
@@ -10,65 +16,28 @@ describe("GapHint", () => {
   });
 
   it("renders gap label", () => {
-    render(
-      <GapHint
-        gap={GAP}
-        cvId="cv-1"
-        sectionId="introduction"
-        onDismiss={vi.fn()}
-        onAcceptSuggestion={vi.fn()}
-      />
-    );
+    render(<GapHint {...BASE_PROPS} />);
     expect(screen.getByText("Python")).toBeTruthy();
   });
 
-  it("'Selbst schreiben' button calls onDismiss", () => {
+  it("'Selbst schreiben' button calls onDismiss with gap id", () => {
     const onDismiss = vi.fn();
-    render(
-      <GapHint
-        gap={GAP}
-        cvId="cv-1"
-        sectionId="introduction"
-        onDismiss={onDismiss}
-        onAcceptSuggestion={vi.fn()}
-      />
-    );
+    render(<GapHint {...BASE_PROPS} onDismiss={onDismiss} />);
     fireEvent.click(screen.getByTestId("write-myself-btn"));
     expect(onDismiss).toHaveBeenCalledWith("Python");
   });
 
-  it("'Kaile hilft' button is enabled", () => {
-    render(
-      <GapHint
-        gap={GAP}
-        cvId="cv-1"
-        sectionId="introduction"
-        onDismiss={vi.fn()}
-        onAcceptSuggestion={vi.fn()}
-      />
-    );
-    const btn = screen.getByTestId("kaile-help-btn") as HTMLButtonElement;
-    expect(btn.disabled).toBe(false);
+  it("'Kaile hilft' button calls onAddressGap with gap id", () => {
+    const onAddressGap = vi.fn();
+    render(<GapHint {...BASE_PROPS} onAddressGap={onAddressGap} />);
+    fireEvent.click(screen.getByTestId("kaile-help-btn"));
+    expect(onAddressGap).toHaveBeenCalledWith("Python");
   });
 
-  it("clicking 'Kaile hilft' triggers API call and shows question", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ session_id: "s1", question: "Wie lange Python?" }),
-    } as Response);
-
-    render(
-      <GapHint
-        gap={GAP}
-        cvId="cv-1"
-        sectionId="introduction"
-        onDismiss={vi.fn()}
-        onAcceptSuggestion={vi.fn()}
-      />
-    );
-
+  it("'Kaile hilft' button does not open inline session", () => {
+    render(<GapHint {...BASE_PROPS} />);
     fireEvent.click(screen.getByTestId("kaile-help-btn"));
-    await screen.findByTestId("assist-question");
-    expect(screen.getByTestId("assist-question").textContent).toContain("Wie lange Python?");
+    // No AssistMicroSession — no question text should appear
+    expect(screen.queryByTestId("assist-question")).toBeNull();
   });
 });
