@@ -132,6 +132,8 @@ async def delete_scheme(db: AsyncSession, scheme_id: uuid.UUID) -> ColorScheme |
     scheme = await db.get(ColorScheme, scheme_id)
     if scheme is None:
         return None
+    if scheme.is_builtin:
+        raise ValueError(f"Cannot delete builtin scheme {scheme_id}")
     await db.delete(scheme)
     await db.commit()
     return scheme
