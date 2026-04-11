@@ -6,6 +6,8 @@ No Docker, no DB, no LLM.
 Run:
     pytest tests/unit/test_color_schemes.py -v
 """
+import uuid
+
 import pytest
 from applire.services.color_schemes import derive_scheme, _hex_to_hsl, _hsl_to_hex
 
@@ -95,8 +97,6 @@ class TestDeriveScheme:
 
 
 # --- DB service tests (SQLite in-memory) ---
-
-import uuid
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -190,6 +190,19 @@ class TestServiceFunctions:
 
     @pytest.mark.asyncio
     async def test_delete_builtin_raises(self, db, eu_blue):
-        from applire.services.color_schemes import delete_scheme
-        with pytest.raises(ValueError, match="builtin"):
+        from applire.services.color_schemes import delete_scheme, SchemeIsBuiltin
+        with pytest.raises(SchemeIsBuiltin):
             await delete_scheme(db, uuid.UUID("a0000000-0000-0000-0000-000000000001"))
+
+    @pytest.mark.asyncio
+    async def test_delete_active_raises(self, db, eu_blue):
+        from applire.services.color_schemes import create_scheme, activate_scheme, delete_scheme, SchemeIsActive
+        # Create and activate a non-builtin scheme
+        scheme = await create_scheme(
+            db, name="Active", seed_primary="#aabbcc",
+            seed_accent="#112233", seed_secondary="#ddeeff", surface_lightness=0.95,
+        )
+        await activate_scheme(db, scheme.id)
+        # Now scheme is active (not builtin), should raise SchemeIsActive
+        with pytest.raises(SchemeIsActive):
+            await delete_scheme(db, scheme.id)

@@ -1,11 +1,9 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from applire.db.session import get_db
-from applire.models.color_scheme import ColorScheme
 from applire.schemas.color_scheme import (
     ActiveSchemeResponse,
     ColorSchemeCreate,
@@ -13,6 +11,9 @@ from applire.schemas.color_scheme import (
     ColorSchemeResponse,
 )
 from applire.services.color_schemes import (
+    SchemeIsActive,
+    SchemeIsBuiltin,
+    SchemeNotFound,
     activate_scheme,
     create_scheme,
     delete_scheme,
@@ -73,18 +74,14 @@ async def activate(scheme_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/{scheme_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete(scheme_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(ColorScheme).where(ColorScheme.id == scheme_id))
-    target = result.scalar_one_or_none()
-    if target is None:
+    try:
+        await delete_scheme(db, scheme_id)
+    except SchemeNotFound:
         raise HTTPException(status_code=404, detail="Color scheme not found")
-    if target.is_builtin:
+    except SchemeIsBuiltin:
         raise HTTPException(status_code=409, detail="Cannot delete a built-in scheme")
-    if target.is_active:
+    except SchemeIsActive:
         raise HTTPException(
             status_code=409,
             detail="Cannot delete the active scheme — activate another scheme first",
         )
-    try:
-        await delete_scheme(db, scheme_id)
-    except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))

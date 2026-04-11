@@ -9,6 +9,26 @@ from applire.models.color_scheme import ColorScheme
 
 
 # ---------------------------------------------------------------------------
+# Exception hierarchy
+# ---------------------------------------------------------------------------
+
+class SchemeDeleteError(Exception):
+    """Base class for delete_scheme errors."""
+
+
+class SchemeNotFound(SchemeDeleteError):
+    """Raised when the scheme does not exist."""
+
+
+class SchemeIsBuiltin(SchemeDeleteError):
+    """Raised when attempting to delete a built-in scheme."""
+
+
+class SchemeIsActive(SchemeDeleteError):
+    """Raised when attempting to delete the currently active scheme."""
+
+
+# ---------------------------------------------------------------------------
 # Color math helpers
 # ---------------------------------------------------------------------------
 
@@ -128,12 +148,13 @@ async def activate_scheme(db: AsyncSession, scheme_id: uuid.UUID) -> ColorScheme
     return scheme
 
 
-async def delete_scheme(db: AsyncSession, scheme_id: uuid.UUID) -> ColorScheme | None:
+async def delete_scheme(db: AsyncSession, scheme_id: uuid.UUID) -> None:
     scheme = await db.get(ColorScheme, scheme_id)
     if scheme is None:
-        return None
+        raise SchemeNotFound(scheme_id)
     if scheme.is_builtin:
-        raise ValueError(f"Cannot delete builtin scheme {scheme_id}")
+        raise SchemeIsBuiltin(scheme_id)
+    if scheme.is_active:
+        raise SchemeIsActive(scheme_id)
     await db.delete(scheme)
     await db.commit()
-    return scheme
