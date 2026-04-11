@@ -65,7 +65,7 @@ def upgrade() -> None:
             sp="#1B4F72",
             sa="#2A8F9D",
             ss="#C9A84C",
-            sl=0.97,
+            sl=0.80,
             derived=json.dumps(_EU_BLUE_DERIVED),
             created_at=datetime.now(timezone.utc).isoformat(),
         )

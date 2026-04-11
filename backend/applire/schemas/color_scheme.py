@@ -19,7 +19,7 @@ class ColorSchemeCreate(BaseModel):
     seed_primary: str
     seed_accent: str
     seed_secondary: str
-    surface_lightness: float = 0.97
+    surface_lightness: float = 0.80
 
     @field_validator("seed_primary", "seed_accent", "seed_secondary", mode="before")
     @classmethod
@@ -29,8 +29,8 @@ class ColorSchemeCreate(BaseModel):
     @field_validator("surface_lightness")
     @classmethod
     def validate_lightness(cls, v: float) -> float:
-        if not 0.88 <= v <= 0.99:
-            raise ValueError("surface_lightness must be between 0.88 and 0.99")
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("surface_lightness must be between 0.0 and 1.0")
         return v
 
     @field_validator("name")
@@ -48,7 +48,7 @@ class ColorSchemePreviewRequest(BaseModel):
     seed_primary: str
     seed_accent: str
     seed_secondary: str
-    surface_lightness: float = 0.97
+    surface_lightness: float = 0.80
 
     @field_validator("seed_primary", "seed_accent", "seed_secondary", mode="before")
     @classmethod
@@ -58,8 +58,8 @@ class ColorSchemePreviewRequest(BaseModel):
     @field_validator("surface_lightness")
     @classmethod
     def validate_lightness(cls, v: float) -> float:
-        if not 0.88 <= v <= 0.99:
-            raise ValueError("surface_lightness must be between 0.88 and 0.99")
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("surface_lightness must be between 0.0 and 1.0")
         return v
 
 

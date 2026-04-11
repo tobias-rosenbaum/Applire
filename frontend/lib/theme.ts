@@ -8,6 +8,20 @@ export interface SeedColors {
 
 export type DerivedScheme = Record<string, string>;
 
+/** Blend hex_color into white at the given opacity (0-1).
+ *
+ *  opacity=0 → #ffffff, opacity=0.2 → 20% primary + 80% white.
+ */
+function composeRgba(hexColor: string, opacity: number): string {
+  const r = parseInt(hexColor.slice(1, 3), 16);
+  const g = parseInt(hexColor.slice(3, 5), 16);
+  const b = parseInt(hexColor.slice(5, 7), 16);
+  const rI = Math.round(r * opacity + 255 * (1 - opacity));
+  const gI = Math.round(g * opacity + 255 * (1 - opacity));
+  const bI = Math.round(b * opacity + 255 * (1 - opacity));
+  return "#" + [rI, gI, bI].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("");
+}
+
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -48,7 +62,8 @@ function deriveColor(hex: string, lightness: number, saturation: number): string
 }
 
 export function deriveScheme(seeds: SeedColors, surfaceLightness: number): DerivedScheme {
-  const L = surfaceLightness;
+  // 1.0 = pure white surfaces, 0.0 = surfaces match primary color
+  const tintOpacity = 1.0 - surfaceLightness;
   return {
     "--color-primary": seeds.primary.toLowerCase(),
     "--color-primary-container": deriveColor(seeds.primary, 0.90, 0.30),
@@ -59,11 +74,11 @@ export function deriveScheme(seeds: SeedColors, surfaceLightness: number): Deriv
     "--color-gold": seeds.secondary.toLowerCase(),
     "--color-gold-dim": deriveColor(seeds.secondary, 0.20, 1.00),
     "--color-gold-container": deriveColor(seeds.secondary, 0.92, 0.60),
-    "--color-surface-dim": deriveColor(seeds.primary, L, 0.08),
+    "--color-surface-dim": composeRgba(seeds.primary, Math.max(0, tintOpacity - 0.08)),
     "--color-surface-bright": "#ffffff",
-    "--color-surface-container": deriveColor(seeds.primary, Math.max(0, L - 0.02), 0.10),
-    "--color-surface-container-high": deriveColor(seeds.primary, Math.max(0, L - 0.05), 0.12),
-    "--color-surface-container-highest": deriveColor(seeds.primary, Math.max(0, L - 0.08), 0.14),
-    "--color-neutral-light": deriveColor(seeds.primary, L, 0.05),
+    "--color-surface-container": composeRgba(seeds.primary, Math.max(0, tintOpacity - 0.05)),
+    "--color-surface-container-high": composeRgba(seeds.primary, Math.max(0, tintOpacity - 0.02)),
+    "--color-surface-container-highest": composeRgba(seeds.primary, tintOpacity),
+    "--color-neutral-light": composeRgba(seeds.primary, tintOpacity * 0.5),
   };
 }

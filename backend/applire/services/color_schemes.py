@@ -43,9 +43,23 @@ def _hex_to_hsl(hex_color: str) -> tuple[float, float, float]:
     return h, s, l
 
 
+def _compose_rgba(hex_color: str, opacity: float) -> str:
+    """Blend hex_color into white at the given opacity (0-1).
+
+    opacity=0 → #ffffff, opacity=0.2 → 20% primary + 80% white.
+    """
+    r = int(hex_color.lstrip("#")[0:2], 16)
+    g = int(hex_color.lstrip("#")[2:4], 16)
+    b = int(hex_color.lstrip("#")[4:6], 16)
+    r_i = max(0, min(255, round(r * opacity + 255 * (1 - opacity))))
+    g_i = max(0, min(255, round(g * opacity + 255 * (1 - opacity))))
+    b_i = max(0, min(255, round(b * opacity + 255 * (1 - opacity))))
+    return f"#{r_i:02x}{g_i:02x}{b_i:02x}"
+
+
 def _hsl_to_hex(h: float, s: float, l: float) -> str:
     """Convert (h, s, l) with all values in [0, 1] → #rrggbb."""
-    # colorsys expects (h, l, s)
+    # colorsys expects (h, l, s) — note the l/s swap vs our convention
     r, g, b = colorsys.hls_to_rgb(h, l, s)
     r_i = max(0, min(255, round(r * 255)))
     g_i = max(0, min(255, round(g * 255)))
@@ -69,8 +83,14 @@ def derive_scheme(
     seed_secondary: str,
     surface_lightness: float,
 ) -> dict[str, str]:
-    """Derive all 15 CSS custom property values from 3 seeds + surface lightness."""
-    L = surface_lightness
+    """Derive all 15 CSS custom property values from 3 seeds + surface lightness.
+
+    surface_lightness (0.0–1.0):
+      1.0 → surfaces are pure white (no primary tint)
+      0.0 → surfaces match the primary color
+    Internally inverted to tint_opacity so that higher lightness = more white.
+    """
+    tint_opacity = 1.0 - surface_lightness
     return {
         "--color-primary": seed_primary.lower(),
         "--color-primary-container": _derive_color(seed_primary, 0.90, 0.30),
@@ -81,12 +101,12 @@ def derive_scheme(
         "--color-gold": seed_secondary.lower(),
         "--color-gold-dim": _derive_color(seed_secondary, 0.20, 1.00),
         "--color-gold-container": _derive_color(seed_secondary, 0.92, 0.60),
-        "--color-surface-dim": _derive_color(seed_primary, L, 0.08),
+        "--color-surface-dim": _compose_rgba(seed_primary, max(0.0, tint_opacity - 0.08)),
         "--color-surface-bright": "#ffffff",
-        "--color-surface-container": _derive_color(seed_primary, max(0.0, L - 0.02), 0.10),
-        "--color-surface-container-high": _derive_color(seed_primary, max(0.0, L - 0.05), 0.12),
-        "--color-surface-container-highest": _derive_color(seed_primary, max(0.0, L - 0.08), 0.14),
-        "--color-neutral-light": _derive_color(seed_primary, L, 0.05),
+        "--color-surface-container": _compose_rgba(seed_primary, max(0.0, tint_opacity - 0.05)),
+        "--color-surface-container-high": _compose_rgba(seed_primary, max(0.0, tint_opacity - 0.02)),
+        "--color-surface-container-highest": _compose_rgba(seed_primary, tint_opacity),
+        "--color-neutral-light": _compose_rgba(seed_primary, tint_opacity * 0.5),
     }
 
 

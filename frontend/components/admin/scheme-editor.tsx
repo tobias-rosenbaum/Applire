@@ -24,7 +24,7 @@ const NEUTRAL_DEFAULTS: SeedColors = {
   secondary: "#4a4a4a",
 };
 
-const SURFACE_LIGHTNESS_DEFAULT = 0.97;
+const SURFACE_LIGHTNESS_DEFAULT = 0.80;
 
 export function SchemeEditor() {
   const { refreshTheme } = useTheme();
@@ -211,8 +211,8 @@ export function SchemeEditor() {
         </div>
         <input
           type="range"
-          min={88}
-          max={99}
+          min={0}
+          max={100}
           step={1}
           value={Math.round(surfaceLightness * 100)}
           onChange={(e) => setSurfaceLightness(parseInt(e.target.value) / 100)}
@@ -220,9 +220,9 @@ export function SchemeEditor() {
           style={{ accentColor: "var(--color-primary)" }}
         />
         <div className="flex justify-between items-center mt-1">
-          <span className="text-[10px] text-gray-400">Tinted</span>
+          <span className="text-[10px] text-gray-400">Primary</span>
           <code className="text-xs font-semibold" style={{ color: "var(--color-neutral-dark, #2C3E50)" }}>
-            {Math.round((0.99 - surfaceLightness) / 0.11 * 100)}% tint
+            {Math.round(surfaceLightness * 100)}%
           </code>
           <span className="text-[10px] text-gray-400">White</span>
         </div>
