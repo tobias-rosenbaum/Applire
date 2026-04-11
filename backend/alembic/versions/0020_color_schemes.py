@@ -20,21 +20,21 @@ depends_on: Union[str, Sequence[str], None] = None
 _EU_BLUE_ID = "a0000000-0000-0000-0000-000000000001"
 
 _EU_BLUE_DERIVED = {
-    "--color-primary": "#1B4F72",
-    "--color-primary-container": "#D4E6F1",
-    "--color-teal": "#2A8F9D",
-    "--color-teal-dim": "#003a41",
-    "--color-teal-container": "#e3effe",
-    "--color-teal-container-light": "#f7f9ff",
-    "--color-gold": "#C9A84C",
-    "--color-gold-dim": "#755b00",
-    "--color-gold-container": "#ffeec5",
-    "--color-surface-dim": "#f7f9ff",
+    "--color-primary": "#1b4f72",
+    "--color-primary-container": "#dee7ed",
+    "--color-teal": "#2a8f9d",
+    "--color-teal-dim": "#00363d",
+    "--color-teal-container": "#e2f1f3",
+    "--color-teal-container-light": "#f6f8f8",
+    "--color-gold": "#c9a84c",
+    "--color-gold-dim": "#664b00",
+    "--color-gold-container": "#f7f0de",
+    "--color-surface-dim": "#e4eaee",
     "--color-surface-bright": "#ffffff",
-    "--color-surface-container": "#f0f4f9",
-    "--color-surface-container-high": "#e3effe",
-    "--color-surface-container-highest": "#d9e4f4",
-    "--color-neutral-light": "#F5F7FA",
+    "--color-surface-container": "#dde5ea",
+    "--color-surface-container-high": "#d6dfe6",
+    "--color-surface-container-highest": "#d1dce3",
+    "--color-neutral-light": "#e8edf1",
 }
 
 
@@ -58,14 +58,14 @@ def upgrade() -> None:
             "INSERT INTO color_schemes "
             "(id, name, is_active, is_builtin, seed_primary, seed_accent, seed_secondary, "
             "surface_lightness, derived, created_at) VALUES "
-            "(:id, :name, true, true, :sp, :sa, :ss, :sl, :derived::jsonb, :created_at)"
+            "(CAST(:id AS UUID), :name, true, true, :sp, :sa, :ss, :sl, CAST(:derived AS JSONB), CAST(:created_at AS TIMESTAMPTZ))"
         ).bindparams(
             id=_EU_BLUE_ID,
             name="EU Blue",
             sp="#1B4F72",
             sa="#2A8F9D",
             ss="#C9A84C",
-            sl=0.97,
+            sl=0.20,
             derived=json.dumps(_EU_BLUE_DERIVED),
             created_at=datetime.now(timezone.utc).isoformat(),
         )
