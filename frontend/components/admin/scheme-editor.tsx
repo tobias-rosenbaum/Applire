@@ -1,0 +1,266 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { deriveScheme, type DerivedScheme, type SeedColors } from "@/lib/theme";
+import { useTheme } from "@/components/theme-provider";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
+interface SavedScheme {
+  id: string;
+  name: string;
+  is_active: boolean;
+  is_builtin: boolean;
+  seed_primary: string;
+  seed_accent: string;
+  seed_secondary: string;
+  surface_lightness: number;
+  derived: Record<string, string>;
+}
+
+const NEUTRAL_DEFAULTS: SeedColors = {
+  primary: "#4a4a4a",
+  accent: "#4a4a4a",
+  secondary: "#4a4a4a",
+};
+
+export function SchemeEditor() {
+  const { refreshTheme } = useTheme();
+  const [schemes, setSchemes] = useState<SavedScheme[]>([]);
+  const [seeds, setSeeds] = useState<SeedColors>(NEUTRAL_DEFAULTS);
+  const [surfaceLightness, setSurfaceLightness] = useState(0.97);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchSchemes = useCallback(async () => {
+    const res = await fetch(`${API_BASE}/api/admin/color-schemes`);
+    if (res.ok) setSchemes(await res.json());
+  }, []);
+
+  useEffect(() => { fetchSchemes(); }, [fetchSchemes]);
+
+  // Apply derived colors to preview via CSS custom properties on every change
+  useEffect(() => {
+    const derived: DerivedScheme = deriveScheme(seeds, surfaceLightness);
+    for (const [key, value] of Object.entries(derived)) {
+      document.documentElement.style.setProperty(key, value);
+    }
+  }, [seeds, surfaceLightness]);
+
+  function loadScheme(scheme: SavedScheme) {
+    setSeeds({
+      primary: scheme.seed_primary,
+      accent: scheme.seed_accent,
+      secondary: scheme.seed_secondary,
+    });
+    setSurfaceLightness(scheme.surface_lightness);
+    setName(scheme.name);
+  }
+
+  function startNew() {
+    setSeeds(NEUTRAL_DEFAULTS);
+    setSurfaceLightness(0.97);
+    setName("");
+  }
+
+  async function handleSave() {
+    if (!name.trim()) { setError("Please enter a scheme name."); return; }
+    setSaving(true); setError("");
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/color-schemes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          seed_primary: seeds.primary,
+          seed_accent: seeds.accent,
+          seed_secondary: seeds.secondary,
+          surface_lightness: surfaceLightness,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.detail ?? "Save failed.");
+      } else {
+        await fetchSchemes();
+      }
+    } catch { setError("Save failed. Is the backend running?"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleActivate() {
+    const match = schemes.find(
+      (s) =>
+        s.seed_primary === seeds.primary &&
+        s.seed_accent === seeds.accent &&
+        s.seed_secondary === seeds.secondary &&
+        s.surface_lightness === surfaceLightness
+    );
+    if (!match) { setError("Save the scheme first before activating it."); return; }
+    setActivating(true); setError("");
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/color-schemes/${match.id}/activate`, {
+        method: "PATCH",
+      });
+      if (!res.ok) {
+        setError("Activation failed.");
+      } else {
+        await fetchSchemes();
+        refreshTheme();
+      }
+    } catch { setError("Activation failed."); }
+    finally { setActivating(false); }
+  }
+
+  return (
+    <div className="w-[340px] flex-shrink-0 flex flex-col gap-4">
+
+      {/* Saved Schemes */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Saved Schemes
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {schemes.map((scheme) => (
+            <button
+              key={scheme.id}
+              onClick={() => loadScheme(scheme)}
+              className="flex flex-col items-center gap-1"
+              title={scheme.name}
+            >
+              <div
+                className="w-11 h-11 rounded-lg relative"
+                style={{
+                  background: scheme.seed_primary,
+                  boxShadow: scheme.is_active
+                    ? `0 0 0 2px white, 0 0 0 4px ${scheme.seed_secondary}`
+                    : "0 1px 3px rgba(0,0,0,0.15)",
+                }}
+              >
+                <div
+                  className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-sm"
+                  style={{ background: scheme.seed_accent }}
+                />
+              </div>
+              <span className="text-[10px] font-semibold max-w-[44px] truncate" style={{ color: "var(--color-neutral-dark, #2C3E50)" }}>
+                {scheme.name}
+              </span>
+              {scheme.is_active && (
+                <span className="text-[9px] font-semibold" style={{ color: "var(--color-gold)" }}>active</span>
+              )}
+            </button>
+          ))}
+          <button onClick={startNew} className="flex flex-col items-center gap-1 opacity-50 hover:opacity-80">
+            <div className="w-11 h-11 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xl">
+              +
+            </div>
+            <span className="text-[10px] text-gray-400">New</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Seed Colors */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Seed Colors
+        </div>
+        <div className="flex flex-col gap-3">
+          {(
+            [
+              { key: "primary", label: "Primary", desc: "Headings, nav, key surfaces" },
+              { key: "accent", label: "Accent", desc: "Links, interactive elements" },
+              { key: "secondary", label: "Secondary", desc: "Highlights, badges, accents" },
+            ] as const
+          ).map(({ key, label, desc }) => (
+            <div key={key} className="flex items-center gap-3">
+              <label className="cursor-pointer flex-shrink-0" title={`Pick ${label} color`}>
+                <div
+                  className="w-9 h-9 rounded-lg border border-gray-200"
+                  style={{ background: seeds[key] }}
+                />
+                <input
+                  type="color"
+                  value={seeds[key]}
+                  onChange={(e) => setSeeds((prev) => ({ ...prev, [key]: e.target.value }))}
+                  className="sr-only"
+                />
+              </label>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold" style={{ color: "var(--color-neutral-dark, #2C3E50)" }}>{label}</div>
+                <div className="text-[11px] text-gray-400">{desc}</div>
+              </div>
+              <code className="text-[11px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded flex-shrink-0">
+                {seeds[key]}
+              </code>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Surface Lightness */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+          Surface Lightness
+        </div>
+        <div className="text-[11px] text-gray-400 mb-3">
+          Controls how tinted page backgrounds and card surfaces appear
+        </div>
+        <input
+          type="range"
+          min={88}
+          max={99}
+          step={1}
+          value={Math.round(surfaceLightness * 100)}
+          onChange={(e) => setSurfaceLightness(parseInt(e.target.value) / 100)}
+          className="w-full"
+          style={{ accentColor: "var(--color-primary)" }}
+        />
+        <div className="flex justify-between items-center mt-1">
+          <span className="text-[10px] text-gray-400">Tinted</span>
+          <code className="text-xs font-semibold" style={{ color: "var(--color-neutral-dark, #2C3E50)" }}>
+            {Math.round(surfaceLightness * 100)}%
+          </code>
+          <span className="text-[10px] text-gray-400">Airy</span>
+        </div>
+      </div>
+
+      {/* Save Scheme */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Save Scheme
+        </div>
+        {error && (
+          <p className="text-xs mb-2" style={{ color: "var(--color-critical, #e53e3e)" }}>{error}</p>
+        )}
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Scheme name e.g. Midnight"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none"
+          style={{ color: "var(--color-neutral-dark, #2C3E50)" }}
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 text-white rounded-lg py-2 text-xs font-semibold disabled:opacity-50"
+            style={{ background: "var(--color-primary)" }}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={handleActivate}
+            disabled={activating}
+            className="flex-1 text-white rounded-lg py-2 text-xs font-semibold disabled:opacity-50"
+            style={{ background: "var(--color-teal)" }}
+          >
+            {activating ? "Activating…" : "Activate"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
