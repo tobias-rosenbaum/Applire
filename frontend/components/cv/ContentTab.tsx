@@ -111,6 +111,7 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
           type="button"
           onClick={handleBackToBrowse}
           className="text-xs text-teal underline hover:opacity-80 self-start"
+          data-testid="back-to-browse"
         >
           &larr; Zur&uuml;ck zur &Uuml;bersicht
         </button>
