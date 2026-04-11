@@ -14,6 +14,7 @@ from applire import __version__
 from applire.config import settings
 from applire.db.session import AsyncSessionLocal
 from applire.routers import application, cv, flow, health, job, jobs, profile, session
+from applire.routers.admin import color_schemes as admin_color_schemes
 from applire.services.thumbnails import ensure_thumbnails
 
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -63,3 +64,4 @@ app.include_router(session.router)
 app.include_router(flow.router)
 app.include_router(cv.router)
 app.include_router(application.router)
+app.include_router(admin_color_schemes.router)
