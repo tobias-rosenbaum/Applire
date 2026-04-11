@@ -92,18 +92,10 @@ export function SchemeEditor() {
     finally { setSaving(false); }
   }
 
-  async function handleActivate() {
-    const match = schemes.find(
-      (s) =>
-        s.seed_primary === seeds.primary &&
-        s.seed_accent === seeds.accent &&
-        s.seed_secondary === seeds.secondary &&
-        s.surface_lightness === surfaceLightness
-    );
-    if (!match) { setError("Save the scheme first before activating it."); return; }
+  async function activateScheme(scheme: SavedScheme) {
     setActivating(true); setError("");
     try {
-      const res = await fetch(`${API_BASE}/api/admin/color-schemes/${match.id}/activate`, {
+      const res = await fetch(`${API_BASE}/api/admin/color-schemes/${scheme.id}/activate`, {
         method: "PATCH",
       });
       if (!res.ok) {
@@ -111,6 +103,7 @@ export function SchemeEditor() {
       } else {
         await fetchSchemes();
         refreshTheme();
+        loadScheme(scheme);
       }
     } catch { setError("Activation failed."); }
     finally { setActivating(false); }
@@ -128,9 +121,10 @@ export function SchemeEditor() {
           {schemes.map((scheme) => (
             <button
               key={scheme.id}
-              onClick={() => loadScheme(scheme)}
-              className="flex flex-col items-center gap-1"
-              title={scheme.name}
+              onClick={() => activateScheme(scheme)}
+              disabled={activating}
+              className="flex flex-col items-center gap-1 disabled:opacity-60"
+              title={`Activate ${scheme.name}`}
             >
               <div
                 className="w-11 h-11 rounded-lg relative"
@@ -254,12 +248,36 @@ export function SchemeEditor() {
             {saving ? "Saving…" : "Save"}
           </button>
           <button
-            onClick={handleActivate}
-            disabled={activating}
+            onClick={async () => {
+              if (!name.trim()) { setError("Please enter a scheme name."); return; }
+              setSaving(true); setError("");
+              try {
+                const res = await fetch(`${API_BASE}/api/admin/color-schemes`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    name: name.trim(),
+                    seed_primary: seeds.primary,
+                    seed_accent: seeds.accent,
+                    seed_secondary: seeds.secondary,
+                    surface_lightness: surfaceLightness,
+                  }),
+                });
+                if (!res.ok) {
+                  const err = await res.json();
+                  setError(err.detail ?? "Save failed.");
+                } else {
+                  const saved: SavedScheme = await res.json();
+                  await activateScheme(saved);
+                }
+              } catch { setError("Save failed. Is the backend running?"); }
+              finally { setSaving(false); }
+            }}
+            disabled={saving || activating}
             className="flex-1 text-white rounded-lg py-2 text-xs font-semibold disabled:opacity-50"
             style={{ background: "var(--color-teal)" }}
           >
-            {activating ? "Activating…" : "Activate"}
+            {saving || activating ? "Saving…" : "Save & Activate"}
           </button>
         </div>
       </div>
