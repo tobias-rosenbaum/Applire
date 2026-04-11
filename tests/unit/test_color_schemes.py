@@ -92,3 +92,104 @@ class TestDeriveScheme:
         _, _, l_light = _hex_to_hsl(light["--color-surface-dim"])
         _, _, l_dark = _hex_to_hsl(dark["--color-surface-dim"])
         assert l_dark < l_light
+
+
+# --- DB service tests (SQLite in-memory) ---
+
+import uuid
+
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from applire.db.session import Base
+import applire.models.color_scheme  # noqa: F401 — registers model with Base.metadata
+
+
+@pytest_asyncio.fixture
+async def db():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        yield session
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def eu_blue(db):
+    """Insert the EU Blue builtin scheme into the test DB."""
+    from applire.models.color_scheme import ColorScheme
+    from applire.services.color_schemes import derive_scheme
+    scheme = ColorScheme(
+        id=uuid.UUID("a0000000-0000-0000-0000-000000000001"),
+        name="EU Blue",
+        is_active=True,
+        is_builtin=True,
+        seed_primary="#1b4f72",
+        seed_accent="#2a8f9d",
+        seed_secondary="#c9a84c",
+        surface_lightness=0.97,
+        derived=derive_scheme("#1b4f72", "#2a8f9d", "#c9a84c", 0.97),
+    )
+    db.add(scheme)
+    await db.commit()
+    await db.refresh(scheme)
+    return scheme
+
+
+class TestServiceFunctions:
+    @pytest.mark.asyncio
+    async def test_get_active_scheme_returns_eu_blue(self, db, eu_blue):
+        from applire.services.color_schemes import get_active_scheme
+        result = await get_active_scheme(db)
+        assert result is not None
+        assert result.name == "EU Blue"
+
+    @pytest.mark.asyncio
+    async def test_create_scheme_derives_values(self, db, eu_blue):
+        from applire.services.color_schemes import create_scheme
+        scheme = await create_scheme(
+            db,
+            name="Midnight",
+            seed_primary="#1a1a2e",
+            seed_accent="#16213e",
+            seed_secondary="#e94560",
+            surface_lightness=0.96,
+        )
+        assert scheme.name == "Midnight"
+        assert "--color-primary" in scheme.derived
+        assert scheme.is_active is False
+
+    @pytest.mark.asyncio
+    async def test_activate_scheme_deactivates_others(self, db, eu_blue):
+        from applire.services.color_schemes import create_scheme, activate_scheme, get_active_scheme
+        midnight = await create_scheme(
+            db, name="Midnight", seed_primary="#1a1a2e",
+            seed_accent="#16213e", seed_secondary="#e94560", surface_lightness=0.96,
+        )
+        activated = await activate_scheme(db, midnight.id)
+        assert activated is not None
+        assert activated.is_active is True
+        # EU Blue should now be inactive
+        active = await get_active_scheme(db)
+        assert active is not None
+        assert active.name == "Midnight"
+
+    @pytest.mark.asyncio
+    async def test_delete_scheme_removes_it(self, db, eu_blue):
+        from applire.services.color_schemes import create_scheme, delete_scheme, list_schemes
+        scheme = await create_scheme(
+            db, name="ToDelete", seed_primary="#aabbcc",
+            seed_accent="#112233", seed_secondary="#ddeeff", surface_lightness=0.95,
+        )
+        await delete_scheme(db, scheme.id)
+        schemes = await list_schemes(db)
+        assert not any(s.name == "ToDelete" for s in schemes)
+
+    @pytest.mark.asyncio
+    async def test_delete_builtin_raises(self, db, eu_blue):
+        from applire.services.color_schemes import delete_scheme
+        with pytest.raises(ValueError, match="builtin"):
+            await delete_scheme(db, uuid.UUID("a0000000-0000-0000-0000-000000000001"))
