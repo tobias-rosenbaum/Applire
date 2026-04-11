@@ -24,11 +24,13 @@ const NEUTRAL_DEFAULTS: SeedColors = {
   secondary: "#4a4a4a",
 };
 
+const SURFACE_LIGHTNESS_DEFAULT = 0.97;
+
 export function SchemeEditor() {
   const { refreshTheme } = useTheme();
   const [schemes, setSchemes] = useState<SavedScheme[]>([]);
   const [seeds, setSeeds] = useState<SeedColors>(NEUTRAL_DEFAULTS);
-  const [surfaceLightness, setSurfaceLightness] = useState(0.97);
+  const [surfaceLightness, setSurfaceLightness] = useState(SURFACE_LIGHTNESS_DEFAULT);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [activating, setActivating] = useState(false);
@@ -61,7 +63,7 @@ export function SchemeEditor() {
 
   function startNew() {
     setSeeds(NEUTRAL_DEFAULTS);
-    setSurfaceLightness(0.97);
+    setSurfaceLightness(SURFACE_LIGHTNESS_DEFAULT);
     setName("");
   }
 
@@ -199,13 +201,13 @@ export function SchemeEditor() {
         </div>
       </div>
 
-      {/* Surface Lightness */}
+      {/* Surface Tint */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-          Surface Lightness
+          Surface Tint
         </div>
         <div className="text-[11px] text-gray-400 mb-3">
-          Controls how tinted page backgrounds and card surfaces appear
+          How much primary color tints page and card backgrounds
         </div>
         <input
           type="range"
@@ -220,9 +222,9 @@ export function SchemeEditor() {
         <div className="flex justify-between items-center mt-1">
           <span className="text-[10px] text-gray-400">Tinted</span>
           <code className="text-xs font-semibold" style={{ color: "var(--color-neutral-dark, #2C3E50)" }}>
-            {Math.round(surfaceLightness * 100)}%
+            {Math.round((0.99 - surfaceLightness) / 0.11 * 100)}% tint
           </code>
-          <span className="text-[10px] text-gray-400">Airy</span>
+          <span className="text-[10px] text-gray-400">White</span>
         </div>
       </div>
 
