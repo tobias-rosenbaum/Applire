@@ -8,7 +8,7 @@ test.describe("Admin appearance page", () => {
     // Left panel sections
     await expect(page.getByText("Saved Schemes")).toBeVisible();
     await expect(page.getByText("Seed Colors")).toBeVisible();
-    await expect(page.getByText("Surface Lightness")).toBeVisible();
+    await expect(page.getByText("Surface Tint")).toBeVisible();
     await expect(page.getByText("Save Scheme")).toBeVisible();
     // Right panel
     await expect(page.getByText("Live Preview")).toBeVisible();
