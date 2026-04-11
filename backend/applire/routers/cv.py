@@ -18,11 +18,13 @@ from applire.schemas.cv_sections import (
     AssistStartRequest,
     AssistStartResponse,
     CVSectionsResponse,
+    RewriteRequest,
+    RewriteResponse,
     SectionPatchRequest,
     SectionPatchResponse,
 )
 from applire.services.cv import generate_cv, get_cv_html, get_cv_pdf, get_cv_status, get_pdf_filename, list_cvs_for_job
-from applire.services.cv_assist import start_assist_session, submit_assist_answer
+from applire.services.cv_assist import rewrite_section, start_assist_session, submit_assist_answer
 from applire.services.cv_section_editor import get_cv_sections, patch_cv_section
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
@@ -190,6 +192,36 @@ async def patch_section_assist(
     """
     try:
         return await submit_assist_answer(cv_id, section_id, body.session_id, body.answer, provider, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@router.post(
+    "/{cv_id}/sections/{section_id}/rewrite",
+    response_model=RewriteResponse,
+)
+async def post_section_rewrite(
+    cv_id: uuid.UUID,
+    section_id: str,
+    body: RewriteRequest,
+    db: AsyncSession = Depends(get_db),
+    provider: LLMProvider = Depends(_get_provider),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> RewriteResponse:
+    """Single-turn directed rewrite for a CV section (Sprint 22, US089).
+
+    User provides free-text directions and optional gap IDs.
+    Returns a suggested rewrite — does NOT save or re-render the CV.
+    422 if section_id is unknown.
+    """
+    try:
+        return await rewrite_section(
+            cv_id, section_id, body.directions, body.gap_ids, provider, db
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except LookupError as exc:
