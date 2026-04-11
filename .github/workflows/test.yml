@@ -278,6 +278,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-unit-tests, integration-and-e2e-tests, frontend-unit-tests, module-system-check]
     if: always()
+    permissions:
+      pull-requests: write
+      checks: write
+      contents: read
 
     steps:
       - name: Checkout code

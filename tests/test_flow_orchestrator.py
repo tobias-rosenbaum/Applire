@@ -327,7 +327,7 @@ class TestAdvanceFlow:
 
         adv3 = requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "complete"},
+            json={"step": "complete", "artifact_id": cv_id},
             timeout=10,
         )
         assert adv3.status_code == 200, adv3.text
@@ -370,7 +370,7 @@ class TestAdvanceFlow:
         )
         requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "complete"},
+            json={"step": "complete", "artifact_id": cv_id},
             timeout=10,
         )
 
