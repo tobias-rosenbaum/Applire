@@ -274,4 +274,4 @@ On viewports narrower than `md` (768px):
 - Multi-turn KaileChat conversation
 - Appearance tab (color matching to company brand) — tab slot reserved, not implemented
 - Mobile-optimised editing UX
-- Navigation menu redesign — noted as a separate sprint
+- Navigation menu redesign — **decided**: left sidebar rail (icons + labels) to accommodate future services (Cover Letter, Interview Prep, etc.). Implementation deferred to a dedicated Navigation sprint. Sprint 22 keeps the current top navbar unchanged.
