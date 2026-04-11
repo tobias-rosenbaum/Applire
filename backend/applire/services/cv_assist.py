@@ -15,11 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from applire.models.cv import GeneratedCV
 from applire.models.flow import FlowSession
 from applire.models.gap import GapAnalysis
+from applire.models.job import JobAnalysis
 from applire.providers.llm.base import LLMProvider
 from applire.schemas.cv_sections import (
     AssistAnswerResponse,
     AssistStartResponse,
     ContentSnapshot,
+    RewriteResponse,
 )
 
 # ---------------------------------------------------------------------------
@@ -110,6 +112,42 @@ async def submit_assist_answer(
     )
 
     return AssistAnswerResponse(suggestion=suggestion.strip())
+
+
+async def rewrite_section(
+    cv_id: uuid.UUID,
+    section_id: str,
+    directions: str,
+    gap_ids: list[str],
+    provider: LLMProvider,
+    db: AsyncSession,
+) -> RewriteResponse:
+    """Single-turn directed rewrite for a CV section.
+
+    The user provides free-text directions and optional gap IDs.
+    Kaile rewrites the section accordingly.
+
+    Raises:
+        LookupError: CV not found or has no content snapshot.
+        ValueError: section_id is unknown.
+    """
+    section_label, section_content = await _load_cv_and_section(cv_id, section_id, db)
+
+    # Load job role title for context (best-effort — omitted if no flow found)
+    role_title = await _get_role_title(cv_id, db)
+
+    suggestion = await provider.acomplete(
+        _rewrite_prompt(section_label, section_content, directions, gap_ids, role_title),
+        system=(
+            "Du bist Kaile, ein KI-Karriereassistent. "
+            "Rewrite the given CV section exactly as directed by the user. "
+            "Output only the improved section text — no commentary, no introduction."
+        ),
+        temperature=0.5,
+        max_tokens=600,
+    )
+
+    return RewriteResponse(suggestion=suggestion.strip())
 
 
 # ---------------------------------------------------------------------------
@@ -207,3 +245,41 @@ def _suggestion_prompt(
         "Generiere einen verbesserten Text für diesen Abschnitt, der die Lücke schließt "
         "und natürlich klingt. Gib nur den verbesserten Text aus, ohne Kommentar oder Einleitung."
     )
+
+
+async def _get_role_title(cv_id: uuid.UUID, db: AsyncSession) -> str | None:
+    """Return the job role title linked to this CV, or None if not found."""
+    flow_result = await db.execute(
+        select(FlowSession).where(
+            FlowSession.generated_cv_id == cv_id,
+            FlowSession.deleted_at.is_(None),
+        ).limit(1)
+    )
+    flow = flow_result.scalar_one_or_none()
+    if not flow or not flow.job_id:
+        return None
+
+    job = await db.get(JobAnalysis, flow.job_id)
+    return job.role_title if job else None
+
+
+def _rewrite_prompt(
+    section_label: str,
+    section_content: str,
+    directions: str,
+    gap_ids: list[str],
+    role_title: str | None,
+) -> str:
+    lines = [f"Abschnitt: {section_label}"]
+    if role_title:
+        lines.append(f"Zielrolle: {role_title}")
+    lines.append(f"Aktueller Inhalt:\n{section_content}")
+    if gap_ids:
+        lines.append(f"Zu schließende Lücken: {', '.join(gap_ids)}")
+    if directions:
+        lines.append(f"Anweisungen des Nutzers: {directions}")
+    lines.append(
+        "\nSchreibe den Abschnitt neu und berücksichtige dabei die Anweisungen und Lücken. "
+        "Gib nur den verbesserten Text aus."
+    )
+    return "\n".join(lines)
