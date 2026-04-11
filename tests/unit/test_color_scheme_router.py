@@ -111,7 +111,7 @@ class TestColorSchemeSchemas:
             ColorSchemeCreate(
                 name="Test", seed_primary="#1B4F72",
                 seed_accent="#2A8F9D", seed_secondary="#C9A84C",
-                surface_lightness=0.5,
+                surface_lightness=1.5,
             )
 
     def test_create_schema_empty_name(self):
@@ -139,7 +139,7 @@ class TestColorSchemeSchemas:
             seed_accent="#2A8F9D",
             seed_secondary="#C9A84C",
         )
-        assert obj.surface_lightness == 0.97  # default
+        assert obj.surface_lightness == 0.80  # default
 
     def test_preview_schema_invalid_lightness(self):
         from applire.schemas.color_scheme import ColorSchemePreviewRequest
