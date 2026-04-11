@@ -46,8 +46,14 @@ describe("deriveScheme", () => {
   it("lower surface_lightness produces a lower lightness surface-dim", () => {
     const light = deriveScheme(EU_BLUE, 0.97);
     const dark = deriveScheme(EU_BLUE, 0.88);
-    // surface-dim at 0.88 should be a darker color than at 0.97
-    // We verify this by checking the hex value differs and parsing lightness
-    expect(light["--color-surface-dim"]).not.toBe(dark["--color-surface-dim"]);
+    const parseLightness = (hex: string): number => {
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
+    };
+    expect(parseLightness(dark["--color-surface-dim"])).toBeLessThan(
+      parseLightness(light["--color-surface-dim"])
+    );
   });
 });
