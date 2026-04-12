@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
  *  - Clicking a section transitions to Edit mode with SectionEditor textarea
  *  - Edit → Save → preview iframe refreshes
  *  - Clicking a gap card navigates to owning section with gap pre-selected
- *  - Unsaved-changes guard when switching sections
+ *  - Unsaved-changes guard (window.confirm) on browser navigation
  *  - KaileChat rewrite: submit → suggestion appears → Apply
  *
  * Uses page.route() mocks — does NOT require a running backend.
@@ -66,8 +66,29 @@ const MOCK_CV_HTML_UPDATED = `<html><body>
   <p id="intro">My edited introduction text for E2E test</p>
 </body></html>`;
 
+/**
+ * Click a section button in Browse mode.
+ * Uses a button role selector since sections are styled as buttons,
+ * avoiding the strict-mode violation of getByText() matching both
+ * a button and a heading.
+ */
+async function clickSectionButton(page: import("@playwright/test").Page, label: string) {
+  const btn = page.getByRole("button", { name: label });
+  await btn.click();
+}
+
+/**
+ * Accept the unsaved-changes window.confirm() dialog that ContentTab triggers.
+ * Playwright catches it and auto-accepts.
+ */
+async function acceptConfirm(page: import("@playwright/test").Page) {
+  page.once("dialog", async (dialog) => {
+    await dialog.accept();
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Core: Browse → Edit → Save
+// Core: Browse -> Edit -> Save
 // ---------------------------------------------------------------------------
 
 test.describe("CV Section Editor — Browse/Edit/Save", () => {
@@ -101,7 +122,6 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
             }),
           });
         } else if (route.request().method() === "POST" && route.request().url().includes("/rewrite")) {
-          // Allow rewrite route to pass through or be overridden per test
           await route.continue();
         } else {
           await route.continue();
@@ -127,9 +147,9 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
       page.getByText(/1 Lücke gefunden für/)
     ).toBeVisible({ timeout: 5_000 });
 
-    // Section list items
-    await expect(page.getByText("Introduction")).toBeVisible();
-    await expect(page.getByText("Skills")).toBeVisible();
+    // Section list buttons (they're rendered as buttons)
+    await expect(page.getByRole("button", { name: "Introduction" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Skills" })).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -144,8 +164,8 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
       timeout: 10_000,
     });
 
-    // Click Introduction in the section list
-    await page.getByText("Introduction").click();
+    // Click Introduction section button
+    await clickSectionButton(page, "Introduction");
 
     // SectionEditor textarea should appear
     const textarea = page.locator('[data-testid="section-textarea"]');
@@ -155,11 +175,10 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Edit → Save → preview iframe refreshes
+  // Edit -> Save -> preview iframe refreshes
   // -------------------------------------------------------------------------
 
   test("editing + saving updates the preview iframe", async ({ page }) => {
-    // Register a CV HTML mock that returns updated content after save
     let cvHtmlCallCount = 0;
     await page.route(`**/api/cv/${TEST_CV_ID}/html`, async (route) => {
       cvHtmlCallCount++;
@@ -176,7 +195,7 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
     });
 
     // Open Introduction section
-    await page.getByText("Introduction").click();
+    await clickSectionButton(page, "Introduction");
 
     // Edit textarea
     const textarea = page.locator('[data-testid="section-textarea"]');
@@ -194,38 +213,42 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
     });
     await page.click('[data-testid="save-cv-only-btn"]');
 
-    // CV should be re-fetched (refresh triggered by onSectionSave → onHtmlRefresh)
-    // The iframe srcdoc will update asynchronously; verify iframe stays visible
+    // CV iframe stays visible (refresh triggered by onSectionSave -> onHtmlRefresh)
     await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({
       timeout: 5_000,
     });
   });
 
   // -------------------------------------------------------------------------
-  // Unsaved-changes guard when switching sections
+  // Unsaved-changes guard when clicking "Back to overview"
+  // ContentTab uses window.confirm() — Playwright catches it via dialog event
   // -------------------------------------------------------------------------
 
-  test("unsaved edits show guard dialog when switching sections", async ({
+  test("unsaved edits trigger window.confirm when clicking back to overview", async ({
     page,
   }) => {
+    let confirmFired = false;
+    page.on("dialog", async (dialog) => {
+      confirmFired = dialog.type() === "confirm";
+      await dialog.accept();
+    });
+
     await page.goto(CV_PAGE_URL);
     await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
       timeout: 10_000,
     });
 
     // Open Introduction and make unsaved edit
-    await page.getByText("Introduction").click();
+    await clickSectionButton(page, "Introduction");
     const textarea = page.locator('[data-testid="section-textarea"]');
     await expect(textarea).toBeVisible({ timeout: 5_000 });
     await textarea.fill("Unsaved edit to trigger guard");
 
-    // Click "Back to overview" (Zurück zur Übersicht)
+    // Click "Back to overview"
     await page.click('[data-testid="back-to-browse"]');
 
-    // Unsaved-changes guard dialog should appear
-    await expect(page.locator('[data-testid="discard-confirm"]')).toBeVisible({
-      timeout: 3_000,
-    });
+    // window.confirm() should have been triggered
+    expect(confirmFired).toBe(true);
   });
 
   // -------------------------------------------------------------------------
@@ -240,14 +263,15 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
       timeout: 10_000,
     });
 
-    // Click the gap card (shows gap label)
-    await page.getByText("Python").first().click();
+    // First gap card in Browse mode (data-testid="gap-card")
+    await page.locator('[data-testid="gap-card"]').first().click();
 
-    // Should be in Edit mode for the Introduction section
+    // Should be in Edit mode — back button visible
     await expect(page.locator('[data-testid="back-to-browse"]')).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByText("Introduction")).toBeVisible();
+    // Section label heading
+    await expect(page.getByRole("heading", { name: "Introduction" })).toBeVisible();
   });
 });
 
@@ -292,10 +316,9 @@ test.describe("CV Section Editor — KaileChat Rewrite", () => {
     );
   });
 
-  test("'Kaile hilft' → free-text → rewrite → suggestion appears → Apply", async ({
+  test("'Kaile hilft' -> free-text -> rewrite -> suggestion appears -> Apply", async ({
     page,
   }) => {
-    // Register rewrite endpoint
     await page.route(
       `**/api/cv/${TEST_CV_ID}/sections/introduction/rewrite`,
       async (route) => {
@@ -303,7 +326,7 @@ test.describe("CV Section Editor — KaileChat Rewrite", () => {
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
-            suggestion: "Erfahrener Python-Entwickler mit fünf Jahren Erfahrung.",
+            suggestion: "Erfahrener Python-Entwickler mit fÃ¼nf Jahren Erfahrung.",
           }),
         });
       }
@@ -315,7 +338,7 @@ test.describe("CV Section Editor — KaileChat Rewrite", () => {
     });
 
     // Open Introduction section
-    await page.getByText("Introduction").click();
+    await clickSectionButton(page, "Introduction");
     await expect(page.locator('[data-testid="section-textarea"]')).toBeVisible({
       timeout: 5_000,
     });
@@ -349,7 +372,7 @@ test.describe("CV Section Editor — KaileChat Rewrite", () => {
     });
 
     // Open Introduction (which has a gap)
-    await page.getByText("Introduction").click();
+    await clickSectionButton(page, "Introduction");
     await expect(page.locator('[data-testid="section-textarea"]')).toBeVisible({
       timeout: 5_000,
     });

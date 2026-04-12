@@ -171,6 +171,7 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
                 type="button"
                 onClick={() => handleAddressGap(gap.id)}
                 className="text-left text-sm border border-neutral-medium rounded-lg p-2.5 hover:border-teal transition-colors"
+                data-testid="gap-card"
               >
                 <span className="text-xs text-neutral-medium font-medium">{gap.label}</span>
               </button>
