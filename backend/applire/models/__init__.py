@@ -3,6 +3,7 @@
 from applire.models import (  # noqa: F401
     application,
     color_profile,
+    color_scheme,
     company,
     cv,
     flow,

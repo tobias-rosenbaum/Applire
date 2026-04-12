@@ -158,7 +158,7 @@ class TestSprint6FullFlow:
         """Advancing to complete from complete is rejected (already finalized)."""
         r = requests.post(
             f"{api}/api/flow/{flow_and_cv['flow_id']}/advance",
-            json={"step": "complete"},
+            json={"step": "complete", "artifact_id": flow_and_cv["cv_id"]},
             timeout=10,
         )
         assert r.status_code == 409

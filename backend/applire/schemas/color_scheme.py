@@ -82,3 +82,5 @@ class ActiveSchemeResponse(BaseModel):
     id: uuid.UUID
     name: str
     derived: dict[str, str]
+
+    model_config = {"from_attributes": True}

@@ -261,6 +261,9 @@ export default function SettingsPage() {
           <a href="/profile" className="text-sm text-teal hover:underline">
             My Profile
           </a>
+          <a href="/admin/appearance" className="text-sm text-teal hover:underline">
+            Admin
+          </a>
           <a href="/help" className="text-sm text-gray-500 hover:underline">
             Help
           </a>
