@@ -375,6 +375,7 @@ async def _render_cv_background(
                 reviewer_system=_CV_REVIEW_SYSTEM_PROMPT,
                 provider=provider,
                 max_retries=LLM_REVIEW_MAX_RETRIES,
+                generator_max_tokens=8192,
             )
 
             tailored = TailoredCVData.model_validate(tailored_raw)
