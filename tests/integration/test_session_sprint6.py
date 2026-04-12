@@ -123,10 +123,18 @@ class TestSprint6FullFlow:
         # Advance flow to cv_generation (Task 20.9)
         adv_r = requests.post(
             f"{api}/api/flow/{flow_id}/advance",
-            json={"step": "cv_generation", "artifact_id": cv_id},
+            json={"step": "cv_generation"},
             timeout=10,
         )
         assert adv_r.status_code == 200, f"Flow advance failed: {adv_r.text}"
+
+        # Advance to complete, recording the generated cv
+        done_r = requests.post(
+            f"{api}/api/flow/{flow_id}/advance",
+            json={"step": "complete", "artifact_id": cv_id},
+            timeout=10,
+        )
+        assert done_r.status_code == 200, f"Flow advance to complete failed: {done_r.text}"
 
         return {"flow_id": flow_id, "cv_id": cv_id, "job_id": job_id}
 
@@ -134,23 +142,24 @@ class TestSprint6FullFlow:
         assert len(flow_and_cv["cv_id"]) == 36
 
     def test_flow_state_has_cv_summary_after_advance(self, api, flow_and_cv):
-        """After advance to cv_generation, flow state has cv_summary (20.9)."""
+        """After advance to complete, flow state has cv_summary."""
         r = requests.get(f"{api}/api/flow/{flow_and_cv['flow_id']}/state", timeout=10)
         assert r.status_code == 200
         state = r.json()
-        assert state.get("cv_summary") is not None, "cv_summary should be set after advance"
+        assert state.get("cv_summary") is not None, "cv_summary should be set after complete"
         assert state["cv_summary"]["cv_id"] == flow_and_cv["cv_id"]
 
-    def test_flow_state_current_step_is_cv_generation(self, api, flow_and_cv):
+    def test_flow_state_current_step_is_complete(self, api, flow_and_cv):
         r = requests.get(f"{api}/api/flow/{flow_and_cv['flow_id']}/state", timeout=10)
         state = r.json()
-        assert state.get("current_step") == "cv_generation"
+        assert state.get("current_step") == "complete"
 
     def test_advance_to_complete_finalizes_flow(self, api, flow_and_cv):
+        """Advancing to complete from complete is rejected (already finalized)."""
         r = requests.post(
             f"{api}/api/flow/{flow_and_cv['flow_id']}/advance",
             json={"step": "complete"},
             timeout=10,
         )
-        assert r.status_code == 200
-        assert r.json().get("current_step") == "complete"
+        assert r.status_code == 409
+        assert r.json()["detail"]["allowed_transitions"] == []
