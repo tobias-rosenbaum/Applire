@@ -17,7 +17,11 @@ Env vars consumed (see applire/config.py):
 
 import asyncio
 import json
+import logging
+import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import openai
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -119,6 +123,12 @@ class OpenRouterProvider(LLMProvider):
 
     @_retry
     async def _complete(self, messages: list, temperature: float, max_tokens: int) -> str:
+        prompt_chars = sum(len(m.get("content", "")) for m in messages)
+        logger.debug(
+            "LLM request [acomplete] model=%s temperature=%s max_tokens=%d messages=%d prompt_chars=%d",
+            self._model, temperature, max_tokens, len(messages), prompt_chars,
+        )
+        t0 = time.monotonic()
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
@@ -126,10 +136,27 @@ class OpenRouterProvider(LLMProvider):
             max_tokens=max_tokens,
             extra_body=self._extra_body(),
         )
-        return response.choices[0].message.content
+        elapsed = time.monotonic() - t0
+        content = response.choices[0].message.content
+        usage = response.usage
+        logger.info(
+            "LLM response [acomplete] model=%s latency=%.2fs prompt_tokens=%s completion_tokens=%s finish=%s",
+            self._model, elapsed,
+            usage.prompt_tokens if usage else "?",
+            usage.completion_tokens if usage else "?",
+            response.choices[0].finish_reason,
+        )
+        logger.debug("LLM response content (first 500 chars): %.500s", content or "")
+        return content
 
     @_retry
     async def _parse_json(self, messages: list, temperature: float, max_tokens: int) -> str:
+        prompt_chars = sum(len(m.get("content", "")) for m in messages)
+        logger.debug(
+            "LLM request [aparse_json] model=%s temperature=%s max_tokens=%d messages=%d prompt_chars=%d",
+            self._model, temperature, max_tokens, len(messages), prompt_chars,
+        )
+        t0 = time.monotonic()
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
@@ -138,7 +165,18 @@ class OpenRouterProvider(LLMProvider):
             response_format={"type": "json_object"},
             extra_body=self._extra_body(),
         )
-        return response.choices[0].message.content
+        elapsed = time.monotonic() - t0
+        content = response.choices[0].message.content
+        usage = response.usage
+        logger.info(
+            "LLM response [aparse_json] model=%s latency=%.2fs prompt_tokens=%s completion_tokens=%s finish=%s",
+            self._model, elapsed,
+            usage.prompt_tokens if usage else "?",
+            usage.completion_tokens if usage else "?",
+            response.choices[0].finish_reason,
+        )
+        logger.debug("LLM response content (first 500 chars): %.500s", content or "")
+        return content
 
 
 def _build_messages(prompt: str, system: str | None) -> list:

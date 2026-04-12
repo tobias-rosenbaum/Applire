@@ -46,7 +46,7 @@ class GeneratedCV(Base):
     content_snapshot: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
     section_overrides: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
     color_profile_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("color_profiles.id"), nullable=True
+        ForeignKey("cv_color_profiles.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

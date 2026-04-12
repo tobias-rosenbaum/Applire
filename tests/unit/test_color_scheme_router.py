@@ -139,7 +139,7 @@ class TestColorSchemeSchemas:
             seed_accent="#2A8F9D",
             seed_secondary="#C9A84C",
         )
-        assert obj.surface_lightness == 0.80  # default
+        assert obj.surface_lightness == 0.97  # default (refined in sprint-23)
 
     def test_preview_schema_invalid_lightness(self):
         from applire.schemas.color_scheme import ColorSchemePreviewRequest

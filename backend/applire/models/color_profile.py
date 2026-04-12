@@ -11,7 +11,7 @@ _JSON = JSONB().with_variant(JSON(), "sqlite")
 
 
 class ColorProfile(Base):
-    __tablename__ = "color_profiles"
+    __tablename__ = "cv_color_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     seed_primary: Mapped[str] = mapped_column(String(7), nullable=False)

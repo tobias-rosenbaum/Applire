@@ -138,9 +138,9 @@ export default function CVPage({
         : null;
 
     return (
-      <div className="p-6 min-h-screen bg-neutral-light" data-testid="cv-page">
+      <div className="min-h-screen bg-neutral-light" data-testid="cv-page">
         <div className="flex w-full h-[calc(100vh-56px)] gap-0">
-          <div className="flex-1 flex flex-col min-w-0 px-6 py-4 gap-3 bg-neutral-light overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 px-4 py-3 gap-3 bg-neutral-light overflow-hidden">
             {flowState?.job_summary && (
               <h2 className="text-lg font-heading font-bold text-neutral-dark leading-snug">
                 {flowState.job_summary.role_title}

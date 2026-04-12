@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
 // Curated professional preset colors (hue-diverse, all print-safe)
 const PRESET_COLORS = [
   { hex: "#2b5fa8", label: "Klassisches Blau" },
@@ -31,8 +33,6 @@ export function DesignTab({
   onColorApplied,
 }: DesignTabProps) {
   const [selectedHex, setSelectedHex] = useState(currentAccentHex);
-  // Track the last successfully applied hex so the button disables after a successful apply
-  // even before the parent re-fetches and updates currentAccentHex.
   const [appliedHex, setAppliedHex] = useState(currentAccentHex);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function DesignTab({
     setApplying(true);
     setError(null);
     try {
-      const res = await fetch(`/api/cv/${cvId}/color`, {
+      const res = await fetch(`${API_BASE}/api/cv/${cvId}/color`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accent_hex: selectedHex }),
@@ -92,12 +92,37 @@ export function DesignTab({
         </div>
       )}
 
-      {/* Preset swatches */}
+      {/* Color picker */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-wider text-neutral-medium mb-2">
+        <p className="text-xs font-bold uppercase tracking-wider text-neutral-medium mb-3">
           Akzentfarbe wählen
         </p>
-        <div className="flex flex-wrap gap-2 mb-3">
+
+        {/* Native color picker — styled swatch wraps hidden input */}
+        <div className="flex items-center gap-3 mb-3">
+          <label className="cursor-pointer flex-shrink-0" title="Farbe auswählen">
+            <div
+              className="w-9 h-9 rounded-lg border border-neutral-medium shadow-sm"
+              style={{ background: selectedHex }}
+            />
+            <input
+              type="color"
+              value={selectedHex}
+              onChange={(e) => setSelectedHex(e.target.value)}
+              className="sr-only"
+            />
+          </label>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-semibold text-neutral-dark">Akzentfarbe</div>
+            <div className="text-[11px] text-neutral-medium">Überschriften, Linien, Hervorhebungen</div>
+          </div>
+          <code className="text-[11px] text-neutral-medium bg-surface-container px-1.5 py-0.5 rounded flex-shrink-0">
+            {selectedHex}
+          </code>
+        </div>
+
+        {/* Preset swatches */}
+        <div className="flex flex-wrap gap-2">
           {PRESET_COLORS.map(({ hex, label }) => (
             <button
               key={hex}
@@ -113,24 +138,6 @@ export function DesignTab({
               style={{ background: hex }}
             />
           ))}
-        </div>
-
-        {/* Hex input */}
-        <div className="flex items-center gap-2 bg-surface-container border border-neutral-medium rounded px-2 py-1.5">
-          <div
-            className="w-4 h-4 rounded flex-shrink-0 border border-neutral-medium"
-            style={{ background: selectedHex }}
-          />
-          <input
-            type="text"
-            value={selectedHex}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (/^#[0-9a-fA-F]{0,6}$/.test(val)) setSelectedHex(val);
-            }}
-            className="flex-1 text-sm font-mono bg-transparent outline-none text-neutral-dark min-w-0"
-            maxLength={7}
-          />
         </div>
       </div>
 

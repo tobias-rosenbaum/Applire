@@ -15,7 +15,7 @@ class UserSettings(Base):
         ForeignKey("users.id"), nullable=False, index=True
     )
     default_color_profile_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("color_profiles.id"), nullable=True
+        ForeignKey("cv_color_profiles.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

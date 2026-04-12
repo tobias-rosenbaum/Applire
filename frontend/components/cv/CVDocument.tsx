@@ -106,11 +106,18 @@ export const CVDocument = forwardRef<CVDocumentHandle, CVDocumentProps>(
             data-testid="cv-iframe"
           />
         ) : (
+          // Container is wider than A4 — render at natural width, centred
           <iframe
             srcDoc={htmlContent}
             sandbox="allow-same-origin"
             title="Lebenslauf Vorschau"
-            className="w-full h-full border-0"
+            style={{
+              width: CV_WIDTH,
+              height: "100%",
+              border: "none",
+              display: "block",
+              margin: "0 auto",
+            }}
             data-testid="cv-iframe"
           />
         )}

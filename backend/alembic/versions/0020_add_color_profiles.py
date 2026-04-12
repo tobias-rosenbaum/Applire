@@ -1,4 +1,4 @@
-"""Add color_profiles, companies, user_settings tables; FK cols on generated_cvs and job_analyses
+"""Add cv_color_profiles, companies, user_settings tables; FK cols on generated_cvs and job_analyses
 
 Revision ID: 0020
 Revises: 0019
@@ -18,7 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "color_profiles",
+        "cv_color_profiles",
         sa.Column("id", sa.UUID(), nullable=False, server_default=sa.text("gen_random_uuid()")),
         sa.Column("seed_primary", sa.String(7), nullable=False),
         sa.Column("derived", JSONB(), nullable=False),
@@ -34,7 +34,7 @@ def upgrade() -> None:
         sa.Column("color_profile_id", sa.UUID(), nullable=True),
         sa.Column("scraped_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.ForeignKeyConstraint(["color_profile_id"], ["color_profiles.id"]),
+        sa.ForeignKeyConstraint(["color_profile_id"], ["cv_color_profiles.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("domain"),
     )
@@ -45,13 +45,13 @@ def upgrade() -> None:
         sa.Column("default_color_profile_id", sa.UUID(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
-        sa.ForeignKeyConstraint(["default_color_profile_id"], ["color_profiles.id"]),
+        sa.ForeignKeyConstraint(["default_color_profile_id"], ["cv_color_profiles.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.add_column("generated_cvs", sa.Column("color_profile_id", sa.UUID(), nullable=True))
     op.create_foreign_key(
         "fk_generated_cvs_color_profile",
-        "generated_cvs", "color_profiles",
+        "generated_cvs", "cv_color_profiles",
         ["color_profile_id"], ["id"],
     )
     op.add_column("job_analyses", sa.Column("company_id", sa.UUID(), nullable=True))
@@ -69,4 +69,4 @@ def downgrade() -> None:
     op.drop_column("generated_cvs", "color_profile_id")
     op.drop_table("user_settings")
     op.drop_table("companies")
-    op.drop_table("color_profiles")
+    op.drop_table("cv_color_profiles")

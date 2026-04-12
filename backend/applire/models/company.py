@@ -14,7 +14,7 @@ class Company(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     domain: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
     color_profile_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("color_profiles.id"), nullable=True
+        ForeignKey("cv_color_profiles.id"), nullable=True
     )
     scraped_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
