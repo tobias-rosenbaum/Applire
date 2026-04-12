@@ -165,6 +165,8 @@ export default function CVPage({
             template={{ label: template === "classic_german" ? "Klassischer Lebenslauf" : "Modern Swiss CV" }}
             matchScore={flowState?.gap_summary?.match_score ?? null}
             expiryWarning={expiryWarning}
+            detectedCompany={(flowState?.gap_summary as any)?.detected_company ?? null}
+            currentAccentHex={(flowState?.gap_summary as any)?.current_accent_hex ?? "#2b5fa8"}
             onHtmlRefresh={() => cvDocRef.current?.refresh()}
             onRegenerateSame={() => void handleGenerate(template)}
             onRegenerateDifferent={() => setPhase("template_select")}

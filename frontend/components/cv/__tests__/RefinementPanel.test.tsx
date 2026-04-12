@@ -21,6 +21,8 @@ const BASE_PROPS = {
   template: { label: "Klassischer Lebenslauf" },
   matchScore: 0.82,
   expiryWarning: null as { level: "none" | "warning" | "critical"; expiresIn: string } | null,
+  detectedCompany: { name: "Siemens AG", hex: "#009fe3" },
+  currentAccentHex: "#009fe3",
   onHtmlRefresh: vi.fn(),
   onRegenerateSame: vi.fn(),
   onRegenerateDifferent: vi.fn(),
@@ -71,5 +73,12 @@ describe("RefinementPanel", () => {
     expect(actionsTab.getAttribute("aria-selected")).toBe("true");
     const contentTab = screen.getByTestId("tab-content");
     expect(contentTab.getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("renders Design tab and shows company color card when clicked", () => {
+    render(<RefinementPanel {...BASE_PROPS} />);
+    fireEvent.click(screen.getByTestId("tab-appearance"));
+    expect(screen.getByText("Siemens AG")).toBeTruthy();
+    expect(screen.getByText("automatisch erkannt")).toBeTruthy();
   });
 });
