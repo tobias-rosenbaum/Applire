@@ -30,6 +30,10 @@ from bs4 import BeautifulSoup
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from applire.models.color_profile import ColorProfile
+from applire.models.company import Company
+from applire.models.user_settings import UserSettings
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_ACCENT = "#2b5fa8"
@@ -63,10 +67,7 @@ def _default_context() -> ColorContext:
 
 async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> ColorContext:  # noqa: F821
     """Walk the 4-step resolution cascade and return a ColorContext."""
-    from applire.models.color_profile import ColorProfile
-    from applire.models.company import Company
     from applire.models.job import JobAnalysis
-    from applire.models.user_settings import UserSettings
 
     # Step 1: CV-specific override
     if record.color_profile_id:
@@ -203,9 +204,6 @@ async def _upsert_company_color(
     db: AsyncSession,
 ) -> "Company":  # noqa: F821
     """Create or update the company record with the detected color profile."""
-    from applire.models.color_profile import ColorProfile
-    from applire.models.company import Company
-
     # Upsert color profile
     cp = ColorProfile(
         seed_primary=hex_color,
@@ -234,8 +232,6 @@ async def detect_and_cache_company_color(job: "JobAnalysis", db: AsyncSession) -
 
     Called from _render_cv_background. Silently logs and returns on any failure.
     """
-    from applire.models.company import Company
-
     domain = _extract_domain(job.source_url)
     if not domain:
         logger.debug("No domain derivable from source_url for job %s — skipping detection", job.id)
