@@ -31,10 +31,13 @@ export function DesignTab({
   onColorApplied,
 }: DesignTabProps) {
   const [selectedHex, setSelectedHex] = useState(currentAccentHex);
+  // Track the last successfully applied hex so the button disables after a successful apply
+  // even before the parent re-fetches and updates currentAccentHex.
+  const [appliedHex, setAppliedHex] = useState(currentAccentHex);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isDirty = selectedHex.toLowerCase() !== currentAccentHex.toLowerCase();
+  const isDirty = selectedHex.toLowerCase() !== appliedHex.toLowerCase();
 
   const handleApply = async () => {
     if (!isDirty || applying) return;
@@ -50,6 +53,7 @@ export function DesignTab({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail ?? "Farbe konnte nicht gespeichert werden");
       }
+      setAppliedHex(selectedHex);
       onColorApplied();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler");

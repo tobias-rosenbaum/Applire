@@ -258,13 +258,15 @@ async def patch_cv_section(
     resolved_gaps = await _resolve_gaps(cv_id, section_id, content, db)
 
     # Jinja2 re-render with overrides applied
+    from applire.services.color_detection import resolve_color_context
     tailored = TailoredCVData.model_validate(record.tailored_data)
     tailored_with_overrides = apply_overrides_to_tailored(
         tailored, record.content_snapshot, overrides
     )
+    color_ctx = await resolve_color_context(record, db)
     template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
     template = _jinja_env.get_template(template_file)
-    html = template.render(cv=tailored_with_overrides)
+    html = template.render(cv=tailored_with_overrides, color=color_ctx)
 
     return SectionPatchResponse(
         html=html,
