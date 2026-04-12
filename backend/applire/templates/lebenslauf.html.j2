@@ -10,6 +10,11 @@
        ----------------------------------------------------------------------- */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --cv-accent: {{ color.accent }};
+      --cv-accent-tint: {{ color.tint }};
+    }
+
     body {
       font-family: "Times New Roman", Times, serif;
       font-size: 11pt;
@@ -82,7 +87,7 @@
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      border-bottom: 1px solid #1a1a1a;
+      border-bottom: 1px solid var(--cv-accent);
       padding-bottom: 2pt;
       margin-bottom: 8pt;
     }

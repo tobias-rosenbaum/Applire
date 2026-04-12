@@ -68,3 +68,12 @@ class AssistAnswerRequest(BaseModel):
 
 class AssistAnswerResponse(BaseModel):
     suggestion: str
+
+
+class RewriteRequest(BaseModel):
+    directions: str = Field("", max_length=2000)
+    gap_ids: list[str] = Field(default_factory=list)
+
+
+class RewriteResponse(BaseModel):
+    suggestion: str

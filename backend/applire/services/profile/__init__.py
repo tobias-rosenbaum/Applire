@@ -225,6 +225,7 @@ async def _import_from_text(
         build_user_prompt(raw_text),
         system=SYSTEM_PROMPT,
         temperature=0.1,
+        max_tokens=8192,
     )
     data = await review_and_refine(
         source=raw_text,
@@ -235,6 +236,7 @@ async def _import_from_text(
         reviewer_system=_EXTRACTION_REVIEW_SYSTEM_PROMPT,
         provider=provider,
         max_retries=LLM_REVIEW_MAX_RETRIES,
+        generator_max_tokens=8192,
     )
     incoming = MasterProfileData.model_validate(data)
     now = datetime.now(timezone.utc)

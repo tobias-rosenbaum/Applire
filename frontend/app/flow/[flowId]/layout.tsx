@@ -75,6 +75,11 @@ const s = {
   }),
   main: {
     flex: 1,
+    width: "100%",
+    overflow: "hidden",
+  },
+  mainConstrained: {
+    flex: 1,
     maxWidth: 960,
     width: "100%",
     margin: "0 auto",
@@ -168,7 +173,7 @@ export default function FlowLayout({
         )}
       </div>
 
-      <div style={s.main}>
+      <div style={currentSegment === "cv" ? s.main : s.mainConstrained}>
         {ready ? children : <div style={s.loading}>Lade …</div>}
       </div>
     </div>

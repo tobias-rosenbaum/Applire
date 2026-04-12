@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import uuid
@@ -12,8 +13,21 @@ from sqlalchemy import text
 
 from applire import __version__
 from applire.config import settings
+
+# Attach a StreamHandler directly to the applire logger so records don't rely on the
+# root logger's handler chain (uvicorn's dictConfig only registers handlers for its
+# own loggers — propagated records would otherwise be silently dropped).
+_applire_logger = logging.getLogger("applire")
+_applire_logger.setLevel(settings.log_level.upper())
+if not _applire_logger.handlers:
+    _applire_handler = logging.StreamHandler()
+    _applire_handler.setFormatter(
+        logging.Formatter("%(levelname)s [%(name)s] %(message)s")
+    )
+    _applire_logger.addHandler(_applire_handler)
 from applire.db.session import AsyncSessionLocal
-from applire.routers import application, cv, flow, health, job, jobs, profile, session
+from applire.routers import application, cv, cv_color, flow, health, job, jobs, profile, session
+from applire.routers import settings as settings_router
 from applire.routers.admin import color_schemes as admin_color_schemes
 from applire.services.thumbnails import ensure_thumbnails
 
@@ -63,5 +77,7 @@ app.include_router(profile.router)
 app.include_router(session.router)
 app.include_router(flow.router)
 app.include_router(cv.router)
+app.include_router(cv_color.router)
+app.include_router(settings_router.router)
 app.include_router(application.router)
 app.include_router(admin_color_schemes.router)

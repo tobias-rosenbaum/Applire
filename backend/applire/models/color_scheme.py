@@ -11,7 +11,7 @@ _JSON = JSONB().with_variant(JSON(), "sqlite")
 
 
 class ColorScheme(Base):
-    __tablename__ = "color_schemes"
+    __tablename__ = "system_color_schemes"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(64), nullable=False)

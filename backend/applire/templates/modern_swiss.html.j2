@@ -13,7 +13,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --accent: #2b5fa8;
+      --cv-accent: {{ color.accent }};
+      --cv-accent-tint: {{ color.tint }};
       --text: #1c1c1c;
       --muted: #5a5a5a;
       --rule: #d0d5dd;
@@ -36,7 +37,7 @@
 
     /* ---- Header ---- */
     .header {
-      border-left: 4pt solid var(--accent);
+      border-left: 4pt solid var(--cv-accent);
       padding-left: 10pt;
       margin-bottom: 18pt;
     }
@@ -91,7 +92,7 @@
     .section-title-en {
       font-size: 11pt;
       font-weight: 700;
-      color: var(--accent);
+      color: var(--cv-accent);
       text-transform: uppercase;
       letter-spacing: 0.07em;
     }
@@ -168,7 +169,7 @@
     .skills-grid li {
       font-size: 10pt;
       padding: 1.5pt 6pt;
-      background: #f0f4fb;
+      background: var(--cv-accent-tint);
       border-radius: 2pt;
       color: var(--text);
     }

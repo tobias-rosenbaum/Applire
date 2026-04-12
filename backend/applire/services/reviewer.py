@@ -26,6 +26,7 @@ async def review_and_refine(
     reviewer_system: str,
     provider: LLMProvider,
     max_retries: int,
+    generator_max_tokens: int = 4096,
 ) -> dict[str, Any]:
     """Run a reviewer-guided retry loop over an LLM generator output.
 
@@ -40,6 +41,9 @@ async def review_and_refine(
         reviewer_system: The reviewer's system prompt.
         provider: LLM provider — same instance used by the calling service.
         max_retries: Maximum number of generator retries. 0 = review layer disabled.
+        generator_max_tokens: Token budget for the generator retry calls. Set this to
+                              match the initial extraction call's max_tokens so that
+                              retry outputs are never truncated where the initial wasn't.
 
     Returns:
         The approved draft, or the last generated draft if retries are exhausted.
@@ -73,6 +77,7 @@ async def review_and_refine(
             generator_prompt_fn(source, current_draft, feedback),
             system=generator_system,
             temperature=0.1,
+            max_tokens=generator_max_tokens,
         )
 
     # Exhausted all retries — return the last generated draft unreviewed.

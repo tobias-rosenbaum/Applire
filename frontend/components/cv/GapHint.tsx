@@ -1,9 +1,6 @@
 // frontend/components/cv/GapHint.tsx
 "use client";
 
-import { useState } from "react";
-import { AssistMicroSession } from "./AssistMicroSession";
-
 interface GapHintItem {
   id: string;
   label: string;
@@ -11,15 +8,11 @@ interface GapHintItem {
 
 interface GapHintProps {
   gap: GapHintItem;
-  cvId: string;
-  sectionId: string;
   onDismiss: (gapId: string) => void;
-  onAcceptSuggestion: (suggestion: string, focus: boolean) => void;
+  onAddressGap: (gapId: string) => void;
 }
 
-export function GapHint({ gap, cvId, sectionId, onDismiss, onAcceptSuggestion }: GapHintProps) {
-  const [showAssist, setShowAssist] = useState(false);
-
+export function GapHint({ gap, onDismiss, onAddressGap }: GapHintProps) {
   return (
     <div className="mb-2">
       <div className="flex items-center justify-between bg-warning-container border border-warning/30 rounded-lg px-3 py-2">
@@ -35,7 +28,7 @@ export function GapHint({ gap, cvId, sectionId, onDismiss, onAcceptSuggestion }:
           </button>
           <button
             type="button"
-            onClick={() => setShowAssist((v) => !v)}
+            onClick={() => onAddressGap(gap.id)}
             className="text-xs text-teal border border-teal px-2 py-0.5 rounded hover:bg-teal hover:text-white transition-colors"
             data-testid="kaile-help-btn"
           >
@@ -43,23 +36,6 @@ export function GapHint({ gap, cvId, sectionId, onDismiss, onAcceptSuggestion }:
           </button>
         </div>
       </div>
-
-      {showAssist && (
-        <AssistMicroSession
-          cvId={cvId}
-          sectionId={sectionId}
-          gap={gap}
-          onAccept={(suggestion) => {
-            onAcceptSuggestion(suggestion, false);
-            setShowAssist(false);
-          }}
-          onEdit={(suggestion) => {
-            onAcceptSuggestion(suggestion, true);
-            setShowAssist(false);
-          }}
-          onReject={() => setShowAssist(false)}
-        />
-      )}
     </div>
   );
 }

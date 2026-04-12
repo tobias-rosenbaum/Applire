@@ -2,14 +2,15 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * CV Section Editor — OQ Tests
+ * CV Section Editor — OQ Tests (Sprint 22 layout)
  *
  * Covers:
- *  - Fine-tune toggle opens FineTunePanel with section list
- *  - Clicking a section reveals SectionEditor textarea with content
- *  - Edit → Save → SaveScopePrompt → "Just this CV" → preview iframe updates
- *  - Switching sections with unsaved edits shows the unsaved-changes guard dialog
- *  - Polish behaviours: character counter, auto-resize textarea, undo-discard flow
+ *  - RefinementPanel Content tab: Browse mode shows gap cards + section list
+ *  - Clicking a section transitions to Edit mode with SectionEditor textarea
+ *  - Edit → Save → preview iframe refreshes
+ *  - Clicking a gap card navigates to owning section with gap pre-selected
+ *  - Unsaved-changes guard (window.confirm) on browser navigation
+ *  - KaileChat rewrite: submit → suggestion appears → Apply
  *
  * Uses page.route() mocks — does NOT require a running backend.
  */
@@ -18,7 +19,6 @@ const TEST_FLOW_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff";
 const TEST_CV_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
 const TEST_JOB_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const CV_PAGE_URL = `/flow/${TEST_FLOW_ID}/cv`;
-const SESSION_ID = "assist-session-1";
 
 // ---------------------------------------------------------------------------
 // Mock data fixtures
@@ -27,7 +27,26 @@ const SESSION_ID = "assist-session-1";
 const MOCK_FLOW_STATE = {
   job_id: TEST_JOB_ID,
   job_summary: { role_title: "Senior Software Engineer" },
-  gap_summary: { match_score: 0.85 },
+  gap_summary: {
+    match_score: 0.85,
+    gaps: [{ id: "Python", label: "Python" }],
+    sections: [
+      {
+        section_id: "introduction",
+        label: "Introduction",
+        content: "Erfahrener Entwickler mit fünf Jahren Erfahrung.",
+        has_override: false,
+        gaps: [{ id: "Python", label: "Python" }],
+      },
+      {
+        section_id: "skills",
+        label: "Skills",
+        content: "Java, Spring Boot",
+        has_override: false,
+        gaps: [],
+      },
+    ],
+  },
   cv_summary: {
     cv_id: TEST_CV_ID,
     pdf_url: `http://localhost:8001/api/cv/${TEST_CV_ID}/pdf`,
@@ -38,7 +57,7 @@ const MOCK_FLOW_STATE = {
 const MOCK_CV_HTML = `<html><body>
   <h1>Max Mustermann</h1>
   <p>Senior Software Engineer</p>
-  <p id="intro">Erfahrener Ingenieur mit zehn Jahren Berufserfahrung.</p>
+  <p id="intro">Erfahrener Entwickler mit fünf Jahren Erfahrung.</p>
 </body></html>`;
 
 const MOCK_CV_HTML_UPDATED = `<html><body>
@@ -47,75 +66,33 @@ const MOCK_CV_HTML_UPDATED = `<html><body>
   <p id="intro">My edited introduction text for E2E test</p>
 </body></html>`;
 
-const MOCK_CV_HTML_UPDATED_PYTHON = `<html><body><h1>Max Mustermann</h1><p id="intro">Python-Entwickler</p></body></html>`;
+/**
+ * Click a section button in Browse mode.
+ * Uses a button role selector since sections are styled as buttons,
+ * avoiding the strict-mode violation of getByText() matching both
+ * a button and a heading.
+ */
+async function clickSectionButton(page: import("@playwright/test").Page, label: string) {
+  const btn = page.getByRole("button", { name: label });
+  await btn.click();
+}
 
-const MOCK_SECTIONS = {
-  sections: [
-    {
-      section_id: "intro",
-      label: "Introduction",
-      content: "Erfahrener Ingenieur mit zehn Jahren Berufserfahrung.",
-      has_override: false,
-      gaps: [{ id: "gap-1", label: "Missing cloud experience" }],
-    },
-    {
-      section_id: "experience",
-      label: "Experience",
-      content: "10+ years in software engineering.",
-      has_override: false,
-      gaps: [],
-    },
-  ],
-  general_gaps: [],
-};
-
-const MOCK_SECTIONS_WITH_GAPS = {
-  sections: [
-    {
-      section_id: "introduction",
-      label: "Introduction",
-      content: "Erfahrener Entwickler",
-      has_override: false,
-      gaps: [{ id: "Python", label: "Python" }],
-    },
-    {
-      section_id: "skills",
-      label: "Skills",
-      content: "Java",
-      has_override: false,
-      gaps: [],
-    },
-  ],
-  general_gaps: [],
-};
-
-const MOCK_SECTIONS_NO_GAPS = {
-  sections: [
-    {
-      section_id: "introduction",
-      label: "Introduction",
-      content: "Python-Entwickler",
-      has_override: true,
-      gaps: [],
-    },
-    {
-      section_id: "skills",
-      label: "Skills",
-      content: "Java",
-      has_override: false,
-      gaps: [],
-    },
-  ],
-  general_gaps: [],
-};
+/**
+ * Accept the unsaved-changes window.confirm() dialog that ContentTab triggers.
+ * Playwright catches it and auto-accepts.
+ */
+async function acceptConfirm(page: import("@playwright/test").Page) {
+  page.once("dialog", async (dialog) => {
+    await dialog.accept();
+  });
+}
 
 // ---------------------------------------------------------------------------
-// Core section editor tests
+// Core: Browse -> Edit -> Save
 // ---------------------------------------------------------------------------
 
-test.describe("CV Section Editor — Core", () => {
+test.describe("CV Section Editor — Browse/Edit/Save", () => {
   test.beforeEach(async ({ page }) => {
-    // Mock flow state so the CV preview page renders immediately
     await page.route(`**/api/flow/${TEST_FLOW_ID}/state`, async (route) => {
       await route.fulfill({
         status: 200,
@@ -124,7 +101,6 @@ test.describe("CV Section Editor — Core", () => {
       });
     });
 
-    // Mock the CV HTML endpoint (initial load)
     await page.route(`**/api/cv/${TEST_CV_ID}/html`, async (route) => {
       await route.fulfill({
         status: 200,
@@ -133,16 +109,6 @@ test.describe("CV Section Editor — Core", () => {
       });
     });
 
-    // Mock the sections list endpoint
-    await page.route(`**/api/cv/${TEST_CV_ID}/sections`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(MOCK_SECTIONS),
-      });
-    });
-
-    // Mock the section PATCH endpoint (returns updated HTML)
     await page.route(
       `**/api/cv/${TEST_CV_ID}/sections/**`,
       async (route) => {
@@ -152,9 +118,11 @@ test.describe("CV Section Editor — Core", () => {
             contentType: "application/json",
             body: JSON.stringify({
               html: MOCK_CV_HTML_UPDATED,
-              overrides_applied: ["intro"],
+              overrides_applied: ["introduction"],
             }),
           });
+        } else if (route.request().method() === "POST" && route.request().url().includes("/rewrite")) {
+          await route.continue();
         } else {
           await route.continue();
         }
@@ -163,54 +131,43 @@ test.describe("CV Section Editor — Core", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Fine-tune toggle opens the section panel
+  // Refinement panel visible with Browse content
   // -------------------------------------------------------------------------
 
-  test("clicking Fine-tune opens the section panel with section list", async ({
+  test("refinement panel loads with gap count and section list", async ({
     page,
   }) => {
     await page.goto(CV_PAGE_URL);
-
-    // The CV preview iframe must be visible first (confirms page rendered)
-    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
       timeout: 10_000,
     });
 
-    // Click the Fine-tune toggle
-    await page.click('[data-testid="finetune-toggle"]');
-
-    // At least one section list item must appear
+    // Content tab is default — should show gap count
     await expect(
-      page.locator('[data-testid="section-list-item"]').first()
-    ).toBeVisible({ timeout: 10_000 });
-
-    // The panel also shows the finetune-preview-iframe (right-hand side)
-    await expect(
-      page.locator('[data-testid="finetune-preview-iframe"]')
+      page.getByText(/1 Lücke gefunden für/)
     ).toBeVisible({ timeout: 5_000 });
+
+    // Section list buttons (they're rendered as buttons)
+    await expect(page.getByRole("button", { name: "Introduction" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Skills" })).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
-  // Clicking a section reveals the textarea with content
+  // Clicking a section opens Edit mode
   // -------------------------------------------------------------------------
 
-  test("clicking a section item opens the textarea with pre-filled content", async ({
+  test("clicking a section in Browse opens Edit mode with textarea", async ({
     page,
   }) => {
     await page.goto(CV_PAGE_URL);
-    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
       timeout: 10_000,
     });
 
-    // Open Fine-tune panel
-    await page.click('[data-testid="finetune-toggle"]');
-    const items = page.locator('[data-testid="section-list-item"]');
-    await expect(items.first()).toBeVisible({ timeout: 10_000 });
+    // Click Introduction section button
+    await clickSectionButton(page, "Introduction");
 
-    // Click the first section
-    await items.first().click();
-
-    // Textarea must appear and have content
+    // SectionEditor textarea should appear
     const textarea = page.locator('[data-testid="section-textarea"]');
     await expect(textarea).toBeVisible({ timeout: 5_000 });
     const value = await textarea.inputValue();
@@ -218,94 +175,111 @@ test.describe("CV Section Editor — Core", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Edit → Save → scope prompt → CV-only → preview updates
+  // Edit -> Save -> preview iframe refreshes
   // -------------------------------------------------------------------------
 
-  test("editing + saving with 'Just this CV' scope updates the preview", async ({
-    page,
-  }) => {
+  test("editing + saving updates the preview iframe", async ({ page }) => {
+    let cvHtmlCallCount = 0;
+    await page.route(`**/api/cv/${TEST_CV_ID}/html`, async (route) => {
+      cvHtmlCallCount++;
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: cvHtmlCallCount > 1 ? MOCK_CV_HTML_UPDATED : MOCK_CV_HTML,
+      });
+    });
+
     await page.goto(CV_PAGE_URL);
     await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({
       timeout: 10_000,
     });
 
-    // Clear any remembered scope choice so the prompt always shows
-    await page.evaluate(() => sessionStorage.removeItem("finetune_save_scope"));
+    // Open Introduction section
+    await clickSectionButton(page, "Introduction");
 
-    // Open Fine-tune panel
-    await page.click('[data-testid="finetune-toggle"]');
-
-    // Click the Introduction section
-    const introItem = page.locator('[data-testid="section-list-item"]', {
-      hasText: "Introduction",
-    });
-    await expect(introItem).toBeVisible({ timeout: 10_000 });
-    await introItem.click();
-
-    // Edit the textarea
+    // Edit textarea
     const textarea = page.locator('[data-testid="section-textarea"]');
     await expect(textarea).toBeVisible({ timeout: 5_000 });
     await textarea.fill("My edited introduction text for E2E test");
 
-    // Save button must become enabled
+    // Save
     const saveBtn = page.locator('[data-testid="section-save"]');
     await expect(saveBtn).toBeEnabled({ timeout: 3_000 });
     await saveBtn.click();
 
-    // SaveScopePrompt must appear
+    // SaveScopePrompt should appear — choose "Just this CV"
     await expect(page.locator('[data-testid="save-cv-only-btn"]')).toBeVisible({
       timeout: 3_000,
     });
-
-    // Choose "Just this CV"
     await page.click('[data-testid="save-cv-only-btn"]');
 
-    // Preview iframe must remain visible (srcDoc updated with new HTML)
-    await expect(
-      page.locator('[data-testid="finetune-preview-iframe"]')
-    ).toBeVisible({ timeout: 5_000 });
+    // CV iframe stays visible (refresh triggered by onSectionSave -> onHtmlRefresh)
+    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   // -------------------------------------------------------------------------
-  // Switching sections with unsaved changes shows the guard dialog
+  // Unsaved-changes guard when clicking "Back to overview"
+  // ContentTab uses window.confirm() — Playwright catches it via dialog event
   // -------------------------------------------------------------------------
 
-  test("switching sections with unsaved changes shows the discard dialog", async ({
+  test("unsaved edits trigger window.confirm when clicking back to overview", async ({
     page,
   }) => {
+    let confirmFired = false;
+    page.on("dialog", async (dialog) => {
+      confirmFired = dialog.type() === "confirm";
+      await dialog.accept();
+    });
+
     await page.goto(CV_PAGE_URL);
-    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
       timeout: 10_000,
     });
 
-    // Open Fine-tune panel
-    await page.click('[data-testid="finetune-toggle"]');
-    const items = page.locator('[data-testid="section-list-item"]');
-    await expect(items.first()).toBeVisible({ timeout: 10_000 });
-
-    // Open the first section and make an unsaved edit
-    await items.first().click();
+    // Open Introduction and make unsaved edit
+    await clickSectionButton(page, "Introduction");
     const textarea = page.locator('[data-testid="section-textarea"]');
     await expect(textarea).toBeVisible({ timeout: 5_000 });
     await textarea.fill("Unsaved edit to trigger guard");
 
-    // Click a different section
-    await items.nth(1).click();
+    // Click "Back to overview"
+    await page.click('[data-testid="back-to-browse"]');
 
-    // The unsaved-changes guard dialog must appear
-    await expect(page.locator('[data-testid="discard-confirm"]')).toBeVisible({
-      timeout: 3_000,
+    // window.confirm() should have been triggered
+    expect(confirmFired).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // Gap card in Browse navigates to owning section
+  // -------------------------------------------------------------------------
+
+  test("clicking a gap card opens Edit mode for owning section", async ({
+    page,
+  }) => {
+    await page.goto(CV_PAGE_URL);
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
+      timeout: 10_000,
     });
+
+    // First gap card in Browse mode (data-testid="gap-card")
+    await page.locator('[data-testid="gap-card"]').first().click();
+
+    // Should be in Edit mode — back button visible
+    await expect(page.locator('[data-testid="back-to-browse"]')).toBeVisible({
+      timeout: 5_000,
+    });
+    // Section label heading
+    await expect(page.getByRole("heading", { name: "Introduction" })).toBeVisible();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Polish behaviours: Kaile assist, gap badges, mobile accordion
+// KaileChat rewrite flow
 // ---------------------------------------------------------------------------
 
-test.describe("CV Section Editor — Polish", () => {
-  test.use({ viewport: { width: 1280, height: 800 } });
-
+test.describe("CV Section Editor — KaileChat Rewrite", () => {
   test.beforeEach(async ({ page }) => {
     await page.route(`**/api/flow/${TEST_FLOW_ID}/state`, async (route) => {
       await route.fulfill({
@@ -316,175 +290,140 @@ test.describe("CV Section Editor — Polish", () => {
     });
 
     await page.route(`**/api/cv/${TEST_CV_ID}/html`, async (route) => {
-      await route.fulfill({ status: 200, contentType: "text/html", body: MOCK_CV_HTML });
-    });
-
-    await page.route(`**/api/cv/${TEST_CV_ID}/sections`, async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(MOCK_SECTIONS_WITH_GAPS),
+        contentType: "text/html",
+        body: MOCK_CV_HTML,
       });
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // 'Kaile hilft' → question → submit answer → Accept populates textarea
-  // -------------------------------------------------------------------------
-
-  test("'Kaile hilft' → question → submit answer → Accept populates textarea", async ({
-    page,
-  }) => {
-    // Register broad catch-all FIRST so the specific route below takes precedence (Playwright LIFO)
-    await page.route(`**/api/cv/${TEST_CV_ID}/sections/**`, async (route) => {
-      if (route.request().method() === "PATCH") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            html: MOCK_CV_HTML_UPDATED_PYTHON,
-            overrides_applied: ["introduction"],
-            resolved_gaps: ["Python"],
-          }),
-        });
-      } else {
-        await route.continue();
-      }
-    });
-
-    // Register specific assist route AFTER the catch-all so it wins in LIFO evaluation order
     await page.route(
-      `**/api/cv/${TEST_CV_ID}/sections/introduction/assist`,
+      `**/api/cv/${TEST_CV_ID}/sections/**`,
       async (route) => {
-        if (route.request().method() === "POST") {
+        if (route.request().method() === "PATCH") {
           await route.fulfill({
             status: 200,
             contentType: "application/json",
-            body: JSON.stringify({ session_id: SESSION_ID, question: "Wie lange Python?" }),
-          });
-        } else if (route.request().method() === "PATCH") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ suggestion: "Erfahrener Python-Entwickler." }),
+            body: JSON.stringify({
+              html: MOCK_CV_HTML_UPDATED,
+              overrides_applied: ["introduction"],
+            }),
           });
         } else {
           await route.continue();
         }
       }
     );
-
-    await page.goto(CV_PAGE_URL);
-    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({ timeout: 10_000 });
-
-    await page.click('[data-testid="finetune-toggle"]');
-    const introItem = page.locator('[data-testid="section-list-item"]', { hasText: "Introduction" });
-    await expect(introItem).toBeVisible({ timeout: 10_000 });
-    await introItem.click();
-
-    // Click "Kaile hilft"
-    const kaileBtn = page.locator('[data-testid="kaile-help-btn"]').first();
-    await expect(kaileBtn).toBeVisible({ timeout: 5_000 });
-    await kaileBtn.click();
-
-    // Question should appear
-    await expect(page.locator('[data-testid="assist-question"]')).toBeVisible({ timeout: 8_000 });
-    expect(await page.locator('[data-testid="assist-question"]').textContent()).toContain("Wie lange");
-
-    // Fill in the answer
-    await page.fill('[data-testid="assist-answer"]', "5 Jahre");
-    await page.click('[data-testid="assist-submit"]');
-
-    // Suggestion with Accept/Edit/Reject should appear
-    await expect(page.locator('[data-testid="assist-accept"]')).toBeVisible({ timeout: 8_000 });
-
-    // Accept populates the textarea
-    await page.click('[data-testid="assist-accept"]');
-    const textareaValue = await page.locator('[data-testid="section-textarea"]').inputValue();
-    expect(textareaValue).toContain("Python");
   });
 
-  // -------------------------------------------------------------------------
-  // Saving section removes resolved gap badge
-  // -------------------------------------------------------------------------
-
-  test("saving section removes resolved gap badge", async ({ page }) => {
-    await page.route(`**/api/cv/${TEST_CV_ID}/sections/**`, async (route) => {
-      if (route.request().method() === "PATCH") {
+  test("'Kaile hilft' -> free-text -> rewrite -> suggestion appears -> Apply", async ({
+    page,
+  }) => {
+    await page.route(
+      `**/api/cv/${TEST_CV_ID}/sections/introduction/rewrite`,
+      async (route) => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
-            html: MOCK_CV_HTML_UPDATED_PYTHON,
-            overrides_applied: ["introduction"],
-            resolved_gaps: ["Python"],
+            suggestion: "Erfahrener Python-Entwickler mit fÃ¼nf Jahren Erfahrung.",
           }),
         });
-      } else {
-        await route.continue();
       }
-    });
+    );
 
     await page.goto(CV_PAGE_URL);
-    // Set sessionStorage after navigation so the page context is accessible
-    await page.evaluate(() => sessionStorage.setItem("finetune_save_scope", "cv"));
-    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
+      timeout: 10_000,
+    });
 
-    await page.click('[data-testid="finetune-toggle"]');
-    const introItem = page.locator('[data-testid="section-list-item"]', { hasText: "Introduction" });
-    await expect(introItem).toBeVisible({ timeout: 10_000 });
+    // Open Introduction section
+    await clickSectionButton(page, "Introduction");
+    await expect(page.locator('[data-testid="section-textarea"]')).toBeVisible({
+      timeout: 5_000,
+    });
 
-    // Introduction should have a gap badge
-    const badge = page.locator('[data-testid="gap-badge"]').first();
-    await expect(badge).toBeVisible({ timeout: 5_000 });
+    // KaileChat should be visible below the editor
+    const rewriteBtn = page.locator('[data-testid="kaile-rewrite-btn"]');
+    await expect(rewriteBtn).toBeVisible({ timeout: 5_000 });
 
-    await introItem.click();
-    const textarea = page.locator('[data-testid="section-textarea"]');
-    await expect(textarea).toBeVisible({ timeout: 5_000 });
-    await textarea.fill("Python developer");
+    // Type a direction and submit
+    const directions = page.locator('[data-testid="kaile-directions-input"]');
+    await directions.fill("I also have extensive Python experience");
+    await rewriteBtn.click();
 
-    await page.click('[data-testid="section-save"]');
+    // Suggestion should appear
+    const suggestion = page.locator('[data-testid="kaile-suggestion"]');
+    await expect(suggestion).toBeVisible({ timeout: 5_000 });
+    expect(await suggestion.textContent()).toContain("Python");
 
-    // Badge should disappear after save
-    await expect(page.locator('[data-testid="gap-badge"]')).not.toBeVisible({ timeout: 5_000 });
+    // Apply button
+    const applyBtn = page.locator('[data-testid="apply-suggestion-btn"]');
+    await expect(applyBtn).toBeVisible();
+    await applyBtn.click();
   });
 
-  // -------------------------------------------------------------------------
-  // All gaps resolved shows 'all gaps closed' indicator
-  // -------------------------------------------------------------------------
+  test("gap chips are rendered and toggleable in KaileChat", async ({
+    page,
+  }) => {
+    await page.goto(CV_PAGE_URL);
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
+      timeout: 10_000,
+    });
 
-  test("all gaps resolved shows 'all gaps closed' indicator", async ({ page }) => {
-    // Override sections mock to return no gaps
-    await page.route(`**/api/cv/${TEST_CV_ID}/sections`, async (route) => {
+    // Open Introduction (which has a gap)
+    await clickSectionButton(page, "Introduction");
+    await expect(page.locator('[data-testid="section-textarea"]')).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Gap chip should be visible and not selected by default
+    const chip = page.locator('[data-testid="gap-chip-Python"]');
+    await expect(chip).toBeVisible({ timeout: 5_000 });
+    expect(await chip.getAttribute("data-selected")).toBe("false");
+
+    // Click to toggle
+    await chip.click();
+    expect(await chip.getAttribute("data-selected")).toBe("true");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Actions tab
+// ---------------------------------------------------------------------------
+
+test.describe("CV Section Editor — Actions Tab", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route(`**/api/flow/${TEST_FLOW_ID}/state`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(MOCK_SECTIONS_NO_GAPS),
+        body: JSON.stringify(MOCK_FLOW_STATE),
       });
     });
 
-    await page.goto(CV_PAGE_URL);
-    await expect(page.locator('[data-testid="cv-iframe"]')).toBeVisible({ timeout: 10_000 });
-
-    await page.click('[data-testid="finetune-toggle"]');
-    await expect(page.locator('[data-testid="all-gaps-closed"]')).toBeVisible({ timeout: 10_000 });
+    await page.route(`**/api/cv/${TEST_CV_ID}/html`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: MOCK_CV_HTML,
+      });
+    });
   });
 
-  // -------------------------------------------------------------------------
-  // Mobile viewport renders accordion layout
-  // -------------------------------------------------------------------------
-
-  test("mobile viewport renders accordion layout", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-
+  test("Actions tab shows match score and download button", async ({ page }) => {
     await page.goto(CV_PAGE_URL);
-    // On mobile, the cv-iframe may be scaled/transformed by ResizeObserver before it settles.
-    // Wait for the finetune-toggle button (always visible in the metadata panel) instead.
-    await expect(page.locator('[data-testid="finetune-toggle"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="refinement-panel"]')).toBeVisible({
+      timeout: 10_000,
+    });
 
-    await page.click('[data-testid="finetune-toggle"]');
+    // Switch to Actions tab
+    await page.click('[data-testid="tab-actions"]');
 
-    await expect(page.locator('[data-testid="mobile-accordion"]')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('[data-testid="accordion-section"]').first()).toBeVisible({ timeout: 5_000 });
+    // Match score should be visible
+    await expect(page.getByText("85%")).toBeVisible({ timeout: 3_000 });
+
+    // Download PDF button
+    await expect(page.locator('[data-testid="download-pdf-btn"]')).toBeVisible();
   });
 });

@@ -320,7 +320,7 @@ class TestAdvanceFlow:
 
         adv2 = requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "cv_generation", "artifact_id": cv_id},
+            json={"step": "cv_generation"},
             timeout=10,
         )
         assert adv2.status_code == 200, adv2.text
@@ -365,7 +365,7 @@ class TestAdvanceFlow:
         cv_id = cv_r.json()["cv_id"]
         requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "cv_generation", "artifact_id": cv_id},
+            json={"step": "cv_generation"},
             timeout=10,
         )
         requests.post(
@@ -376,7 +376,7 @@ class TestAdvanceFlow:
 
         r = requests.post(
             f"{api}/api/flow/{fid}/advance",
-            json={"step": "cv_generation"},
+            json={"step": "complete"},
             timeout=10,
         )
         assert r.status_code == 409

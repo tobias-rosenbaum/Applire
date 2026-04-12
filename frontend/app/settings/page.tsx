@@ -1,11 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
+function DefaultColorPicker() {
+  const [hex, setHex] = useState("#2b5fa8");
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`)
+      .then((r) => r.json())
+      .then((d) => { if (d.default_accent_hex) setHex(d.default_accent_hex); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    const res = await fetch(`${API_BASE}/api/settings`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ default_accent_hex: hex }),
+    });
+    if (res.ok) setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  if (loading) return <div className="h-8 w-32 bg-surface-container rounded animate-pulse" />;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 bg-surface-container border border-neutral-medium rounded px-2 py-1.5">
+        <div className="w-5 h-5 rounded border border-neutral-medium" style={{ background: hex }} />
+        <input
+          type="text"
+          value={hex}
+          onChange={(e) => { if (/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setHex(e.target.value); }}
+          className="text-sm font-mono bg-transparent outline-none w-20"
+          maxLength={7}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={handleSave}
+        className="px-3 py-1.5 text-sm font-medium bg-teal text-white rounded hover:opacity-90"
+      >
+        {saved ? "Gespeichert ✓" : "Speichern"}
+      </button>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -141,6 +189,17 @@ export default function SettingsPage() {
               </div>
             </div>
           </Card>
+
+          {/* Standard-Farbe für Lebensläufe */}
+          <section className="rounded-lg border border-neutral-medium p-4">
+            <h2 className="text-base font-semibold text-neutral-dark mb-1">
+              Standard-Farbe für Lebensläufe
+            </h2>
+            <p className="text-sm text-neutral-medium mb-4">
+              Wird verwendet, wenn keine Firmenfarbe erkannt werden kann.
+            </p>
+            <DefaultColorPicker />
+          </section>
 
           {/* Delete Confirmation Dialog */}
           {showDeleteConfirm && (
