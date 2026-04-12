@@ -276,9 +276,12 @@ async def get_cv_html(cv_id: uuid.UUID, db: AsyncSession) -> str:
                 "contact": tailored.contact.model_copy(update={"photo_url": data_uri})
             })
 
+    from applire.services.color_detection import resolve_color_context
+    color_ctx = await resolve_color_context(record, db)
+
     template_file = _TEMPLATE_FILES.get(record.template, "lebenslauf.html.j2")
     template = _jinja_env.get_template(template_file)
-    return template.render(cv=tailored)
+    return template.render(cv=tailored, color=color_ctx)
 
 
 # ---------------------------------------------------------------------------
@@ -319,6 +322,13 @@ async def _render_cv_background(
             # Load job + profile + optional gap analysis
             job = await db.get(JobAnalysis, job_id)
             profile = await db.get(MasterProfile, profile_id)
+
+            # Auto-detect and cache company brand color (best-effort; never blocks CV generation)
+            try:
+                from applire.services.color_detection import detect_and_cache_company_color
+                await detect_and_cache_company_color(job, db)
+            except Exception:
+                logger.debug("detect_and_cache_company_color failed silently", exc_info=True)
 
             gap_result = await db.execute(
                 select(GapAnalysis)
