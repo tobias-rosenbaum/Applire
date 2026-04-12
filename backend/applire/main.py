@@ -13,7 +13,8 @@ from sqlalchemy import text
 from applire import __version__
 from applire.config import settings
 from applire.db.session import AsyncSessionLocal
-from applire.routers import application, cv, flow, health, job, jobs, profile, session
+from applire.routers import application, cv, cv_color, flow, health, job, jobs, profile, session
+from applire.routers import settings as settings_router
 from applire.services.thumbnails import ensure_thumbnails
 
 _STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -62,4 +63,6 @@ app.include_router(profile.router)
 app.include_router(session.router)
 app.include_router(flow.router)
 app.include_router(cv.router)
+app.include_router(cv_color.router)
+app.include_router(settings_router.router)
 app.include_router(application.router)
