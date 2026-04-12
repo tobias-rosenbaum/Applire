@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, JSON, String, Text
+from sqlalchemy import DateTime, ForeignKey, JSON, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,9 @@ class JobAnalysis(Base):
     # NULL when the LLM cannot confidently assign a code or for pre-migration rows.
     berufsbild_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
     berufsbild_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("companies.id"), nullable=True
+    )
     # Embedding vector for job-profile similarity scoring (migration 0016).
     # NULL until first embedding pass; always NULL on SQLite (noop provider).
     embedding: Mapped[list[float] | None] = mapped_column(_VECTOR_1024, nullable=True)

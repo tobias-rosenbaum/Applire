@@ -45,6 +45,9 @@ class GeneratedCV(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_snapshot: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
     section_overrides: Mapped[dict | None] = mapped_column(_JSON, nullable=True)
+    color_profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("color_profiles.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

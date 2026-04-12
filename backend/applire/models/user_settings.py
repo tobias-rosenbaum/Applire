@@ -1,0 +1,24 @@
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
+
+from applire.db.session import Base
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    default_color_profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("color_profiles.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
