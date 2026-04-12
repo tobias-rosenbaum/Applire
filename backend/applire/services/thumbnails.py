@@ -25,6 +25,9 @@ from applire.schemas.cv import (
     TailoredEducationEntry,
     TailoredLanguage,
 )
+from applire.services.color_detection import ColorContext
+
+_DEFAULT_COLOR = ColorContext(accent="#2b5fa8", tint="#dce8f7")
 
 _SAMPLE_DATA = TailoredCVData(
     contact=TailoredContact(
@@ -96,7 +99,7 @@ async def ensure_thumbnails(static_dir: Path) -> None:
         for name, tpl_file in missing:
             try:
                 template = jinja_env.get_template(tpl_file)
-                html = template.render(cv=_SAMPLE_DATA)
+                html = template.render(cv=_SAMPLE_DATA, color=_DEFAULT_COLOR)
                 page = await browser.new_page()
                 await page.set_viewport_size({"width": 794, "height": 1123})
                 await page.set_content(html, wait_until="networkidle")
