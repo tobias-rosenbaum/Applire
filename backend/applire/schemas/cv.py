@@ -6,7 +6,15 @@ from pydantic import BaseModel, field_validator
 
 from applire.models.cv import CVGenerationStatus
 
-CVTemplate = Literal["classic_german", "modern_swiss"]
+CVTemplate = Literal[
+    "classic_german",
+    "modern_swiss",
+    "executive",
+    "tech_developer",
+    "creative_sidebar",
+    "academic",
+    "compact_pro",
+]
 
 
 class CVGenerateRequest(BaseModel):
