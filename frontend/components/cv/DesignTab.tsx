@@ -21,16 +21,20 @@ interface DetectedCompany {
 
 interface DesignTabProps {
   cvId: string;
+  templateLabel: string | null;
   detectedCompany: DetectedCompany | null;
   currentAccentHex: string;
   onColorApplied: () => void;
+  onChangeTemplate: () => void;
 }
 
 export function DesignTab({
   cvId,
+  templateLabel,
   detectedCompany,
   currentAccentHex,
   onColorApplied,
+  onChangeTemplate,
 }: DesignTabProps) {
   const [selectedHex, setSelectedHex] = useState(currentAccentHex);
   const [appliedHex, setAppliedHex] = useState(currentAccentHex);
@@ -64,6 +68,26 @@ export function DesignTab({
 
   return (
     <div className="flex flex-col gap-4 p-3" data-testid="design-tab">
+
+      {/* Template selection */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wider text-neutral-medium mb-2">
+          Vorlage
+        </p>
+        <div className="flex items-center justify-between gap-2">
+          {templateLabel && (
+            <span className="text-sm font-medium text-neutral-dark">{templateLabel}</span>
+          )}
+          <button
+            type="button"
+            onClick={onChangeTemplate}
+            className="text-sm text-teal underline hover:opacity-80 whitespace-nowrap"
+            data-testid="change-template-btn"
+          >
+            Vorlage ändern
+          </button>
+        </div>
+      </div>
 
       {/* Detected company color card */}
       {detectedCompany && (

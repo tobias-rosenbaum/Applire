@@ -51,7 +51,7 @@ export function RefinementPanel({
 
   return (
     <div
-      className="w-[28%] min-w-[220px] max-w-[360px] h-[calc(100vh-56px)] overflow-y-auto border-l border-neutral-medium bg-white flex flex-col"
+      className="w-1/2 h-[calc(100vh-56px)] overflow-y-auto border-l border-neutral-medium bg-white flex flex-col"
       data-testid="refinement-panel"
     >
       {/* Tab strip */}
@@ -112,19 +112,19 @@ export function RefinementPanel({
         ) : activeTab === "actions" ? (
           <ActionsTab
             matchScore={matchScore}
-            templateLabel={template?.label ?? null}
             expiryWarning={expiryWarning}
             onDownloadPdf={onDownloadPdf}
             onRegenerateSame={onRegenerateSame}
-            onRegenerateDifferent={onRegenerateDifferent}
             onNext={onNext}
           />
         ) : (
           <DesignTab
             cvId={cvId}
+            templateLabel={template?.label ?? null}
             detectedCompany={detectedCompany}
             currentAccentHex={currentAccentHex}
             onColorApplied={onHtmlRefresh}
+            onChangeTemplate={onRegenerateDifferent}
           />
         )}
       </div>

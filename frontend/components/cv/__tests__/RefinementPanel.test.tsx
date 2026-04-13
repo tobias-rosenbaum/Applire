@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { vi, describe, it, expect, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi, describe, it, expect, afterEach, beforeEach } from "vitest";
 import { RefinementPanel } from "../RefinementPanel";
 
 const BASE_PROPS = {
@@ -30,17 +30,34 @@ const BASE_PROPS = {
   onDownloadPdf: vi.fn(),
 };
 
+const MOCK_SECTIONS_RESPONSE = {
+  sections: [
+    { section_id: "introduction", label: "Introduction", content: "Experienced dev", has_override: false, gaps: [{ id: "Python", label: "Python" }] },
+    { section_id: "skills", label: "Skills", content: "Python, React", has_override: false, gaps: [] },
+  ],
+  general_gaps: [],
+};
+
 describe("RefinementPanel", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(MOCK_SECTIONS_RESPONSE),
+    } as Response);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders with Content tab active by default", () => {
+  it("renders with Content tab active by default", async () => {
     render(<RefinementPanel {...BASE_PROPS} />);
     expect(screen.getByTestId("tab-content")).toBeTruthy();
     expect(screen.getByTestId("tab-actions")).toBeTruthy();
-    // Content tab should show gap count
-    expect(screen.getByText("1 Lücke gefunden für \"Senior Software Engineer\"")).toBeTruthy();
+    // Content tab should show gap count after sections load
+    await waitFor(() =>
+      expect(screen.getByText("1 Lücke gefunden für \"Senior Software Engineer\"")).toBeTruthy()
+    );
   });
 
   it("switching to Actions tab shows Actions component", () => {
@@ -48,14 +65,22 @@ describe("RefinementPanel", () => {
     fireEvent.click(screen.getByTestId("tab-actions"));
     // ActionsTab shows match score
     expect(screen.getByText("82%")).toBeTruthy();
-    expect(screen.getByText("Klassischer Lebenslauf")).toBeTruthy();
   });
 
-  it("switching back to Content tab restores Content", () => {
+  it("switching to Design tab shows template label and change button", () => {
+    render(<RefinementPanel {...BASE_PROPS} />);
+    fireEvent.click(screen.getByTestId("tab-appearance"));
+    expect(screen.getByText("Klassischer Lebenslauf")).toBeTruthy();
+    expect(screen.getByTestId("change-template-btn")).toBeTruthy();
+  });
+
+  it("switching back to Content tab restores Content", async () => {
     render(<RefinementPanel {...BASE_PROPS} />);
     fireEvent.click(screen.getByTestId("tab-actions"));
     fireEvent.click(screen.getByTestId("tab-content"));
-    expect(screen.getByText("1 Lücke gefunden für \"Senior Software Engineer\"")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByText("1 Lücke gefunden für \"Senior Software Engineer\"")).toBeTruthy()
+    );
   });
 
   it("tab-content has correct aria-selected when active", () => {

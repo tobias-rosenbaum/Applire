@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { SectionEditor } from "./SectionEditor";
 import { KaileChat } from "./KaileChat";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
 export interface GapHintItem {
   id: string;
   label: string;
@@ -39,6 +41,28 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [preSelectedGapIds, setPreSelectedGapIds] = useState<string[]>([]);
   const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [generalGaps, setGeneralGaps] = useState<GapHintItem[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [sectionsError, setSectionsError] = useState(false);
+
+  // Fetch sections from the CV sections endpoint
+  useEffect(() => {
+    if (!cvId) return;
+    setSectionsLoading(true);
+    setSectionsError(false);
+    fetch(`${API_BASE}/api/cv/${cvId}/sections`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json() as Promise<{ sections: SectionItem[]; general_gaps: GapHintItem[] }>;
+      })
+      .then((data) => {
+        setSections(data.sections);
+        setGeneralGaps(data.general_gaps);
+      })
+      .catch(() => setSectionsError(true))
+      .finally(() => setSectionsLoading(false));
+  }, [cvId]);
 
   // Warn before page unload when in edit mode with unsaved changes
   useEffect(() => {
@@ -51,12 +75,11 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsaved, mode]);
 
-  const sections: SectionItem[] =
-    flowSummary?.gap_summary?.sections ??
-    flowSummary?.cv_summary?.sections ??
-    [];
-
-  const allGaps: GapHintItem[] = flowSummary?.gap_summary?.gaps ?? [];
+  // All gaps = section gaps flattened + general gaps
+  const allGaps: GapHintItem[] = [
+    ...sections.flatMap((s) => s.gaps),
+    ...generalGaps,
+  ];
 
   const handleBrowseToEdit = useCallback(
     (sectionId: string, preselectedGaps: string[] = []) => {
@@ -123,9 +146,20 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
         <SectionEditor
           cvId={cvId}
           section={activeSection}
-          onSaved={(html) => {
+          onSaved={(html, savedContent, resolvedGaps) => {
             onSectionSave(html);
             setHasUnsaved(false);
+            setSections((prev) =>
+              prev.map((s) => {
+                if (s.section_id !== activeSectionId) return s;
+                const updated = { ...s, content: savedContent, has_override: true };
+                if (resolvedGaps.length > 0) {
+                  const resolvedSet = new Set(resolvedGaps);
+                  return { ...updated, gaps: updated.gaps.filter((g) => !resolvedSet.has(g.id)) };
+                }
+                return updated;
+              })
+            );
           }}
           onUnsavedChange={(unsaved) => {
             setHasUnsaved(unsaved);
@@ -153,6 +187,45 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
 
   // Browse mode
   const pluralGaps = allGaps.length !== 1;
+
+  if (sectionsLoading) {
+    return (
+      <div className="flex flex-col gap-2 p-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-10 rounded-lg bg-gray-200 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (sectionsError) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-sm text-gray-500 mb-2">Abschnitte konnten nicht geladen werden.</p>
+        <button
+          type="button"
+          onClick={() => {
+            setSectionsError(false);
+            setSectionsLoading(true);
+            fetch(`${API_BASE}/api/cv/${cvId}/sections`)
+              .then((res) => {
+                if (!res.ok) throw new Error("Failed");
+                return res.json() as Promise<{ sections: SectionItem[]; general_gaps: GapHintItem[] }>;
+              })
+              .then((data) => {
+                setSections(data.sections);
+                setGeneralGaps(data.general_gaps);
+              })
+              .catch(() => setSectionsError(true))
+              .finally(() => setSectionsLoading(false));
+          }}
+          className="text-sm text-teal underline hover:opacity-80"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 p-3">
@@ -184,6 +257,11 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
       <h4 className="text-xs font-semibold text-neutral-dark uppercase tracking-wide">
         Abschnitte bearbeiten
       </h4>
+      {sections.length === 0 && (
+        <p className="text-xs text-gray-500">
+          Kein Inhalt zum Bearbeiten verfügbar. Bitte den Lebenslauf neu generieren.
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
         {sections.map((section) => (
           <button

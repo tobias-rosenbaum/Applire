@@ -4,11 +4,9 @@ import { ActionsTab } from "../ActionsTab";
 
 const BASE_PROPS = {
   matchScore: 0.82,
-  templateLabel: "Klassischer Lebenslauf",
   expiryWarning: null as { level: "none" | "warning" | "critical"; expiresIn: string } | null,
   onDownloadPdf: vi.fn(),
   onRegenerateSame: vi.fn(),
-  onRegenerateDifferent: vi.fn(),
   onNext: vi.fn(),
 };
 
@@ -21,11 +19,6 @@ describe("ActionsTab", () => {
     render(<ActionsTab {...BASE_PROPS} />);
     expect(screen.getByText("82%")).toBeTruthy();
     expect(screen.getByText("Matching-Score")).toBeTruthy();
-  });
-
-  it("renders template label", () => {
-    render(<ActionsTab {...BASE_PROPS} />);
-    expect(screen.getByText("Klassischer Lebenslauf")).toBeTruthy();
   });
 
   it("does not show expiry warning when level is none", () => {

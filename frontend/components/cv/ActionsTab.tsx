@@ -2,21 +2,17 @@
 
 interface ActionsTabProps {
   matchScore: number | null;
-  templateLabel: string | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;
   onDownloadPdf: () => void;
   onRegenerateSame: () => void;
-  onRegenerateDifferent: () => void;
   onNext: () => void;
 }
 
 export function ActionsTab({
   matchScore,
-  templateLabel,
   expiryWarning,
   onDownloadPdf,
   onRegenerateSame,
-  onRegenerateDifferent,
   onNext,
 }: ActionsTabProps) {
   return (
@@ -46,12 +42,6 @@ export function ActionsTab({
             </div>
           </div>
           <span className="text-xs text-neutral-medium">Matching-Score</span>
-        </div>
-      )}
-
-      {templateLabel && (
-        <div className="text-center">
-          <span className="text-sm font-medium text-neutral-dark">{templateLabel}</span>
         </div>
       )}
 
@@ -87,14 +77,6 @@ export function ActionsTab({
           data-testid="regenerate-same-btn"
         >
           Erneut generieren
-        </button>
-        <button
-          type="button"
-          onClick={onRegenerateDifferent}
-          className="w-full text-sm text-teal underline"
-          data-testid="change-template-btn"
-        >
-          Andere Vorlage wählen
         </button>
       </div>
 
