@@ -48,6 +48,11 @@ class ColorContext:
     tint: str    # hex e.g. "#dce8f7" — light background for skill badges
 
 
+def _srgb_to_linear(c: float) -> float:
+    """Convert an sRGB channel value [0.0, 1.0] to linear light (IEC 61966-2-1)."""
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+
 def derive_tint(hex_color: str) -> str:
     """Return a light tint derived from the accent color (L=95%, S=10%, hue preserved)."""
     hex_color = hex_color.lstrip("#")
@@ -65,11 +70,7 @@ def derive_surface_text(hex_color: str) -> str:
     """
     hex_color = hex_color.lstrip("#")
     r, g, b = (int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
-
-    def _lin(c: float) -> float:
-        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-    luminance = 0.2126 * _lin(r) + 0.7152 * _lin(g) + 0.0722 * _lin(b)
+    luminance = 0.2126 * _srgb_to_linear(r) + 0.7152 * _srgb_to_linear(g) + 0.0722 * _srgb_to_linear(b)
     return "#ffffff" if luminance < 0.179 else "#1a1a1a"
 
 

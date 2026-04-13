@@ -274,7 +274,7 @@ class TestDeriveSurfaceText:
 
     def test_dark_surface_returns_white(self):
         from applire.services.color_detection import derive_surface_text
-        # Navy — luminance ~0.06
+        # Navy — luminance ~0.044
         assert derive_surface_text("#1a3a6e") == "#ffffff"
 
     def test_light_surface_returns_dark(self):
