@@ -7,6 +7,7 @@ const BASE_PROPS = {
   expiryWarning: null as { level: "none" | "warning" | "critical"; expiresIn: string } | null,
   onDownloadPdf: vi.fn(),
   onRegenerateSame: vi.fn(),
+  onRegenerateWithTemplate: vi.fn(),
   onNext: vi.fn(),
 };
 
@@ -23,7 +24,7 @@ describe("ActionsTab", () => {
 
   it("does not show expiry warning when level is none", () => {
     render(<ActionsTab {...BASE_PROPS} expiryWarning={null} />);
-    expect(screen.queryByText(/ab/)).toBeNull();
+    expect(screen.queryByText(/läuft ab/)).toBeNull();
   });
 
   it("shows warning expiry when level is warning", () => {
@@ -34,7 +35,7 @@ describe("ActionsTab", () => {
 
   it("shows critical expiry when level is critical", () => {
     render(<ActionsTab {...BASE_PROPS} expiryWarning={{ level: "critical", expiresIn: "in 3 Stunden" }} />);
-    expect(screen.getByText(/ab/)).toBeTruthy();
+    expect(screen.getByText(/läuft ab/)).toBeTruthy();
     expect(screen.getByText("in 3 Stunden")).toBeTruthy();
   });
 

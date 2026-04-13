@@ -29,5 +29,5 @@ export default defineConfig({
     },
   ],
   retries: 1,
-  outputDir: './test-results-pq',
+  outputDir: '/tmp/test-results-pq',
 });

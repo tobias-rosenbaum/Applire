@@ -1,10 +1,15 @@
 "use client";
 
+import { TemplateSelector } from "./TemplateSelector";
+
+type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_developer" | "creative_sidebar" | "academic" | "compact_pro";
+
 interface ActionsTabProps {
   matchScore: number | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;
   onDownloadPdf: () => void;
   onRegenerateSame: () => void;
+  onRegenerateWithTemplate: (template: CVTemplate) => void;
   onNext: () => void;
 }
 
@@ -13,6 +18,7 @@ export function ActionsTab({
   expiryWarning,
   onDownloadPdf,
   onRegenerateSame,
+  onRegenerateWithTemplate,
   onNext,
 }: ActionsTabProps) {
   return (
@@ -76,8 +82,18 @@ export function ActionsTab({
           className="w-full border border-neutral-medium text-sm py-2.5 rounded hover:border-teal transition-colors"
           data-testid="regenerate-same-btn"
         >
-          Erneut generieren
+          Erneut generieren (gleiche Vorlage)
         </button>
+      </div>
+
+      <div className="border-t border-neutral-medium pt-4">
+        <p className="text-xs font-semibold text-neutral-medium uppercase tracking-wide mb-3">
+          Vorlage wechseln
+        </p>
+        <TemplateSelector
+          onGenerate={onRegenerateWithTemplate}
+          actionLabel="Mit dieser Vorlage generieren"
+        />
       </div>
 
       <button

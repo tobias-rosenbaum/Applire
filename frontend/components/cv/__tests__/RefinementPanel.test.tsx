@@ -26,6 +26,7 @@ const BASE_PROPS = {
   onHtmlRefresh: vi.fn(),
   onRegenerateSame: vi.fn(),
   onRegenerateDifferent: vi.fn(),
+  onRegenerateWithTemplate: vi.fn(),
   onNext: vi.fn(),
   onDownloadPdf: vi.fn(),
 };
