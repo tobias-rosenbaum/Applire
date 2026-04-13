@@ -267,3 +267,36 @@ class TestTemplateColorInjection:
 
         html = await get_cv_html(cv.id, db)
         assert accent in html, f"Expected {accent} in rendered HTML"
+
+
+class TestDeriveSurfaceText:
+    """WCAG-contrast-driven auto text colour on coloured surfaces."""
+
+    def test_dark_surface_returns_white(self):
+        from applire.services.color_detection import derive_surface_text
+        # Navy — luminance ~0.06
+        assert derive_surface_text("#1a3a6e") == "#ffffff"
+
+    def test_light_surface_returns_dark(self):
+        from applire.services.color_detection import derive_surface_text
+        # Light blue — luminance ~0.75
+        assert derive_surface_text("#c5d8f8") == "#1a1a1a"
+
+    def test_pure_black_returns_white(self):
+        from applire.services.color_detection import derive_surface_text
+        assert derive_surface_text("#000000") == "#ffffff"
+
+    def test_pure_white_returns_dark(self):
+        from applire.services.color_detection import derive_surface_text
+        assert derive_surface_text("#ffffff") == "#1a1a1a"
+
+    def test_mid_grey_boundary(self):
+        from applire.services.color_detection import derive_surface_text
+        # #767676 is approx WCAG boundary — just confirm it returns a valid value
+        result = derive_surface_text("#767676")
+        assert result in ("#ffffff", "#1a1a1a")
+
+    def test_result_is_always_one_of_two_values(self):
+        from applire.services.color_detection import derive_surface_text
+        for colour in ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff6600"]:
+            assert derive_surface_text(colour) in ("#ffffff", "#1a1a1a")

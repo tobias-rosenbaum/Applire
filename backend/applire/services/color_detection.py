@@ -57,6 +57,22 @@ def derive_tint(hex_color: str) -> str:
     return "#{:02x}{:02x}{:02x}".format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
 
 
+def derive_surface_text(hex_color: str) -> str:
+    """Return white or black for legible text on hex_color background.
+
+    Uses the WCAG relative-luminance formula (IEC 61966-2-1 sRGB).
+    Threshold 0.179 is the geometric mean of 4.5:1 contrast against #000 and #fff.
+    """
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+
+    def _lin(c: float) -> float:
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    luminance = 0.2126 * _lin(r) + 0.7152 * _lin(g) + 0.0722 * _lin(b)
+    return "#ffffff" if luminance < 0.179 else "#1a1a1a"
+
+
 def _make_color_context(hex_accent: str) -> ColorContext:
     return ColorContext(accent=hex_accent, tint=derive_tint(hex_accent))
 
