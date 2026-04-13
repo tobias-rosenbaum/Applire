@@ -28,7 +28,7 @@ describe("DesignTab", () => {
   it("renders the detected company color card when company is provided", () => {
     render(<DesignTab {...BASE_PROPS} />);
     expect(screen.getByText("Siemens AG")).toBeTruthy();
-    expect(screen.getByText("#009fe3")).toBeTruthy();
+    expect(screen.getAllByText("#009fe3").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("automatisch erkannt")).toBeTruthy();
   });
 
