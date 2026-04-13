@@ -1,7 +1,7 @@
 # Design: CV Templates Expansion + Multi-Color Schema (Sprint 24)
 
 **Date:** 2026-04-13  
-**Status:** Approved  
+**Status:** Implemented (Sprint 24)  
 **Branch:** sprint-24
 
 ---
