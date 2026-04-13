@@ -16,6 +16,11 @@ _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 _TEMPLATE_FILES: dict[str, str] = {
     "classic_german": "lebenslauf.html.j2",
     "modern_swiss": "modern_swiss.html.j2",
+    "executive": "executive.html.j2",
+    "tech_developer": "tech_developer.html.j2",
+    "creative_sidebar": "creative_sidebar.html.j2",
+    "academic": "academic.html.j2",
+    "compact_pro": "compact_pro.html.j2",
 }
 
 from applire.schemas.cv import (
@@ -25,9 +30,9 @@ from applire.schemas.cv import (
     TailoredEducationEntry,
     TailoredLanguage,
 )
-from applire.services.color_detection import ColorContext
+from applire.services.color_detection import _make_color_context
 
-_DEFAULT_COLOR = ColorContext(accent="#2b5fa8", tint="#dce8f7")
+_DEFAULT_COLOR = _make_color_context("#2b5fa8")
 
 _SAMPLE_DATA = TailoredCVData(
     contact=TailoredContact(

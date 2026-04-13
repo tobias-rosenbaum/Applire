@@ -44,8 +44,19 @@ _CE_STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 @dataclass
 class ColorContext:
-    accent: str  # hex e.g. "#2b5fa8"
-    tint: str    # hex e.g. "#dce8f7" — light background for skill badges
+    primary: str        # hex — main brand color
+    primary_tint: str   # hex — light version of primary (L=95%, S=10%)
+    surface: str        # hex — sidebar/header bg (Phase 1: = primary)
+    surface_text: str   # "#ffffff" or "#1a1a1a" — WCAG auto-computed
+    secondary: str      # hex — second accent (Phase 1: = primary)
+    # Backward-compat aliases — existing templates use color.accent / color.tint
+    accent: str         # = primary
+    tint: str           # = primary_tint
+
+
+def _srgb_to_linear(c: float) -> float:
+    """Convert an sRGB channel value [0.0, 1.0] to linear light (IEC 61966-2-1)."""
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
 
 
 def derive_tint(hex_color: str) -> str:
@@ -57,8 +68,29 @@ def derive_tint(hex_color: str) -> str:
     return "#{:02x}{:02x}{:02x}".format(int(r2 * 255), int(g2 * 255), int(b2 * 255))
 
 
-def _make_color_context(hex_accent: str) -> ColorContext:
-    return ColorContext(accent=hex_accent, tint=derive_tint(hex_accent))
+def derive_surface_text(hex_color: str) -> str:
+    """Return white or black for legible text on hex_color background.
+
+    Uses the WCAG relative-luminance formula (IEC 61966-2-1 sRGB).
+    Threshold 0.179 is the geometric mean of 4.5:1 contrast against #000 and #fff.
+    """
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    luminance = 0.2126 * _srgb_to_linear(r) + 0.7152 * _srgb_to_linear(g) + 0.0722 * _srgb_to_linear(b)
+    return "#ffffff" if luminance < 0.179 else "#1a1a1a"
+
+
+def _make_color_context(hex_primary: str) -> ColorContext:
+    tint = derive_tint(hex_primary)
+    return ColorContext(
+        primary=hex_primary,
+        primary_tint=tint,
+        surface=hex_primary,      # Phase 1: surface = primary
+        surface_text=derive_surface_text(hex_primary),
+        secondary=hex_primary,    # Phase 1: secondary = primary
+        accent=hex_primary,       # backward compat
+        tint=tint,                # backward compat
+    )
 
 
 def _default_context() -> ColorContext:
@@ -73,10 +105,7 @@ async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> Colo
     if record.color_profile_id:
         cp = await db.get(ColorProfile, record.color_profile_id)
         if cp:
-            return ColorContext(
-                accent=cp.derived["--cv-accent"],
-                tint=cp.derived["--cv-accent-tint"],
-            )
+            return _make_color_context(cp.derived["--cv-accent"])
 
     # Step 2: Auto-detected company color
     job = await db.get(JobAnalysis, record.job_analysis_id)
@@ -85,10 +114,7 @@ async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> Colo
         if company and company.color_profile_id:
             cp = await db.get(ColorProfile, company.color_profile_id)
             if cp:
-                return ColorContext(
-                    accent=cp.derived["--cv-accent"],
-                    tint=cp.derived["--cv-accent-tint"],
-                )
+                return _make_color_context(cp.derived["--cv-accent"])
 
     # Step 3: User default (CE: always stub user)
     result = await db.execute(
@@ -98,10 +124,7 @@ async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> Colo
     if settings and settings.default_color_profile_id:
         cp = await db.get(ColorProfile, settings.default_color_profile_id)
         if cp:
-            return ColorContext(
-                accent=cp.derived["--cv-accent"],
-                tint=cp.derived["--cv-accent-tint"],
-            )
+            return _make_color_context(cp.derived["--cv-accent"])
 
     # Step 4: System default
     return _default_context()

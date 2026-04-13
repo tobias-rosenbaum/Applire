@@ -21,6 +21,7 @@ interface RefinementPanelProps {
   onHtmlRefresh: () => void;
   onRegenerateSame: () => void;
   onRegenerateDifferent: () => void;
+  onRegenerateWithTemplate: (template: string) => void;
   onNext: () => void;
   onDownloadPdf: () => void;
 }
@@ -38,6 +39,7 @@ export function RefinementPanel({
   onHtmlRefresh,
   onRegenerateSame,
   onRegenerateDifferent,
+  onRegenerateWithTemplate,
   onNext,
   onDownloadPdf,
 }: RefinementPanelProps) {
@@ -115,6 +117,7 @@ export function RefinementPanel({
             expiryWarning={expiryWarning}
             onDownloadPdf={onDownloadPdf}
             onRegenerateSame={onRegenerateSame}
+            onRegenerateWithTemplate={onRegenerateWithTemplate}
             onNext={onNext}
           />
         ) : (

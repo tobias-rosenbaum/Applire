@@ -71,6 +71,11 @@ def _slugify(text: str) -> str:
 _TEMPLATE_FILES: dict[str, str] = {
     "classic_german": "lebenslauf.html.j2",
     "modern_swiss": "modern_swiss.html.j2",
+    "executive": "executive.html.j2",
+    "tech_developer": "tech_developer.html.j2",
+    "creative_sidebar": "creative_sidebar.html.j2",
+    "academic": "academic.html.j2",
+    "compact_pro": "compact_pro.html.j2",
 }
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
