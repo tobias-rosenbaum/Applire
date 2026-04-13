@@ -44,8 +44,14 @@ _CE_STUB_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 @dataclass
 class ColorContext:
-    accent: str  # hex e.g. "#2b5fa8"
-    tint: str    # hex e.g. "#dce8f7" — light background for skill badges
+    primary: str        # hex — main brand color
+    primary_tint: str   # hex — light version of primary (L=95%, S=10%)
+    surface: str        # hex — sidebar/header bg (Phase 1: = primary)
+    surface_text: str   # "#ffffff" or "#1a1a1a" — WCAG auto-computed
+    secondary: str      # hex — second accent (Phase 1: = primary)
+    # Backward-compat aliases — existing templates use color.accent / color.tint
+    accent: str         # = primary
+    tint: str           # = primary_tint
 
 
 def _srgb_to_linear(c: float) -> float:
@@ -74,8 +80,17 @@ def derive_surface_text(hex_color: str) -> str:
     return "#ffffff" if luminance < 0.179 else "#1a1a1a"
 
 
-def _make_color_context(hex_accent: str) -> ColorContext:
-    return ColorContext(accent=hex_accent, tint=derive_tint(hex_accent))
+def _make_color_context(hex_primary: str) -> ColorContext:
+    tint = derive_tint(hex_primary)
+    return ColorContext(
+        primary=hex_primary,
+        primary_tint=tint,
+        surface=hex_primary,      # Phase 1: surface = primary
+        surface_text=derive_surface_text(hex_primary),
+        secondary=hex_primary,    # Phase 1: secondary = primary
+        accent=hex_primary,       # backward compat
+        tint=tint,                # backward compat
+    )
 
 
 def _default_context() -> ColorContext:
@@ -90,10 +105,7 @@ async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> Colo
     if record.color_profile_id:
         cp = await db.get(ColorProfile, record.color_profile_id)
         if cp:
-            return ColorContext(
-                accent=cp.derived["--cv-accent"],
-                tint=cp.derived["--cv-accent-tint"],
-            )
+            return _make_color_context(cp.derived["--cv-accent"])
 
     # Step 2: Auto-detected company color
     job = await db.get(JobAnalysis, record.job_analysis_id)
@@ -102,10 +114,7 @@ async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> Colo
         if company and company.color_profile_id:
             cp = await db.get(ColorProfile, company.color_profile_id)
             if cp:
-                return ColorContext(
-                    accent=cp.derived["--cv-accent"],
-                    tint=cp.derived["--cv-accent-tint"],
-                )
+                return _make_color_context(cp.derived["--cv-accent"])
 
     # Step 3: User default (CE: always stub user)
     result = await db.execute(
@@ -115,10 +124,7 @@ async def resolve_color_context(record: "GeneratedCV", db: AsyncSession) -> Colo
     if settings and settings.default_color_profile_id:
         cp = await db.get(ColorProfile, settings.default_color_profile_id)
         if cp:
-            return ColorContext(
-                accent=cp.derived["--cv-accent"],
-                tint=cp.derived["--cv-accent-tint"],
-            )
+            return _make_color_context(cp.derived["--cv-accent"])
 
     # Step 4: System default
     return _default_context()

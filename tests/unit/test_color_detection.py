@@ -60,8 +60,8 @@ class TestDeriveTint:
         assert len(result) == 7
 
     def test_color_context_has_accent_and_tint(self):
-        from applire.services.color_detection import ColorContext, derive_tint
-        ctx = ColorContext(accent="#2b5fa8", tint=derive_tint("#2b5fa8"))
+        from applire.services.color_detection import _make_color_context
+        ctx = _make_color_context("#2b5fa8")
         assert ctx.accent == "#2b5fa8"
         assert ctx.tint.startswith("#")
 
@@ -300,3 +300,43 @@ class TestDeriveSurfaceText:
         from applire.services.color_detection import derive_surface_text
         for colour in ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff6600"]:
             assert derive_surface_text(colour) in ("#ffffff", "#1a1a1a")
+
+
+class TestColorContextFields:
+    """_make_color_context must populate all Phase-1 slots."""
+
+    def _ctx(self, hex_color):
+        from applire.services.color_detection import _make_color_context
+        return _make_color_context(hex_color)
+
+    def test_primary_equals_seed(self):
+        ctx = self._ctx("#2b5fa8")
+        assert ctx.primary == "#2b5fa8"
+
+    def test_accent_alias_equals_primary(self):
+        ctx = self._ctx("#2b5fa8")
+        assert ctx.accent == ctx.primary
+
+    def test_primary_tint_is_hex(self):
+        ctx = self._ctx("#2b5fa8")
+        assert ctx.primary_tint.startswith("#") and len(ctx.primary_tint) == 7
+
+    def test_tint_alias_equals_primary_tint(self):
+        ctx = self._ctx("#2b5fa8")
+        assert ctx.tint == ctx.primary_tint
+
+    def test_surface_equals_primary_in_phase1(self):
+        ctx = self._ctx("#2b5fa8")
+        assert ctx.surface == ctx.primary
+
+    def test_secondary_equals_primary_in_phase1(self):
+        ctx = self._ctx("#2b5fa8")
+        assert ctx.secondary == ctx.primary
+
+    def test_surface_text_is_white_for_dark_surface(self):
+        ctx = self._ctx("#1a3a6e")
+        assert ctx.surface_text == "#ffffff"
+
+    def test_surface_text_is_dark_for_light_surface(self):
+        ctx = self._ctx("#dce8f7")
+        assert ctx.surface_text == "#1a1a1a"
