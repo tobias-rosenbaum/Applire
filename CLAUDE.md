@@ -3,13 +3,27 @@
 ## Project Overview
 
 **Applire** is an AI-powered DACH CV tailoring platform built as an open-core product.
-- **License**: AGPL-3.0 (Community Edition) / Proprietary (Cloud Edition)
+- **License**: AGPL-3.0 (Community Edition)
 - **Founder**: Tobias Rosenbaum
 - **Architecture doc**: `Documents/Architecture/arc42.md` (authoritative)
 - **ADRs**: `Documents/Architecture/ADR.md`
 - **Sprint specs**: `Documents/Sprints/sprint N.md`
 
 ---
+## Ways of working
+This project operates in sprints. The user will ask you to create a new sprint and tell you the scope of the implementation. You check the relevant Documentation and use the superpowers skill for the individual step.
+
+### Branching and merging
+Create a branch for each new sprint. Check that the sprints from previous sprints have been successfully merged into main. After the implementation is finished and the user conducted user acceptance testing, push to the repo and create a pull request.
+
+### User Journeys, Epics and User Stories.
+Check the user journeys in `Documents/Product Specifications/Personas` on whether the sprint impacts any of the existing journeys or whether additional journeys are needed. Next, if journeys are impacted, update the `Documents/Product Specifications/Epic_and_User_Story_Tracker.csv`. Reference these in the plan you write later.
+
+### Architecture and Decisions
+Check the architecture Documentation in `Documents/Architecture/`. If major decisions are made as part of a sprint, propose to document the decision as an ADR entry and update the arc42.md document if necessary. Both documents should be up to date so that future agents get a comprehensive and accurate set of information about the project
+
+
+
 
 ## Tech Stack
 
@@ -93,13 +107,7 @@ npx playwright show-report            # View HTML report
 
 ## Architecture Rules
 
-### Edition Gating
-- `APPLIRE_EDITION=community|cloud` — checked at service layer
-- Cloud-only code lives in `applire.cloud.*` — **never** in `applire.*`
-- Cloud-only endpoints return HTTP 402 on Community Edition
-
 ### Core Patterns
-- **JD-First**: All tailoring flows start with JD analysis
 - **Stateful Backend**: Complex reasoning (Interview Orchestrator, Flow Orchestrator) stays server-side; frontend is thin
 - **Provider Abstraction**: Auth, LLM, Storage, OCR all use factory/interface pattern — pluggable for self-hosters
 - **MCP Agent-First**: All user-facing functionality must be accessible as MCP tools; Kaile is a channel, not a persona

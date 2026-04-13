@@ -180,7 +180,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={deleting}
                 >
@@ -230,7 +230,7 @@ export default function SettingsPage() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   onClick={handleDelete}
                   disabled={deleting || deleteConfirmation !== "DELETE"}
                 >

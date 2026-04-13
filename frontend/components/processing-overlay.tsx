@@ -92,14 +92,29 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
         // Step 2: Create flow session + Upload CVs
         markStep("upload", "in_progress");
 
-        const flowRes = await fetch(`${API_BASE}/api/flow`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ job_id: jobId }),
-        });
-        if (!flowRes.ok) throw new Error(await apiErrorMessage(flowRes));
-        const flow = await flowRes.json();
-        const flowId: string = flow.flow_id;
+        // When a job was analyzed, create an Application record (+ FlowSession)
+        // atomically so it appears on the dashboard. Without a job there is nothing
+        // to track yet, so fall back to a bare FlowSession.
+        let flowId: string;
+        if (jobId !== null) {
+          const appRes = await fetch(`${API_BASE}/api/applications`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_analysis_id: jobId, start_workflow: true }),
+          });
+          if (!appRes.ok) throw new Error(await apiErrorMessage(appRes));
+          const appData = await appRes.json();
+          flowId = appData.flow_session_id;
+        } else {
+          const flowRes = await fetch(`${API_BASE}/api/flow`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_id: null }),
+          });
+          if (!flowRes.ok) throw new Error(await apiErrorMessage(flowRes));
+          const flow = await flowRes.json();
+          flowId = flow.flow_id;
+        }
 
         for (const file of files) {
           const formData = new FormData();

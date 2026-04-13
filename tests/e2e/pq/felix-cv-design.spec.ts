@@ -48,22 +48,23 @@ async function generateCvAndNavigateToView(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/flow\/.*\/gaps/, { timeout: 90000 });
   await expect(page.getByTestId("loading-indicator")).not.toBeVisible({ timeout: 30000 });
 
-  // Navigate to CV page via flow
-  const url = page.url();
-  const match = url.match(/\/flow\/([^/]+)\//);
-  const flowId = match ? match[1] : "";
+  // Advance flow to CV generation (button is always visible on gaps page)
+  await page.getByTestId("generate-cv-button").click();
 
-  // Try generate-cv-button first, otherwise navigate directly
-  const generateBtn = page.getByTestId("generate-cv-button");
-  if (await generateBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await generateBtn.click();
-  } else {
-    await page.goto(`/flow/${flowId}/cv`);
+  // Wait for CV page
+  await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
+
+  // Skip photo prompt if it appears (new users with no photo)
+  const skipPhotoBtn = page.getByText("Skip for now");
+  if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await skipPhotoBtn.click();
   }
 
-  // Wait for CV view to load
-  await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
-  await expect(page.getByTestId("refinement-panel")).toBeVisible({ timeout: 30000 });
+  // Trigger CV generation from template selector
+  await page.getByText("CV generieren").click({ timeout: 10000 });
+
+  // Wait for generation to complete — real LLM can take up to 90s
+  await expect(page.getByTestId("refinement-panel")).toBeVisible({ timeout: 90000 });
 }
 
 test.describe("Felix — CV Design tab (PQ)", () => {

@@ -5,9 +5,11 @@ import { DesignTab } from "../DesignTab";
 
 const BASE_PROPS = {
   cvId: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+  templateLabel: null,
   detectedCompany: { name: "Siemens AG", hex: "#009fe3" },
   currentAccentHex: "#009fe3",
   onColorApplied: vi.fn(),
+  onChangeTemplate: vi.fn(),
 };
 
 describe("DesignTab", () => {

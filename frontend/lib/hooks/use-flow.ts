@@ -37,7 +37,7 @@ function translateError(status: number, detail?: string): string {
   }
 }
 
-interface FlowState {
+export interface FlowState {
   flow_id: string;
   user_type: "new" | "returning";
   current_step: string;
