@@ -29,7 +29,7 @@ export default function CVPage({
 }) {
   const { flowId } = use(params);
 
-  const [phase, setPhase] = useState<Phase>("template_select");
+  const [phase, setPhase] = useState<Phase | null>(null); // null = initializing
   const [cvId, setCvId] = useState<string | null>(null);
   const [template, setTemplate] = useState<CVTemplate>("classic_german");
   const [flowState, setFlowState] = useState<FlowState | null>(null);
@@ -38,12 +38,15 @@ export default function CVPage({
 
   const cvDocRef = useRef<CVDocumentHandle>(null);
 
-  // Restore state from server on mount — skip template picker if CV already exists
+  // Restore state from server on mount — determine correct phase before rendering
   useEffect(() => {
     async function init() {
       try {
         const res = await fetch(`${API_BASE}/api/flow/${flowId}/state`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          setPhase("template_select");
+          return;
+        }
         const fs: FlowState = await res.json();
         setFlowState(fs);
         if (fs.cv_summary?.cv_id) {
@@ -59,15 +62,16 @@ export default function CVPage({
             const photoUrl: string | null =
               profileData?.profile?.personal_info?.photo_url ?? null;
             setProfilePhotoUrl(photoUrl);
-            if (!photoUrl) {
-              setPhase("photo_prompt");
-            }
+            setPhase(photoUrl ? "photo_prompt" : "template_select");
+            return;
           }
         } catch {
           // Non-fatal — fall through to template_select
         }
+        setPhase("template_select");
       } catch {
         // Non-fatal — user sees template picker
+        setPhase("template_select");
       }
     }
     void init();
@@ -170,10 +174,19 @@ export default function CVPage({
             onHtmlRefresh={() => cvDocRef.current?.refresh()}
             onRegenerateSame={() => void handleGenerate(template)}
             onRegenerateDifferent={() => setPhase("template_select")}
+            onRegenerateWithTemplate={(tpl) => void handleGenerate(tpl as CVTemplate)}
             onNext={() => setPhase("complete")}
             onDownloadPdf={() => void handleDownloadPdf()}
           />
         </div>
+      </div>
+    );
+  }
+
+  if (phase === null) {
+    return (
+      <div className="p-6 min-h-screen bg-neutral-light flex items-center justify-center" data-testid="cv-page">
+        <div className="w-8 h-8 border-4 border-teal border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

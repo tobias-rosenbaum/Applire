@@ -48,12 +48,13 @@ async function generateCvAndNavigateToView(page: Page): Promise<void> {
 
   await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
+  // Wait for either the photo prompt or the template selector to appear after page init
   const skipPhotoBtn = page.getByText("Skip for now");
-  if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+  if (await skipPhotoBtn.isVisible({ timeout: 20000 }).catch(() => false)) {
     await skipPhotoBtn.click();
   }
 
-  await page.getByText("CV generieren").click({ timeout: 10000 });
+  await page.getByText("CV generieren").click({ timeout: 20000 });
   await expect(page.getByTestId("refinement-panel")).toBeVisible({ timeout: 90000 });
 }
 
