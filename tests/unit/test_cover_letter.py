@@ -154,3 +154,66 @@ def test_flow_state_response_has_cover_letter_summary_field():
     from applire.schemas.flow import FlowStateResponse
     fields = FlowStateResponse.model_fields
     assert "cover_letter_summary" in fields
+
+
+# ---------------------------------------------------------------------------
+# Task 6 — Recipient extraction
+# ---------------------------------------------------------------------------
+
+def test_extract_recipient_finds_anrede_pattern():
+    from applire.utils.recipient_extraction import extract_recipient_from_jd
+    jd = "Bitte richten Sie Ihre Bewerbung an Dr. Sarah Müller, HR-Abteilung."
+    result = extract_recipient_from_jd(jd)
+    assert result["name"] == "Dr. Sarah Müller"
+
+
+def test_extract_recipient_finds_english_pattern():
+    from applire.utils.recipient_extraction import extract_recipient_from_jd
+    jd = "Please address your application to Ms. Anna Schmidt, Talent Acquisition."
+    result = extract_recipient_from_jd(jd)
+    assert result["name"] == "Ms. Anna Schmidt"
+
+
+def test_extract_recipient_returns_none_when_not_found():
+    from applire.utils.recipient_extraction import extract_recipient_from_jd
+    result = extract_recipient_from_jd("We are looking for a senior engineer.")
+    assert result["name"] is None
+
+
+# ---------------------------------------------------------------------------
+# Task 7 — LLM prompt builder
+# ---------------------------------------------------------------------------
+
+def test_build_cover_letter_prompt_includes_salary():
+    from applire.prompts.cover_letter import build_cover_letter_prompt
+    prompt = build_cover_letter_prompt(
+        cv_data={"contact": {"name": "Marcus Bauer"}, "summary": "QA expert"},
+        jd_text="We are hiring a QA Manager at Roche Diagnostics.",
+        pre_gen_inputs={"salary": "95.000 €", "tone": "formal"},
+        detected_language="de",
+    )
+    assert "Gehaltswunsch" in prompt
+    assert "95.000 €" in prompt
+
+
+def test_build_cover_letter_prompt_includes_availability():
+    from applire.prompts.cover_letter import build_cover_letter_prompt
+    prompt = build_cover_letter_prompt(
+        cv_data={"contact": {"name": "Marcus Bauer"}, "summary": "QA expert"},
+        jd_text="We are hiring a QA Manager.",
+        pre_gen_inputs={"availability": "3 months notice", "tone": "professional"},
+        detected_language="en",
+    )
+    assert "3 months notice" in prompt
+
+
+def test_build_cover_letter_prompt_returns_system_and_user():
+    from applire.prompts.cover_letter import build_cover_letter_prompt, SYSTEM_PROMPT
+    prompt = build_cover_letter_prompt(
+        cv_data={"contact": {"name": "A. Test"}, "summary": "Engineer"},
+        jd_text="Test JD",
+        pre_gen_inputs={"tone": "conversational"},
+        detected_language="de",
+    )
+    assert isinstance(SYSTEM_PROMPT, str)
+    assert len(prompt) > 100
