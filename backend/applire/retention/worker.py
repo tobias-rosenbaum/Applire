@@ -24,6 +24,12 @@ from sqlalchemy import text, update
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from applire.constants import (
+    GENERATED_DOCUMENTS_TTL_DAYS as _GENERATED_DOCS_TTL_DAYS,
+    INTERVIEW_SESSION_TTL_DAYS as _SESSION_TTL_DAYS,
+    PROFILE_INACTIVITY_TTL_DAYS as _INACTIVITY_TTL_DAYS,
+    UPLOAD_TTL_DAYS as _UPLOADS_TTL_DAYS,
+)
 from applire.db.session import AsyncSessionLocal
 from applire.models.application import Application
 from applire.models.cv import CVGenerationStatus, GeneratedCV
@@ -33,9 +39,6 @@ from applire.models.user import User
 
 logger = logging.getLogger(__name__)
 
-_UPLOADS_TTL_DAYS = 7
-_SESSION_TTL_DAYS = 30
-_INACTIVITY_TTL_DAYS = 730        # ≈ 24 months
 _STALE_CV_JOB_MINUTES = 10        # pending/generating → failed after this long
 
 

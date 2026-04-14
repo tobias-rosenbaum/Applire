@@ -25,6 +25,7 @@ from applire.constants import (
     INTERVIEW_HARD_CEILING_GUIDED,
     INTERVIEW_HARD_CEILING_TARGETED,
     INTERVIEW_MAX_QUESTIONS_PER_GAP,
+    INTERVIEW_SESSION_TTL_DAYS as _SESSION_TTL_DAYS,
     INTERVIEW_TARGET_MIN_GUIDED,
     INTERVIEW_TARGET_MIN_TARGETED,
     MODE_B_COMPLETENESS_THRESHOLD,
@@ -52,8 +53,6 @@ from applire.services.interview_graph import (
     question_generator_with_profile,
     response_parser,
 )
-
-_SESSION_TTL_DAYS = 30
 
 
 # ---------------------------------------------------------------------------
