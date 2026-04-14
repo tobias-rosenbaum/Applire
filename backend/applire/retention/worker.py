@@ -176,6 +176,50 @@ async def _reap_stale_cv_jobs(db: AsyncSession) -> int:
         return 0
 
 
+async def _purge_cover_letters(db: AsyncSession) -> int:
+    """Hard-delete generated cover letters whose expires_at is in the past."""
+    now = datetime.now(timezone.utc)
+    try:
+        result = await db.execute(
+            text(
+                "DELETE FROM generated_cover_letters WHERE expires_at < :now AND deleted_at IS NULL"
+            ),
+            {"now": now},
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
+
+
+async def _reap_stale_cl_jobs(db: AsyncSession) -> int:
+    """Mark cover letter generation jobs stuck > 10 minutes in pending/generating as failed."""
+    from applire.models.cover_letter import CoverLetterStatus, GeneratedCoverLetter
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=_STALE_CV_JOB_MINUTES)
+    try:
+        result = await db.execute(
+            update(GeneratedCoverLetter)
+            .where(
+                GeneratedCoverLetter.status.in_(
+                    [CoverLetterStatus.pending.value, CoverLetterStatus.generating.value]
+                )
+            )
+            .where(GeneratedCoverLetter.created_at < cutoff)
+            .where(GeneratedCoverLetter.deleted_at.is_(None))
+            .values(
+                status=CoverLetterStatus.failed.value,
+                error_message="Generation timed out (stale job reaper)",
+            )
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
+
+
 async def run() -> None:
     """Execute all TTL rules and emit a structured JSON report to stdout."""
     async with AsyncSessionLocal() as db:
@@ -186,6 +230,8 @@ async def run() -> None:
         users_tombstoned = await _tombstone_inactive_users(db)
         applications_tombstoned = await _tombstone_inactive_applications(db)
         stale_cv_jobs_failed = await _reap_stale_cv_jobs(db)
+        cover_letters_deleted = await _purge_cover_letters(db)
+        stale_cl_jobs_failed = await _reap_stale_cl_jobs(db)
 
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(),
@@ -196,5 +242,7 @@ async def run() -> None:
         "users_tombstoned": users_tombstoned,
         "applications_tombstoned": applications_tombstoned,
         "stale_cv_jobs_failed": stale_cv_jobs_failed,
+        "generated_cover_letters_deleted": cover_letters_deleted,
+        "stale_cl_jobs_failed": stale_cl_jobs_failed,
     }
     print(json.dumps(report), flush=True)
