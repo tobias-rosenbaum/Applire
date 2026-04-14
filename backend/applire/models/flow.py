@@ -49,6 +49,9 @@ class FlowSession(Base):
     generated_cv_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("generated_cvs.id"), nullable=True
     )
+    generated_cover_letter_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("generated_cover_letters.id"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -116,3 +116,18 @@ async def test_cover_letter_expires_at_is_90_days_out(db):
     expires = cl.expires_at.replace(tzinfo=None) if cl.expires_at.tzinfo else cl.expires_at
     delta = expires - datetime.now()
     assert 88 < delta.days <= 91
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — FlowSession cover letter FK
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_flow_session_has_cover_letter_fk(db):
+    from applire.models.flow import FlowSession
+    import sqlalchemy as sa
+    from applire.db.session import Base
+
+    inspector = sa.inspect(Base.metadata.tables["flow_sessions"])
+    col_names = [c.name for c in inspector.columns]
+    assert "generated_cover_letter_id" in col_names
