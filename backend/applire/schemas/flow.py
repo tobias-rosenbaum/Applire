@@ -44,6 +44,13 @@ class CVSummary(BaseModel):
     expires_at: datetime
 
 
+class CoverLetterSummary(BaseModel):
+    cover_letter_id: uuid.UUID
+    status: str
+    template: str
+    expires_at: datetime
+
+
 # ---------------------------------------------------------------------------
 # Request / Response schemas
 # ---------------------------------------------------------------------------
@@ -82,5 +89,6 @@ class FlowStateResponse(BaseModel):
     gap_summary: GapAnalysisSummary | None = None
     interview_summary: InterviewSummary | None = None
     cv_summary: CVSummary | None = None
+    cover_letter_summary: CoverLetterSummary | None = None
     created_at: datetime
     updated_at: datetime

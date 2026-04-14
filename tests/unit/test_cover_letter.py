@@ -131,3 +131,26 @@ async def test_flow_session_has_cover_letter_fk(db):
     inspector = sa.inspect(Base.metadata.tables["flow_sessions"])
     col_names = [c.name for c in inspector.columns]
     assert "generated_cover_letter_id" in col_names
+
+
+# ---------------------------------------------------------------------------
+# Task 5 — Pydantic schemas
+# ---------------------------------------------------------------------------
+
+def test_cover_letter_generate_request_validates_tone():
+    from applire.schemas.cover_letter import CoverLetterGenerateRequest
+    req = CoverLetterGenerateRequest(job_id=uuid.uuid4(), tone="formal")
+    assert req.tone == "formal"
+
+
+def test_cover_letter_generate_request_rejects_invalid_tone():
+    from pydantic import ValidationError
+    from applire.schemas.cover_letter import CoverLetterGenerateRequest
+    with pytest.raises(ValidationError):
+        CoverLetterGenerateRequest(job_id=uuid.uuid4(), tone="aggressive")
+
+
+def test_flow_state_response_has_cover_letter_summary_field():
+    from applire.schemas.flow import FlowStateResponse
+    fields = FlowStateResponse.model_fields
+    assert "cover_letter_summary" in fields
