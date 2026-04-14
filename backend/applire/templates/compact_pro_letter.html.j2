@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --primary: {{ color.primary }}; }
+    body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 10pt; line-height: 1.5; color: #111; background: #fff; }
+    .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 16mm 22mm 16mm 25mm; }
+    .header { border-bottom: 2px solid var(--primary); padding-bottom: 6px; margin-bottom: 10mm; display: flex; justify-content: space-between; align-items: flex-end; }
+    .header-name { font-size: 14pt; font-weight: 700; }
+    .header-contact { font-size: 8.5pt; color: #555; text-align: right; line-height: 1.5; }
+    .recipient { margin-bottom: 6mm; font-size: 9.5pt; }
+    .date { text-align: right; margin-bottom: 5mm; color: #666; font-size: 9pt; }
+    .subject { font-weight: 700; font-size: 10.5pt; margin-bottom: 6mm; }
+    .body p { margin-bottom: 4mm; font-size: 9.5pt; text-align: justify; }
+    .signature { margin-top: 8mm; font-size: 9.5pt; }
+    .signature .closing { margin-bottom: 10mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-name">{{ letter.header.name }}</div>
+    <div class="header-contact">{% if letter.header.email %}{{ letter.header.email }}<br>{% endif %}{% if letter.header.phone %}{{ letter.header.phone }}<br>{% endif %}{% if letter.header.address %}{{ letter.header.address }}{% endif %}</div>
+  </div>
+  <div class="recipient">{% if letter.recipient.name %}{{ letter.recipient.name }}<br>{% endif %}{% if letter.recipient.company %}{{ letter.recipient.company }}<br>{% endif %}{% if letter.recipient.address %}{{ letter.recipient.address }}{% endif %}</div>
+  <div class="date">{{ letter.recipient.date }}</div>
+  <div class="subject">Bewerbung{% if letter.recipient.company %} — {{ letter.recipient.company }}{% endif %}</div>
+  <div class="body">{% for para in letter.body.paragraphs %}<p>{{ para }}</p>{% endfor %}</div>
+  <div class="signature"><div class="closing">{{ letter.signature.closing }},</div><div>{{ letter.signature.name }}</div></div>
+</div>
+</body>
+</html>
