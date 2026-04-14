@@ -3,12 +3,14 @@
 
 import { useRef } from "react";
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TemplateSelector } from "@/components/cv/TemplateSelector";
 import { GenerationProgress } from "@/components/cv/GenerationProgress";
 import { CVDocument, type CVDocumentHandle } from "@/components/cv/CVDocument";
 import { RefinementPanel } from "@/components/cv/RefinementPanel";
 import { WhatNext } from "@/components/cv/WhatNext";
 import { PhotoPromptStep } from "@/components/cv/PhotoPromptStep";
+import { GenerateCoverLetterModal } from "@/components/cover-letter/GenerateCoverLetterModal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -20,6 +22,7 @@ interface FlowState {
   job_summary?: { role_title: string } | null;
   gap_summary?: { match_score: number; gaps?: Array<{ id: string; label: string }>; sections?: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }> } | null;
   cv_summary?: { cv_id: string; pdf_url: string; expires_at: string } | null;
+  cover_letter_summary?: { cover_letter_id: string } | null;
 }
 
 export default function CVPage({
@@ -28,6 +31,7 @@ export default function CVPage({
   params: Promise<{ flowId: string }>;
 }) {
   const { flowId } = use(params);
+  const router = useRouter();
 
   const [phase, setPhase] = useState<Phase | null>(null); // null = initializing
   const [cvId, setCvId] = useState<string | null>(null);
@@ -35,6 +39,7 @@ export default function CVPage({
   const [flowState, setFlowState] = useState<FlowState | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
 
   const cvDocRef = useRef<CVDocumentHandle>(null);
 
@@ -158,6 +163,7 @@ export default function CVPage({
           </div>
           <RefinementPanel
             cvId={cvId}
+            flowId={flowId}
             jobSummary={flowState?.job_summary?.role_title ?? null}
             gapSummary={{
               gaps: (flowState?.gap_summary as any)?.gaps ?? [],
@@ -169,6 +175,7 @@ export default function CVPage({
             template={{ label: template === "classic_german" ? "Klassischer Lebenslauf" : "Modern Swiss CV" }}
             matchScore={flowState?.gap_summary?.match_score ?? null}
             expiryWarning={expiryWarning}
+            coverLetterId={flowState?.cover_letter_summary?.cover_letter_id ?? null}
             detectedCompany={(flowState?.gap_summary as any)?.detected_company ?? null}
             currentAccentHex={(flowState?.gap_summary as any)?.current_accent_hex ?? "#2b5fa8"}
             onHtmlRefresh={() => cvDocRef.current?.refresh()}
@@ -177,11 +184,23 @@ export default function CVPage({
             onRegenerateWithTemplate={(tpl) => void handleGenerate(tpl as CVTemplate)}
             onNext={() => setPhase("complete")}
             onDownloadPdf={() => void handleDownloadPdf()}
+            onGenerateCoverLetter={() => setShowCoverLetterModal(true)}
           />
         </div>
-      </div>
+      {showCoverLetterModal && flowState?.job_id && (
+        <GenerateCoverLetterModal
+          jobId={flowState.job_id.toString()}
+          onClose={() => setShowCoverLetterModal(false)}
+          onGenerated={(_clId) => {
+            setShowCoverLetterModal(false);
+            router.push(`/flow/${flowId}/cover-letter`);
+          }}
+        />
+      )}
+    </div>
     );
   }
+
 
   if (phase === null) {
     return (

@@ -1,25 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import { TemplateSelector } from "./TemplateSelector";
 
 type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_developer" | "creative_sidebar" | "academic" | "compact_pro";
 
 interface ActionsTabProps {
+  flowId: string;
   matchScore: number | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;
+  coverLetterId: string | null;
   onDownloadPdf: () => void;
   onRegenerateSame: () => void;
   onRegenerateWithTemplate: (template: CVTemplate) => void;
   onNext: () => void;
+  onGenerateCoverLetter: () => void;
 }
 
 export function ActionsTab({
+  flowId,
   matchScore,
   expiryWarning,
+  coverLetterId,
   onDownloadPdf,
   onRegenerateSame,
   onRegenerateWithTemplate,
   onNext,
+  onGenerateCoverLetter,
 }: ActionsTabProps) {
   return (
     <div className="flex flex-col gap-4 p-3">
@@ -94,6 +101,30 @@ export function ActionsTab({
           onGenerate={onRegenerateWithTemplate}
           actionLabel="Mit dieser Vorlage generieren"
         />
+      </div>
+
+      {/* Cover Letter section */}
+      <div className="border-t border-neutral-medium pt-4 flex flex-col gap-2">
+        <p className="text-xs font-semibold text-neutral-medium uppercase tracking-wide mb-1">
+          Anschreiben
+        </p>
+        {coverLetterId ? (
+          <Link
+            href={`/flow/${flowId}/cover-letter`}
+            className="w-full flex items-center justify-center gap-1 border border-blue-500 text-blue-600 text-sm py-2.5 rounded hover:bg-blue-50 transition-colors"
+            data-testid="view-cover-letter-btn"
+          >
+            Anschreiben ansehen →
+          </Link>
+        ) : null}
+        <button
+          type="button"
+          onClick={onGenerateCoverLetter}
+          className="w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded hover:bg-blue-700 transition-colors"
+          data-testid="generate-cover-letter-btn"
+        >
+          {coverLetterId ? "Anschreiben neu generieren" : "Anschreiben generieren"}
+        </button>
       </div>
 
       <button
