@@ -217,3 +217,92 @@ def test_build_cover_letter_prompt_returns_system_and_user():
     )
     assert isinstance(SYSTEM_PROMPT, str)
     assert len(prompt) > 100
+
+
+# ---------------------------------------------------------------------------
+# Task 8 — Generation service
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_generate_cover_letter_creates_pending_record(db):
+    """generate_cover_letter should create a GeneratedCoverLetter with status=pending."""
+    from unittest.mock import AsyncMock, MagicMock
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.models.cv import GeneratedCV
+    from applire.models.flow import FlowSession
+    from applire.models.job import JobAnalysis
+    from applire.models.profile import MasterProfile
+    from applire.models.user import User
+    from applire.schemas.cover_letter import CoverLetterGenerateRequest
+
+    # Seed minimal DB records
+    user = User(id=uuid.uuid4(), email="test@test.com")
+    db.add(user)
+    job = JobAnalysis(
+        id=uuid.uuid4(),
+        raw_text_hash="abc123",
+        raw_text="QA Manager at Roche",
+        role_title="QA Manager",
+        required_skills=[],
+        nice_to_have_skills=[],
+        keywords=[],
+        seniority_level="senior",
+        company_culture_signals=[],
+        language_requirement="de",
+    )
+    db.add(job)
+    profile = MasterProfile(profile_json={
+        "contact": {"name": "Marcus Bauer", "email": "m@test.com"},
+        "summary": "QA Expert",
+        "work_history": [],
+        "skills": [],
+        "education": [],
+        "languages": [],
+    })
+    db.add(profile)
+    await db.flush()
+
+    cv = GeneratedCV(
+        job_analysis_id=job.id,
+        profile_id=profile.id,
+        tailored_data={
+            "contact": {"name": "Marcus Bauer", "email": "m@test.com"},
+            "summary": "QA Expert",
+            "work_history": [],
+            "skills": [],
+            "education": [],
+            "languages": [],
+        },
+        template="executive",
+        status="ready",
+    )
+    db.add(cv)
+
+    flow = FlowSession(
+        user_id=user.id,
+        job_id=job.id,
+        generated_cv_id=cv.id,
+        available_actions={},
+    )
+    db.add(flow)
+    await db.commit()
+
+    # Mock BackgroundTasks and LLM provider
+    bg = MagicMock()
+    bg.add_task = MagicMock()
+    mock_provider = AsyncMock()
+
+    from applire.services.cover_letter import generate_cover_letter
+    request = CoverLetterGenerateRequest(
+        job_id=job.id,
+        tone="formal",
+    )
+    response = await generate_cover_letter(request, db, mock_provider, bg, "http://localhost:8001")
+
+    assert response.cover_letter_id is not None
+    assert response.status == CoverLetterStatus.pending
+    bg.add_task.assert_called_once()
+
+    # FlowSession should be updated
+    await db.refresh(flow)
+    assert flow.generated_cover_letter_id == response.cover_letter_id
