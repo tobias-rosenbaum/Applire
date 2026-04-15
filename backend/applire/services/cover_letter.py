@@ -352,7 +352,7 @@ async def _render_cover_letter_background(
                 pre_gen_inputs=pre_gen,
                 detected_language=detected_language,
             )
-            raw = await provider.complete(SYSTEM_PROMPT, user_prompt)
+            raw = await provider.acomplete(user_prompt, system=SYSTEM_PROMPT)
 
             # Parse JSON response
             letter_data = json.loads(raw)
