@@ -33,9 +33,10 @@ _JS_HOSTS: frozenset[str] = frozenset(
 class ScraperError(Exception):
     """Raised when all tiers fail to extract job text."""
 
-    def __init__(self, url: str, reason: str) -> None:
+    def __init__(self, url: str, reason: str, code: str = "jd_fetch_failed") -> None:
         self.url = url
         self.reason = reason
+        self.code = code
         super().__init__(reason)
 
 
