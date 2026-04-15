@@ -3,12 +3,15 @@ import { vi, describe, it, expect, afterEach } from "vitest";
 import { ActionsTab } from "../ActionsTab";
 
 const BASE_PROPS = {
+  flowId: "test-flow-id",
   matchScore: 0.82,
   expiryWarning: null as { level: "none" | "warning" | "critical"; expiresIn: string } | null,
+  coverLetterId: null as string | null,
   onDownloadPdf: vi.fn(),
   onRegenerateSame: vi.fn(),
   onRegenerateWithTemplate: vi.fn(),
   onNext: vi.fn(),
+  onGenerateCoverLetter: vi.fn(),
 };
 
 describe("ActionsTab", () => {

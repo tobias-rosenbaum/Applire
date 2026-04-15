@@ -4,6 +4,7 @@ import { RefinementPanel } from "../RefinementPanel";
 
 const BASE_PROPS = {
   cvId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  flowId: "test-flow-id",
   jobSummary: "Senior Software Engineer",
   gapSummary: {
     gaps: [{ id: "Python", label: "Python" }],
@@ -21,6 +22,7 @@ const BASE_PROPS = {
   template: { label: "Klassischer Lebenslauf" },
   matchScore: 0.82,
   expiryWarning: null as { level: "none" | "warning" | "critical"; expiresIn: string } | null,
+  coverLetterId: null as string | null,
   detectedCompany: { name: "Siemens AG", hex: "#009fe3" },
   currentAccentHex: "#009fe3",
   onHtmlRefresh: vi.fn(),
@@ -29,6 +31,7 @@ const BASE_PROPS = {
   onRegenerateWithTemplate: vi.fn(),
   onNext: vi.fn(),
   onDownloadPdf: vi.fn(),
+  onGenerateCoverLetter: vi.fn(),
 };
 
 const MOCK_SECTIONS_RESPONSE = {

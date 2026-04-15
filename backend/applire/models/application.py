@@ -19,8 +19,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from applire.db.session import Base
-
-_APPLICATION_TTL_DAYS = 730  # 24 months inactivity (ADR 005 amendment)
+from applire.constants import PROFILE_INACTIVITY_TTL_DAYS as _APPLICATION_TTL_DAYS
 
 
 def _default_expires_at() -> datetime:

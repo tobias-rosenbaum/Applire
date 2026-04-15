@@ -20,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from applire.constants import MODE_B_COMPLETENESS_THRESHOLD
+from applire.models.cover_letter import GeneratedCoverLetter
 from applire.models.cv import GeneratedCV
 from applire.models.flow import FlowSession
 from applire.models.gap import GapAnalysis
@@ -31,6 +32,7 @@ from applire.models.session import InterviewSession
 # from applire.services.application import sync_workflow_status
 from applire.schemas.flow import (
     AdvanceFlowRequest,
+    CoverLetterSummary,
     CreateFlowRequest,
     CreateFlowResponse,
     CVSummary,
@@ -325,6 +327,23 @@ async def _build_state_response(
                 expires_at=cv.expires_at,
             )
 
+    # Cover letter summary — via FK set when cover letter is generated
+    cover_letter_summary: CoverLetterSummary | None = None
+    if flow.generated_cover_letter_id is not None:
+        cl_result = await db.execute(
+            select(GeneratedCoverLetter).where(
+                GeneratedCoverLetter.id == flow.generated_cover_letter_id
+            )
+        )
+        cl = cl_result.scalar_one_or_none()
+        if cl is not None:
+            cover_letter_summary = CoverLetterSummary(
+                cover_letter_id=cl.id,
+                status=cl.status,
+                template=cl.template,
+                expires_at=cl.expires_at,
+            )
+
     return FlowStateResponse(
         flow_id=flow.id,
         job_id=flow.job_id,
@@ -336,6 +355,7 @@ async def _build_state_response(
         gap_summary=gap_summary,
         interview_summary=interview_summary,
         cv_summary=cv_summary,
+        cover_letter_summary=cover_letter_summary,
         created_at=flow.created_at,
         updated_at=flow.updated_at,
     )

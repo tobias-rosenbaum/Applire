@@ -5,8 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from applire.db.session import Base
-
-_UPLOAD_TTL_DAYS = 7
+from applire.constants import UPLOAD_TTL_DAYS as _UPLOAD_TTL_DAYS
 
 
 class UploadRecord(Base):

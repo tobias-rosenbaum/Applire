@@ -10,12 +10,14 @@ type Tab = "content" | "actions" | "appearance";
 
 interface RefinementPanelProps {
   cvId: string;
+  flowId: string;
   jobSummary: string | null;
   gapSummary: { gaps: Array<{ id: string; label: string }>; sections: Array<any> } | null;
   cvSummary: { sections: Array<any> } | null;
   template: { label: string | null } | null;
   matchScore: number | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;
+  coverLetterId: string | null;
   detectedCompany: { name: string; hex: string } | null;
   currentAccentHex: string;
   onHtmlRefresh: () => void;
@@ -24,16 +26,19 @@ interface RefinementPanelProps {
   onRegenerateWithTemplate: (template: string) => void;
   onNext: () => void;
   onDownloadPdf: () => void;
+  onGenerateCoverLetter: () => void;
 }
 
 export function RefinementPanel({
   cvId,
+  flowId,
   jobSummary,
   gapSummary,
   cvSummary,
   template,
   matchScore,
   expiryWarning,
+  coverLetterId,
   detectedCompany,
   currentAccentHex,
   onHtmlRefresh,
@@ -42,6 +47,7 @@ export function RefinementPanel({
   onRegenerateWithTemplate,
   onNext,
   onDownloadPdf,
+  onGenerateCoverLetter,
 }: RefinementPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("content");
 
@@ -113,12 +119,15 @@ export function RefinementPanel({
           />
         ) : activeTab === "actions" ? (
           <ActionsTab
+            flowId={flowId}
             matchScore={matchScore}
             expiryWarning={expiryWarning}
+            coverLetterId={coverLetterId}
             onDownloadPdf={onDownloadPdf}
             onRegenerateSame={onRegenerateSame}
             onRegenerateWithTemplate={onRegenerateWithTemplate}
             onNext={onNext}
+            onGenerateCoverLetter={onGenerateCoverLetter}
           />
         ) : (
           <DesignTab

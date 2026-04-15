@@ -9,8 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 _JSON = JSONB().with_variant(JSON(), "sqlite")
 
 from applire.db.session import Base
-
-_TTL_DAYS = 90
+from applire.constants import GENERATED_DOCUMENTS_TTL_DAYS as _TTL_DAYS
 
 
 class CVGenerationStatus(str, Enum):

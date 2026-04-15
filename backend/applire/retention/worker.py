@@ -24,6 +24,12 @@ from sqlalchemy import text, update
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from applire.constants import (
+    GENERATED_DOCUMENTS_TTL_DAYS as _GENERATED_DOCS_TTL_DAYS,
+    INTERVIEW_SESSION_TTL_DAYS as _SESSION_TTL_DAYS,
+    PROFILE_INACTIVITY_TTL_DAYS as _INACTIVITY_TTL_DAYS,
+    UPLOAD_TTL_DAYS as _UPLOADS_TTL_DAYS,
+)
 from applire.db.session import AsyncSessionLocal
 from applire.models.application import Application
 from applire.models.cv import CVGenerationStatus, GeneratedCV
@@ -33,9 +39,6 @@ from applire.models.user import User
 
 logger = logging.getLogger(__name__)
 
-_UPLOADS_TTL_DAYS = 7
-_SESSION_TTL_DAYS = 30
-_INACTIVITY_TTL_DAYS = 730        # ≈ 24 months
 _STALE_CV_JOB_MINUTES = 10        # pending/generating → failed after this long
 
 
@@ -173,6 +176,50 @@ async def _reap_stale_cv_jobs(db: AsyncSession) -> int:
         return 0
 
 
+async def _purge_cover_letters(db: AsyncSession) -> int:
+    """Hard-delete generated cover letters whose expires_at is in the past."""
+    now = datetime.now(timezone.utc)
+    try:
+        result = await db.execute(
+            text(
+                "DELETE FROM generated_cover_letters WHERE expires_at < :now AND deleted_at IS NULL"
+            ),
+            {"now": now},
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
+
+
+async def _reap_stale_cl_jobs(db: AsyncSession) -> int:
+    """Mark cover letter generation jobs stuck > 10 minutes in pending/generating as failed."""
+    from applire.models.cover_letter import CoverLetterStatus, GeneratedCoverLetter
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=_STALE_CV_JOB_MINUTES)
+    try:
+        result = await db.execute(
+            update(GeneratedCoverLetter)
+            .where(
+                GeneratedCoverLetter.status.in_(
+                    [CoverLetterStatus.pending.value, CoverLetterStatus.generating.value]
+                )
+            )
+            .where(GeneratedCoverLetter.created_at < cutoff)
+            .where(GeneratedCoverLetter.deleted_at.is_(None))
+            .values(
+                status=CoverLetterStatus.failed.value,
+                error_message="Generation timed out (stale job reaper)",
+            )
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
+
+
 async def run() -> None:
     """Execute all TTL rules and emit a structured JSON report to stdout."""
     async with AsyncSessionLocal() as db:
@@ -183,6 +230,8 @@ async def run() -> None:
         users_tombstoned = await _tombstone_inactive_users(db)
         applications_tombstoned = await _tombstone_inactive_applications(db)
         stale_cv_jobs_failed = await _reap_stale_cv_jobs(db)
+        cover_letters_deleted = await _purge_cover_letters(db)
+        stale_cl_jobs_failed = await _reap_stale_cl_jobs(db)
 
     report = {
         "run_at": datetime.now(timezone.utc).isoformat(),
@@ -193,5 +242,7 @@ async def run() -> None:
         "users_tombstoned": users_tombstoned,
         "applications_tombstoned": applications_tombstoned,
         "stale_cv_jobs_failed": stale_cv_jobs_failed,
+        "generated_cover_letters_deleted": cover_letters_deleted,
+        "stale_cl_jobs_failed": stale_cl_jobs_failed,
     }
     print(json.dumps(report), flush=True)
