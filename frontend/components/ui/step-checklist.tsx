@@ -68,9 +68,9 @@ function StepIcon({ state }: { state: StepState }) {
 
   if (state === "skipped") {
     return (
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 border-2 border-amber-400">
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 border-2 border-amber-400 animate-[pop-in_0.2s_ease-out]">
         <svg
-          className="h-3 w-3 text-amber-600"
+          className="h-3 w-3 text-amber-700"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -115,7 +115,7 @@ export function StepChecklist({ steps, stepStates, className }: StepChecklistPro
               {step.detail && (state === "completed" || state === "skipped") && (
                 <p className={cn(
                   "text-xs mt-0.5 animate-[fade-in_0.3s_ease-out]",
-                  state === "skipped" ? "text-amber-600" : "text-gray-500"
+                  state === "skipped" ? "text-amber-700" : "text-gray-500"
                 )}>
                   {step.detail}
                 </p>
