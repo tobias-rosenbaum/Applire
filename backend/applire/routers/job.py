@@ -50,8 +50,6 @@ async def analyze_job_description(
 
     try:
         return await analyze_jd(text, db, provider, source_url=source_url)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except LLMTimeoutError as exc:
         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
     except LLMRateLimitError as exc:
