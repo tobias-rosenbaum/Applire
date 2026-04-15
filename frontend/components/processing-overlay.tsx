@@ -74,13 +74,16 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           });
           if (!res.ok) {
             if (res.status === 422) {
-              let body: { detail?: { error_code?: string; message?: string } | string } | null = null;
+              let body: { detail?: { error_code?: string; message?: string } | string | unknown[] } | null = null;
               try {
                 body = await res.json();
               } catch {
                 // body stays null
               }
-              const detail = body?.detail && typeof body.detail === "object" ? body.detail : null;
+              const detail =
+                body?.detail && typeof body.detail === "object" && !Array.isArray(body.detail)
+                  ? body.detail
+                  : null;
               const errorCode = detail?.error_code;
               if (errorCode === "jd_url_invalid") {
                 markStep("analyze_jd", "skipped", "That doesn't look like a valid URL — you can add it later");
@@ -172,7 +175,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
         if (!jobId) {
           markStep("detect_gaps", "completed", "No job linked — skipped");
           await new Promise((r) => setTimeout(r, 400));
-          router.push(jdFailReason ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}` : `/flow/${flowId}/gaps`);
+          const gapsUrl = jdFailReason
+            ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}`
+            : `/flow/${flowId}/gaps`;
+          router.push(gapsUrl);
           return;
         }
 
@@ -199,7 +205,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
         markStep("detect_gaps", "completed", gapDetail);
 
         await new Promise((r) => setTimeout(r, 400));
-        router.push(jdFailReason ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}` : `/flow/${flowId}/gaps`);
+        const gapsUrl = jdFailReason
+          ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}`
+          : `/flow/${flowId}/gaps`;
+        router.push(gapsUrl);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "An error occurred. Please try again.");
       }
