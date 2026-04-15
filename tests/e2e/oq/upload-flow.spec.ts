@@ -42,6 +42,7 @@ const MOCK_GAP_ANALYSIS = {
   strengths: ["Python"],
 };
 const MOCK_ADVANCE = { status: "ok" };
+const MOCK_APP_CREATE = { flow_session_id: FLOW_ID };
 
 async function setupUploadMocks(page: Page) {
   await page.route("**/api/profile/exists", (route) =>
@@ -49,6 +50,10 @@ async function setupUploadMocks(page: Page) {
   );
   await page.route("**/api/job/analyze", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(MOCK_JD_ANALYZE) })
+  );
+  // When jobId is non-null the overlay calls POST /api/applications (not /api/flow)
+  await page.route("**/api/applications", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(MOCK_APP_CREATE) })
   );
   await page.route("**/api/flow", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(MOCK_FLOW_CREATE) })
