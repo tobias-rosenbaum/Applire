@@ -306,3 +306,556 @@ async def test_generate_cover_letter_creates_pending_record(db):
     # FlowSession should be updated
     await db.refresh(flow)
     assert flow.generated_cover_letter_id == response.cover_letter_id
+
+
+# ---------------------------------------------------------------------------
+# Task 8 (continued) — service helper functions
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_status_pending(db):
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import get_cover_letter_status
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.pending.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    result = await get_cover_letter_status(cl.id, db, "http://localhost:8001")
+    assert result.status == CoverLetterStatus.pending.value
+    assert result.html_url is None  # not ready yet
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_status_ready_has_urls(db):
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import get_cover_letter_status
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="executive",
+        letter_data={"body": {"paragraphs": ["Hello"]}},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.ready.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    result = await get_cover_letter_status(cl.id, db, "http://localhost:8001")
+    assert result.status == CoverLetterStatus.ready.value
+    assert result.html_url is not None
+    assert result.pdf_url is not None
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_status_not_found(db):
+    from applire.services.cover_letter import get_cover_letter_status
+
+    with pytest.raises(LookupError):
+        await get_cover_letter_status(uuid.uuid4(), db, "http://localhost:8001")
+
+
+@pytest.mark.asyncio
+async def test_patch_cover_letter_section_body(db):
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import patch_cover_letter_section
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={"body": {"paragraphs": ["original"]}},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.ready.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    await patch_cover_letter_section(cl.id, "body", "Updated body text.", db)
+    await db.refresh(cl)
+    assert cl.section_overrides is not None
+    assert cl.section_overrides["body"] == "Updated body text."
+
+
+@pytest.mark.asyncio
+async def test_patch_cover_letter_section_not_found(db):
+    from applire.services.cover_letter import patch_cover_letter_section
+
+    with pytest.raises(LookupError):
+        await patch_cover_letter_section(uuid.uuid4(), "body", "text", db)
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_by_job_not_found(db):
+    from applire.services.cover_letter import get_cover_letter_by_job
+
+    with pytest.raises(LookupError):
+        await get_cover_letter_by_job(uuid.uuid4(), db, "http://localhost:8001")
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_by_job_returns_status(db):
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.models.flow import FlowSession
+    from applire.models.user import User
+    from applire.models.job import JobAnalysis
+    from applire.services.cover_letter import get_cover_letter_by_job
+
+    user = User(id=uuid.uuid4(), email="byj@test.com")
+    db.add(user)
+    job = JobAnalysis(
+        id=uuid.uuid4(),
+        raw_text_hash="xyz789",
+        raw_text="Engineer role",
+        role_title="Engineer",
+        required_skills=[],
+        nice_to_have_skills=[],
+        keywords=[],
+        seniority_level="mid",
+        company_culture_signals=[],
+        language_requirement="de",
+    )
+    db.add(job)
+    cl = GeneratedCoverLetter(
+        job_analysis_id=job.id,
+        profile_id=uuid.uuid4(),
+        template="executive",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.pending.value,
+    )
+    db.add(cl)
+    await db.flush()
+
+    flow = FlowSession(
+        user_id=user.id,
+        job_id=job.id,
+        generated_cover_letter_id=cl.id,
+        available_actions={},
+    )
+    db.add(flow)
+    await db.commit()
+
+    result = await get_cover_letter_by_job(job.id, db, "http://localhost:8001")
+    assert result.cover_letter_id == cl.id
+
+
+# ---------------------------------------------------------------------------
+# Task 8 — _apply_section_overrides helper
+# ---------------------------------------------------------------------------
+
+def test_apply_section_overrides_body():
+    from applire.services.cover_letter import _apply_section_overrides
+
+    data = {"body": {"paragraphs": ["original"]}, "closing": "Regards"}
+    result = _apply_section_overrides(data, {"body": "New body text."})
+    assert result["body"]["paragraphs"] == ["New body text."]
+    assert data["body"]["paragraphs"] == ["original"]  # original unchanged
+
+
+def test_apply_section_overrides_other_dict_key():
+    from applire.services.cover_letter import _apply_section_overrides
+
+    data = {"opening": {"text": "Dear Sir"}}
+    result = _apply_section_overrides(data, {"opening": "Overridden"})
+    assert result["opening"]["_override"] == "Overridden"
+
+
+def test_apply_section_overrides_no_overrides():
+    from applire.services.cover_letter import _apply_section_overrides
+
+    data = {"body": {"paragraphs": ["p1"]}}
+    result = _apply_section_overrides(data, {})
+    assert result == data
+
+
+# ---------------------------------------------------------------------------
+# Task 9 — cover letter router (FastAPI AsyncClient, in-memory SQLite)
+# ---------------------------------------------------------------------------
+
+import os
+
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from fastapi import FastAPI
+
+from applire.db.session import get_db
+from applire.auth import get_auth_provider
+from applire.auth.no_auth import NoAuthProvider
+from applire.providers import get_provider
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+
+@pytest_asyncio.fixture
+async def router_db():
+    """Separate in-memory SQLite for router tests."""
+    from applire.db.session import Base
+    import applire.models.user
+    import applire.models.job
+    import applire.models.profile
+    import applire.models.gap
+    import applire.models.cv
+    import applire.models.cover_letter
+    import applire.models.session
+    import applire.models.application
+    import applire.models.flow
+    import applire.models.uploads
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        yield session
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def cl_client(router_db):
+    """FastAPI test client for cover-letter router with mocked dependencies."""
+    from unittest.mock import AsyncMock, MagicMock
+    from applire.routers.cover_letter import router as cl_router
+
+    mock_provider = AsyncMock()
+
+    _app = FastAPI()
+    _app.include_router(cl_router)
+    _app.dependency_overrides[get_db] = lambda: router_db
+    _app.dependency_overrides[get_auth_provider] = lambda: NoAuthProvider()
+
+    # Override the LLM provider dependency used by the router
+    from applire.routers.cover_letter import _get_provider
+    _app.dependency_overrides[_get_provider] = lambda: mock_provider
+
+    transport = ASGITransport(app=_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac, router_db, mock_provider
+
+
+@pytest.mark.asyncio
+async def test_router_post_generate_404_no_flow(cl_client):
+    client, db, _ = cl_client
+    payload = {"job_id": str(uuid.uuid4()), "tone": "formal"}
+    resp = await client.post("/api/cover-letter/generate", json=payload)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_router_get_status_404_unknown(cl_client):
+    client, db, _ = cl_client
+    resp = await client.get(f"/api/cover-letter/{uuid.uuid4()}/status")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_router_get_html_404_unknown(cl_client):
+    client, db, _ = cl_client
+    resp = await client.get(f"/api/cover-letter/{uuid.uuid4()}/html")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_router_get_html_409_not_ready(cl_client):
+    client, db, _ = cl_client
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.pending.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    resp = await client.get(f"/api/cover-letter/{cl.id}/html")
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_router_patch_section_404_unknown(cl_client):
+    client, db, _ = cl_client
+    payload = {"section": "body", "content": "Hello world"}
+    resp = await client.patch(f"/api/cover-letter/{uuid.uuid4()}/section", json=payload)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_router_patch_section_ok(cl_client):
+    client, db, _ = cl_client
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.ready.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    payload = {"section": "body", "content": "Updated text"}
+    resp = await client.patch(f"/api/cover-letter/{cl.id}/section", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["cover_letter_id"] == str(cl.id)
+    assert data["section"] == "body"
+
+
+@pytest.mark.asyncio
+async def test_router_get_by_job_404_no_flow(cl_client):
+    client, db, _ = cl_client
+    resp = await client.get(f"/api/cover-letter/by-job/{uuid.uuid4()}")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_router_post_generate_creates_pending_record(cl_client):
+    """POST /generate with a seeded flow session creates a pending CL record."""
+    from unittest.mock import patch, AsyncMock as AM
+    client, db, mock_provider = cl_client
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.models.cv import GeneratedCV
+    from applire.models.flow import FlowSession
+    from applire.models.job import JobAnalysis
+    from applire.models.profile import MasterProfile
+    from applire.models.user import User
+
+    user = User(id=uuid.uuid4(), email="router@test.com")
+    db.add(user)
+    job = JobAnalysis(
+        id=uuid.uuid4(),
+        raw_text_hash="router123",
+        raw_text="Backend Engineer at Acme",
+        role_title="Backend Engineer",
+        required_skills=[],
+        nice_to_have_skills=[],
+        keywords=[],
+        seniority_level="mid",
+        company_culture_signals=[],
+        language_requirement="de",
+    )
+    db.add(job)
+    profile = MasterProfile(profile_json={
+        "contact": {"name": "Test User", "email": "t@t.com"},
+        "summary": "Dev",
+        "work_history": [],
+        "skills": [],
+        "education": [],
+        "languages": [],
+    })
+    db.add(profile)
+    await db.flush()
+
+    cv = GeneratedCV(
+        job_analysis_id=job.id,
+        profile_id=profile.id,
+        tailored_data={},
+        template="executive",
+        status="ready",
+    )
+    db.add(cv)
+    await db.flush()
+
+    flow = FlowSession(
+        user_id=user.id,
+        job_id=job.id,
+        generated_cv_id=cv.id,
+        available_actions={},
+    )
+    db.add(flow)
+    await db.commit()
+
+    # Patch background task so it doesn't attempt a real DB connection
+    with patch(
+        "applire.services.cover_letter._render_cover_letter_background",
+        new=AM(return_value=None),
+    ):
+        payload = {"job_id": str(job.id), "tone": "formal"}
+        resp = await client.post("/api/cover-letter/generate", json=payload)
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["status"] == CoverLetterStatus.pending.value
+    assert "cover_letter_id" in data
+
+
+@pytest.mark.asyncio
+async def test_router_get_cl_status_ok(cl_client):
+    client, db, _ = cl_client
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.generating.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    resp = await client.get(f"/api/cover-letter/{cl.id}/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == CoverLetterStatus.generating.value
+
+
+@pytest.mark.asyncio
+async def test_router_get_pdf_404_unknown(cl_client):
+    """PDF endpoint returns 404 when cover letter does not exist (render_pdf raises LookupError)."""
+    from unittest.mock import patch
+    client, db, _ = cl_client
+    with patch(
+        "applire.services.cover_letter_pdf.render_pdf",
+        side_effect=LookupError("Cover letter not found"),
+    ):
+        resp = await client.get(f"/api/cover-letter/{uuid.uuid4()}/pdf")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_router_get_pdf_409_not_ready(cl_client):
+    """PDF endpoint returns 409 when cover letter is not in ready state."""
+    from unittest.mock import patch
+    client, db, _ = cl_client
+
+    with patch(
+        "applire.services.cover_letter_pdf.render_pdf",
+        side_effect=ValueError("Cover letter not ready"),
+    ):
+        resp = await client.get(f"/api/cover-letter/{uuid.uuid4()}/pdf")
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_router_get_by_job_ok(cl_client):
+    """GET /by-job/{job_id} returns status response for existing flow + CL."""
+    client, db, _ = cl_client
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.models.flow import FlowSession
+    from applire.models.job import JobAnalysis
+    from applire.models.user import User
+
+    user = User(id=uuid.uuid4(), email="byjrouter@test.com")
+    db.add(user)
+    job = JobAnalysis(
+        id=uuid.uuid4(),
+        raw_text_hash="byjr001",
+        raw_text="Dev role",
+        role_title="Dev",
+        required_skills=[],
+        nice_to_have_skills=[],
+        keywords=[],
+        seniority_level="mid",
+        company_culture_signals=[],
+        language_requirement="de",
+    )
+    db.add(job)
+    cl = GeneratedCoverLetter(
+        job_analysis_id=job.id,
+        profile_id=uuid.uuid4(),
+        template="executive",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.ready.value,
+    )
+    db.add(cl)
+    await db.flush()
+
+    flow = FlowSession(
+        user_id=user.id,
+        job_id=job.id,
+        generated_cover_letter_id=cl.id,
+        available_actions={},
+    )
+    db.add(flow)
+    await db.commit()
+
+    resp = await client.get(f"/api/cover-letter/by-job/{job.id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["cover_letter_id"] == str(cl.id)
+
+
+# ---------------------------------------------------------------------------
+# Task 8 — get_cover_letter_html service (Jinja2 rendering)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_html_renders_template(db):
+    """get_cover_letter_html renders valid HTML for a ready cover letter."""
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import get_cover_letter_html
+
+    letter_data = {
+        "header": {"name": "Marcus Bauer", "address": "Musterstraße 1", "phone": "", "email": "m@test.com"},
+        "recipient": {"name": "Dr. Müller", "title": "", "company": "Roche", "address": "", "date": "14. April 2026"},
+        "subject": "Bewerbung als QA Manager",
+        "opening": "Sehr geehrte Frau Dr. Müller,",
+        "body": {"paragraphs": ["Ich bewerbe mich auf die ausgeschriebene Stelle."]},
+        "signature": {"closing": "Mit freundlichen Grüßen", "name": "Marcus Bauer"},
+    }
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data=letter_data,
+        pre_gen_inputs={},
+        status=CoverLetterStatus.ready.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    html = await get_cover_letter_html(cl.id, db)
+    assert "<html" in html
+    assert "Marcus Bauer" in html
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_html_not_found(db):
+    from applire.services.cover_letter import get_cover_letter_html
+    with pytest.raises(LookupError):
+        await get_cover_letter_html(uuid.uuid4(), db)
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_html_not_ready(db):
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import get_cover_letter_html
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.pending.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    with pytest.raises(ValueError):
+        await get_cover_letter_html(cl.id, db)
