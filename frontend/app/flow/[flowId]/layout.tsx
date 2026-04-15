@@ -120,13 +120,16 @@ export default function FlowLayout({
         setFlowState(state);
 
         // Redirect guard: ensure URL matches backend step
+        // Side-routes (e.g. cover-letter) are valid at any step and bypass the guard.
+        const SIDE_ROUTES = new Set(["cover-letter"]);
         const expectedSegment = STEP_ROUTE[state.current_step];
         const currentSegment = pathname.split("/").pop() ?? "";
 
         if (
           expectedSegment &&
           currentSegment !== expectedSegment &&
-          state.current_step !== "jd_analysis"
+          state.current_step !== "jd_analysis" &&
+          !SIDE_ROUTES.has(currentSegment)
         ) {
           router.replace(`/flow/${flowId}/${expectedSegment}`);
           return;
