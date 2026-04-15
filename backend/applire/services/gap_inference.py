@@ -96,16 +96,26 @@ def pre_classify(job_analysis: dict, profile: dict) -> PreClassification:
         req_lower = req.lower()
         req_tokens = [w for w in req_lower.split() if len(w) > 2]
 
-        # Tenure signal: if any long-tenure role's industry/tech overlaps with req
+        # Tenure signal: if any long-tenure role's industry/tech/responsibilities overlaps with req
         for tenure_role in long_tenures:
             industry = (tenure_role.get("industry_context") or "").lower()
             technologies = [t.lower() for t in (tenure_role.get("technologies") or [])]
             company = (tenure_role.get("company") or "").lower()
+            responsibilities_text = " ".join(
+                (r or "").lower() for r in (tenure_role.get("responsibilities") or [])
+            )
+            achievements_text = " ".join(
+                (a or "").lower() for a in (tenure_role.get("achievements") or [])
+            )
             if (
                 req_lower in industry
                 or any(token in industry for token in req_tokens)
                 or any(req_lower in t for t in technologies)
                 or req_lower in company
+                or req_lower in responsibilities_text
+                or any(token in responsibilities_text for token in req_tokens)
+                or req_lower in achievements_text
+                or any(token in achievements_text for token in req_tokens)
             ):
                 years = tenure_role["_tenure_years"]
                 role_name = tenure_role.get("role") or "role"

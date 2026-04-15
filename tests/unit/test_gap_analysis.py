@@ -178,6 +178,36 @@ class TestTenureInference:
         requirements = [c.requirement for c in result.inferred_b]
         assert "Kubernetes" in requirements
 
+    def test_responsibilities_text_triggers_inference(self):
+        """
+        When a tool/skill appears only in responsibilities (not in technologies or
+        industry_context), a 4+ year role should still trigger a B-candidate.
+
+        This is the root cause of QC-LIMS being flagged as a gap: LinkedIn PDF imports
+        do not populate work_experience[].technologies (the old profile_extraction prompt
+        omits that field). LIMS mentions are only in responsibilities text, so the
+        tenure rule never fires and the requirement lands in unresolved → LLM decides.
+        """
+        entry = _work_entry(
+            company="Acme Pharma GmbH",
+            role="System Engineer",
+            start_years_ago=6,
+            end_years_ago=1,
+        )  # 5-year tenure → qualifies for long-tenure rule (threshold = 4 years)
+        # LIMS is mentioned only in responsibilities, not in technologies
+        entry["responsibilities"] = [
+            "Led global rollout of QC LIMS across 3 manufacturing sites",
+            "Collaborated with LIMS vendor on integrated validation approach",
+        ]
+        profile = _profile(work=[entry])
+        job = _job(required=["QC LIMS"])
+        result = pre_classify(job, profile)
+        requirements = [c.requirement for c in result.inferred_b]
+        assert "QC LIMS" in requirements, (
+            "LIMS mentioned in responsibilities of a 4+ year role should be a B-candidate, "
+            "not left unresolved for the LLM to guess"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Category B: seniority threshold
