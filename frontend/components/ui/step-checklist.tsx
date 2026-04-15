@@ -9,7 +9,7 @@ export interface StepItem {
   detail?: string;
 }
 
-export type StepState = "completed" | "in_progress" | "pending";
+export type StepState = "completed" | "in_progress" | "pending" | "skipped";
 
 interface StepChecklistProps {
   steps: StepItem[];
@@ -66,6 +66,27 @@ function StepIcon({ state }: { state: StepState }) {
     );
   }
 
+  if (state === "skipped") {
+    return (
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 border-2 border-amber-400 animate-[pop-in_0.2s_ease-out]">
+        <svg
+          className="h-3 w-3 text-amber-700"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2.5}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-transparent" />
   );
@@ -85,13 +106,17 @@ export function StepChecklist({ steps, stepStates, className }: StepChecklistPro
                   "text-sm transition-colors duration-200",
                   state === "completed" && "text-gray-500 line-through",
                   state === "in_progress" && "font-semibold text-neutral-dark",
+                  state === "skipped" && "text-amber-600",
                   state === "pending" && "text-gray-400"
                 )}
               >
                 {step.label}
               </p>
-              {step.detail && state === "completed" && (
-                <p className="text-xs text-gray-500 mt-0.5 animate-[fade-in_0.3s_ease-out]">
+              {step.detail && (state === "completed" || state === "skipped") && (
+                <p className={cn(
+                  "text-xs mt-0.5 animate-[fade-in_0.3s_ease-out]",
+                  state === "skipped" ? "text-amber-700" : "text-gray-500"
+                )}>
                   {step.detail}
                 </p>
               )}

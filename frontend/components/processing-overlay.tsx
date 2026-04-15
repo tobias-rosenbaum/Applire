@@ -62,6 +62,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
     async function runPipeline() {
       try {
         let jobId: string | null = null;
+        let jdFailReason: "url_invalid" | "fetch_failed" | null = null;
 
         // Step 1: Analyze Job Description
         markStep("analyze_jd", "in_progress");
@@ -71,10 +72,40 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url: jdUrl.trim() }),
           });
-          if (!res.ok) throw new Error(await apiErrorMessage(res));
-          const data = await res.json();
-          jobId = data.id;
-          markStep("analyze_jd", "completed", data.role_title ? `Role: ${data.role_title}` : "Job description analyzed");
+          if (!res.ok) {
+            if (res.status === 422) {
+              let body: { detail?: { error_code?: string; message?: string } | string | unknown[] } | null = null;
+              try {
+                body = await res.json();
+              } catch {
+                // body stays null
+              }
+              const detail =
+                body?.detail && typeof body.detail === "object" && !Array.isArray(body.detail)
+                  ? body.detail
+                  : null;
+              const errorCode = detail?.error_code;
+              if (errorCode === "jd_url_invalid") {
+                markStep("analyze_jd", "skipped", "That doesn't look like a valid URL — you can add it later");
+                jdFailReason = "url_invalid";
+              } else if (errorCode === "jd_fetch_failed") {
+                markStep("analyze_jd", "skipped", "The site blocked us — you can paste the text later");
+                jdFailReason = "fetch_failed";
+              } else {
+                // Unrecognised 422 — hard stop
+                const msg =
+                  typeof body?.detail === "string" ? body.detail
+                  : detail?.message ?? res.statusText ?? `HTTP ${res.status}`;
+                throw new Error(msg);
+              }
+            } else {
+              throw new Error(await apiErrorMessage(res));
+            }
+          } else {
+            const data = await res.json();
+            jobId = data.id;
+            markStep("analyze_jd", "completed", data.role_title ? `Role: ${data.role_title}` : "Job description analyzed");
+          }
         } else if (jdMode === "text" && jdText.trim()) {
           const res = await fetch(`${API_BASE}/api/job/analyze`, {
             method: "POST",
@@ -144,7 +175,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
         if (!jobId) {
           markStep("detect_gaps", "completed", "No job linked — skipped");
           await new Promise((r) => setTimeout(r, 400));
-          router.push(`/flow/${flowId}/gaps`);
+          const gapsUrl = jdFailReason
+            ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}`
+            : `/flow/${flowId}/gaps`;
+          router.push(gapsUrl);
           return;
         }
 
@@ -171,7 +205,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
         markStep("detect_gaps", "completed", gapDetail);
 
         await new Promise((r) => setTimeout(r, 400));
-        router.push(`/flow/${flowId}/gaps`);
+        const gapsUrl = jdFailReason
+          ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}`
+          : `/flow/${flowId}/gaps`;
+        router.push(gapsUrl);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "An error occurred. Please try again.");
       }
@@ -180,7 +217,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
     runPipeline();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const completedCount = Object.values(stepStates).filter((s) => s === "completed").length;
+  const completedCount = Object.values(stepStates).filter((s) => s === "completed" || s === "skipped").length;
   const progress = (completedCount / STEPS.length) * 100;
 
   const stepsWithDetails = STEPS.map((step) => ({

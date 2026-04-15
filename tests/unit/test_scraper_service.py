@@ -102,7 +102,15 @@ def test_scraper_error_carries_url_and_reason():
     err = ScraperError("https://example.com/job/1", "Could not extract text")
     assert err.url == "https://example.com/job/1"
     assert err.reason == "Could not extract text"
+    assert err.code == "jd_fetch_failed"
     assert "Could not extract text" in str(err)
+
+
+def test_scraper_error_code_can_be_overridden() -> None:
+    from applire.services.scraper import ScraperError
+
+    err = ScraperError("https://example.com/job/1", "some reason", code="custom_code")
+    assert err.code == "custom_code"
 
 
 # ---------------------------------------------------------------------------

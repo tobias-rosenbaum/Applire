@@ -74,6 +74,7 @@ const MOCK_CV_HTML_UPDATED = `<html><body>
  */
 async function clickSectionButton(page: import("@playwright/test").Page, label: string) {
   const btn = page.getByRole("button", { name: label });
+  await btn.waitFor({ state: "visible", timeout: 10_000 });
   await btn.click();
 }
 

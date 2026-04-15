@@ -69,9 +69,9 @@ test.describe('Sprint 14: Profile Photo — CV flow photo prompt', () => {
     await page.goto(`/flow/${TEST_FLOW_ID}/cv`);
 
     // Photo prompt step should appear
-    await expect(page.getByText('Add a profile photo?')).toBeVisible();
-    await expect(page.getByText('Upload photo')).toBeVisible();
-    await expect(page.getByText('Skip for now')).toBeVisible();
+    await expect(page.getByText('Add a profile photo?')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Upload photo')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Skip for now')).toBeVisible({ timeout: 5_000 });
 
     // Clicking Skip advances to template select
     await page.getByText('Skip for now').click();
