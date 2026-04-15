@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -77,6 +77,75 @@ const EMPTY_GAP_STATE: GapClickState = {
   sending: false,
   error: "",
 };
+
+// ---------------------------------------------------------------------------
+// JD Recovery Banner — shown when jd_status query param is present (Sprint 26)
+// ---------------------------------------------------------------------------
+
+function JdRecoveryBannerInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [dismissed, setDismissed] = useState(false);
+
+  const jdStatus = searchParams.get("jd_status");
+
+  if (!jdStatus || dismissed) return null;
+
+  const copy =
+    jdStatus === "url_invalid"
+      ? "That URL didn't look valid. Paste the job description text to run gap analysis."
+      : "We couldn't load that job posting — it may be blocked or taken down. Paste the job description text to run gap analysis.";
+
+  return (
+    <div
+      data-testid="jd-recovery-banner"
+      className="mb-6 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3"
+    >
+      <svg
+        className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+        />
+      </svg>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-amber-800">{copy}</p>
+        <button
+          data-testid="jd-recovery-cta"
+          type="button"
+          className="mt-1 text-sm font-medium text-amber-700 underline hover:no-underline"
+          onClick={() => router.push("/")}
+        >
+          Add job description →
+        </button>
+      </div>
+      <button
+        data-testid="jd-recovery-dismiss"
+        type="button"
+        aria-label="Dismiss"
+        className="shrink-0 text-amber-500 hover:text-amber-700 transition-colors"
+        onClick={() => setDismissed(true)}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function JdRecoveryBanner() {
+  return (
+    <Suspense fallback={null}>
+      <JdRecoveryBannerInner />
+    </Suspense>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // GapClickPanel — inline micro-session for a single gap
@@ -400,6 +469,7 @@ export default function GapsPage({
 
   return (
     <div data-testid="gap-analysis-page" className="max-w-4xl mx-auto">
+      <JdRecoveryBanner />
       {/* Section 1: Master Profile Summary */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
