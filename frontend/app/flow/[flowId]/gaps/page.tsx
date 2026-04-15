@@ -139,6 +139,7 @@ function JdRecoveryBannerInner() {
   );
 }
 
+// Suspense boundary required by Next.js 15 for useSearchParams()
 function JdRecoveryBanner() {
   return (
     <Suspense fallback={null}>
