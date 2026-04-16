@@ -42,6 +42,7 @@ export default function CoverLetterPage({
   const [previewKey, setPreviewKey] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const init = useCallback(async () => {
@@ -209,7 +210,7 @@ export default function CoverLetterPage({
       ) : (
         <div className="flex flex-1 min-h-0">
           {/* LEFT: preview */}
-          <div className="w-1/2 min-w-0 flex flex-col border-r border-neutral-200 bg-neutral-50 p-3">
+          <div className="flex-1 min-w-0 flex flex-col border-r border-neutral-200 bg-neutral-50 p-3">
             <CoverLetterDocument
               key={previewKey}
               coverLetterId={clState!.coverLetterId}
@@ -217,7 +218,7 @@ export default function CoverLetterPage({
           </div>
 
           {/* RIGHT: controls */}
-          <div className="w-1/2 min-w-[340px] flex flex-col overflow-hidden">
+          <div className="flex-shrink-0 flex flex-col overflow-hidden">
             <CoverLetterRefinementPanel
               flowId={flowId}
               coverLetterId={clState!.coverLetterId}
@@ -228,6 +229,8 @@ export default function CoverLetterPage({
               onRegenerateCoverLetter={() => setShowModal(true)}
               onDownloadPdf={() => void handleDownloadPdf()}
               downloading={downloading}
+              collapsed={!panelOpen}
+              onToggleCollapse={() => setPanelOpen((o) => !o)}
             />
           </div>
         </div>
