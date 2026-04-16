@@ -104,3 +104,68 @@ def _apply_floor(calculated: str, existing: str) -> str:
     calc_rank = _PROFICIENCY_RANK.get(calculated, 0)
     exist_rank = _PROFICIENCY_RANK.get(existing, 1)  # default intermediate if unknown
     return calculated if calc_rank > exist_rank else existing
+
+
+def _match_and_enrich(
+    profile: MasterProfileData,
+) -> tuple[list[Skill], list[Skill]]:
+    """Phase 1: Deterministic skill-to-career-step matching.
+
+    Returns:
+        enriched:  Matched technical/soft skills (years calculated) +
+                   language/domain skills (passed through unchanged).
+        unmatched: Technical/soft skills with no match in any WorkEntry.technologies.
+    """
+    today = date.today()
+    enriched: list[Skill] = []
+    unmatched: list[Skill] = []
+
+    for skill in profile.skills:
+        # language / domain skills: time-based experience is not meaningful — pass through
+        if skill.category not in _ELIGIBLE_CATEGORIES:
+            enriched.append(skill)
+            continue
+
+        matched_ranges: list[tuple[date, date]] = []
+        matched_companies: list[str] = []
+
+        for entry in profile.work_experience:
+            technologies_lower = [t.lower() for t in (entry.technologies or [])]
+            if skill.name.lower() not in technologies_lower:
+                continue
+
+            # Parse start date — skip entry if absent or unparseable
+            if not entry.start_date:
+                continue
+            try:
+                start = _parse_partial_date(entry.start_date)
+            except (ValueError, AttributeError):
+                continue
+
+            # Parse end date — null means current role → today
+            if entry.end_date is None:
+                end = today
+            else:
+                try:
+                    end = _parse_partial_date(entry.end_date)
+                except (ValueError, AttributeError):
+                    end = today
+
+            matched_ranges.append((start, end))
+            if entry.company and entry.company not in matched_companies:
+                matched_companies.append(entry.company)
+
+        if matched_ranges:
+            years = _calculate_years(matched_ranges)
+            calculated_prof = _years_to_proficiency(years)
+            final_prof = _apply_floor(calculated_prof, skill.proficiency)
+            enriched.append(skill.model_copy(update={
+                "years_experience": years,
+                "proficiency": final_prof,
+                "work_entry_refs": matched_companies,
+                "source": "deterministic",
+            }))
+        else:
+            unmatched.append(skill)
+
+    return enriched, unmatched

@@ -171,3 +171,166 @@ class TestApplyFloor:
     def test_never_downgrades_expert_to_advanced(self):
         from applire.services.skill_enrichment import _apply_floor
         assert _apply_floor("advanced", "expert") == "expert"
+
+
+# ---------------------------------------------------------------------------
+# Task 4: Deterministic match phase
+# ---------------------------------------------------------------------------
+
+class TestMatchAndEnrich:
+    def _make_profile(self, skills, work_experience):
+        from applire.schemas.profile import MasterProfileData, Skill, WorkEntry
+        return MasterProfileData(
+            skills=[Skill(**s) for s in skills],
+            work_experience=[WorkEntry(**w) for w in work_experience],
+        )
+
+    def test_case_insensitive_match(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "python", "category": "technical", "proficiency": "intermediate"}],
+            work_experience=[{
+                "company": "Siemens AG",
+                "role": "Engineer",
+                "start_date": "2020-01",
+                "end_date": "2021-01",
+                "technologies": ["Python"],
+            }],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        assert len(enriched) == 1
+        assert len(unmatched) == 0
+        skill = enriched[0]
+        assert skill.work_entry_refs == ["Siemens AG"]
+        assert skill.source == "deterministic"
+        assert skill.years_experience == 1
+
+    def test_no_match_goes_to_unmatched(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "Kubernetes", "category": "technical", "proficiency": "basic"}],
+            work_experience=[{
+                "company": "Siemens AG",
+                "role": "Engineer",
+                "start_date": "2020-01",
+                "end_date": "2021-01",
+                "technologies": ["Python"],
+            }],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        assert len(enriched) == 0
+        assert len(unmatched) == 1
+        assert unmatched[0].name == "Kubernetes"
+
+    def test_multiple_matching_entries_combined(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "Python", "category": "technical", "proficiency": "intermediate"}],
+            work_experience=[
+                {
+                    "company": "Siemens AG",
+                    "role": "Junior Engineer",
+                    "start_date": "2018-01",
+                    "end_date": "2020-01",
+                    "technologies": ["Python"],
+                },
+                {
+                    "company": "BMW Group",
+                    "role": "Senior Engineer",
+                    "start_date": "2021-01",
+                    "end_date": "2024-01",
+                    "technologies": ["Python", "Django"],
+                },
+            ],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        assert len(enriched) == 1
+        skill = enriched[0]
+        assert set(skill.work_entry_refs) == {"Siemens AG", "BMW Group"}
+        assert skill.years_experience == 5  # 2 + 3 non-overlapping
+        assert skill.proficiency == "advanced"  # 5 years → advanced
+
+    def test_floor_rule_preserves_higher_existing_proficiency(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "Python", "category": "technical", "proficiency": "expert"}],
+            work_experience=[{
+                "company": "Startup",
+                "role": "Dev",
+                "start_date": "2023-01",
+                "end_date": "2024-01",
+                "technologies": ["Python"],
+            }],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        skill = enriched[0]
+        assert skill.years_experience == 1
+        # Calculated would be intermediate (1 yr) but existing is expert — floor keeps expert
+        assert skill.proficiency == "expert"
+
+    def test_null_end_date_treated_as_current(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        from datetime import date
+        profile = self._make_profile(
+            skills=[{"name": "Python", "category": "technical", "proficiency": "basic"}],
+            work_experience=[{
+                "company": "Current Corp",
+                "role": "Dev",
+                "start_date": "2020-01",
+                "end_date": None,  # current role
+                "technologies": ["Python"],
+            }],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        skill = enriched[0]
+        # years since 2020 — should be >= 5 at time of writing (2026-04-16)
+        assert skill.years_experience >= 5
+        assert skill.source == "deterministic"
+
+    def test_language_skills_passed_through_unchanged(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "German", "category": "language", "proficiency": "expert"}],
+            work_experience=[{
+                "company": "Siemens AG",
+                "role": "Engineer",
+                "start_date": "2020-01",
+                "end_date": "2021-01",
+                "technologies": ["German"],  # even if listed, language skills are skipped
+            }],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        # Language skills go to enriched (passthrough) with NO modification
+        assert len(enriched) == 1
+        assert len(unmatched) == 0
+        skill = enriched[0]
+        assert skill.source is None  # unchanged — no source tag added
+        assert skill.work_entry_refs == []
+
+    def test_domain_skills_passed_through_unchanged(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "Healthcare", "category": "domain", "proficiency": "advanced"}],
+            work_experience=[],
+        )
+        enriched, unmatched = _match_and_enrich(profile)
+        assert len(enriched) == 1
+        assert enriched[0].name == "Healthcare"
+        assert enriched[0].work_entry_refs == []
+
+    def test_entry_with_null_start_date_skipped(self):
+        from applire.services.skill_enrichment import _match_and_enrich
+        profile = self._make_profile(
+            skills=[{"name": "Python", "category": "technical", "proficiency": "intermediate"}],
+            work_experience=[{
+                "company": "Siemens AG",
+                "role": "Engineer",
+                "start_date": None,  # can't calculate a range
+                "end_date": "2021-01",
+                "technologies": ["Python"],
+            }],
+        )
+        # Entry has no start_date → can't form a range → skill goes to unmatched
+        enriched, unmatched = _match_and_enrich(profile)
+        assert len(unmatched) == 1
+        assert unmatched[0].name == "Python"
