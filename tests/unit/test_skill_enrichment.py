@@ -46,7 +46,7 @@ class TestSkillWorkEntryRefs:
 # Task 2: Date parsing and range calculation
 # ---------------------------------------------------------------------------
 
-class TestParsPartialDate:
+class TestParsePartialDate:
     def test_year_only(self):
         from applire.services.skill_enrichment import _parse_partial_date
         assert _parse_partial_date("2020") == date(2020, 1, 1)

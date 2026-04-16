@@ -40,8 +40,8 @@ def _parse_partial_date(s: str) -> date:
     """
     parts = s.strip().split("-")
     year = int(parts[0])
-    month = int(parts[1]) if len(parts) > 1 else 1
-    day = int(parts[2]) if len(parts) > 2 else 1
+    month = int(parts[1]) if len(parts) > 1 and parts[1] else 1
+    day = int(parts[2]) if len(parts) > 2 and parts[2] else 1
     return date(year, month, day)
 
 
@@ -58,6 +58,9 @@ def _calculate_years(ranges: list[tuple[date, date]]) -> int:
         return 0
 
     sorted_ranges = sorted(ranges, key=lambda r: r[0])
+    sorted_ranges = [(s, e) for s, e in sorted_ranges if e > s]
+    if not sorted_ranges:
+        return 0
     merged: list[tuple[date, date]] = []
     cur_start, cur_end = sorted_ranges[0]
 
