@@ -114,6 +114,12 @@ class TestCalculateYears:
         result = _calculate_years([(date(2016, 1, 1), date(2022, 1, 1))])
         assert result == 6
 
+    def test_zero_duration_range_returns_minimum_one(self):
+        from applire.services.skill_enrichment import _calculate_years
+        # A zero-duration range (end == start) — treated as minimum 1, not 0
+        result = _calculate_years([(date(2020, 6, 1), date(2020, 6, 1))])
+        assert result == 1
+
 
 # ---------------------------------------------------------------------------
 # Task 3: Proficiency thresholds and floor rule

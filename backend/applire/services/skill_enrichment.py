@@ -60,7 +60,7 @@ def _calculate_years(ranges: list[tuple[date, date]]) -> int:
     sorted_ranges = sorted(ranges, key=lambda r: r[0])
     sorted_ranges = [(s, e) for s, e in sorted_ranges if e > s]
     if not sorted_ranges:
-        return 0
+        return 1  # ranges existed but all were zero-duration: treat as minimum 1
     merged: list[tuple[date, date]] = []
     cur_start, cur_end = sorted_ranges[0]
 
