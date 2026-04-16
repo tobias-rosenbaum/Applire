@@ -68,7 +68,7 @@ export default function CVPage({
             const photoUrl: string | null =
               profileData?.profile?.personal_info?.photo_url ?? null;
             setProfilePhotoUrl(photoUrl);
-            setPhase(photoUrl ? "photo_prompt" : "template_select");
+            setPhase(photoUrl ? "template_select" : "photo_prompt");
             return;
           }
         } catch {
