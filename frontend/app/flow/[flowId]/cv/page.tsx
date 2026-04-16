@@ -40,6 +40,7 @@ export default function CVPage({
   const [isGenerating, setIsGenerating] = useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   const cvDocRef = useRef<CVDocumentHandle>(null);
 
@@ -67,7 +68,7 @@ export default function CVPage({
             const photoUrl: string | null =
               profileData?.profile?.personal_info?.photo_url ?? null;
             setProfilePhotoUrl(photoUrl);
-            setPhase(photoUrl ? "photo_prompt" : "template_select");
+            setPhase(photoUrl ? "template_select" : "photo_prompt");
             return;
           }
         } catch {
@@ -149,7 +150,7 @@ export default function CVPage({
     return (
       <div className="min-h-screen bg-neutral-light" data-testid="cv-page">
         <div className="flex w-full h-[calc(100vh-56px)] gap-0">
-          <div className="w-1/2 flex flex-col min-w-0 px-4 py-3 gap-3 bg-neutral-light overflow-hidden">
+          <div className="flex-1 min-w-0 flex flex-col px-4 py-3 gap-3 bg-neutral-light overflow-hidden">
             {flowState?.job_summary && (
               <h2 className="text-lg font-heading font-bold text-neutral-dark leading-snug">
                 {flowState.job_summary.role_title}
@@ -185,6 +186,8 @@ export default function CVPage({
             onNext={() => setPhase("complete")}
             onDownloadPdf={() => void handleDownloadPdf()}
             onGenerateCoverLetter={() => setShowCoverLetterModal(true)}
+            collapsed={!panelOpen}
+            onToggleCollapse={() => setPanelOpen((o) => !o)}
           />
         </div>
       {showCoverLetterModal && flowState?.job_id && (

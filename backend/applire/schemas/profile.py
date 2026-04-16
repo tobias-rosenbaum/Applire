@@ -41,6 +41,12 @@ class WorkEntry(BaseModel):
     @classmethod
     def coerce_company(cls, v: object) -> str:
         return v if isinstance(v, str) else ""
+
+    @field_validator("role_aliases", "responsibilities", "achievements", "technologies", mode="before")
+    @classmethod
+    def coerce_list_fields(cls, v: object) -> list:
+        return v if isinstance(v, list) else []
+
     # All role titles ever used for this position across different CVs/applications.
     # Enables the CV tailoring engine to pick the most relevant title per application
     # (e.g. "Team Lead" for leadership roles, "2nd Level Support" for technical roles).
@@ -66,6 +72,12 @@ class EducationEntry(BaseModel):
     @classmethod
     def coerce_str_fields(cls, v: object) -> str:
         return v if isinstance(v, str) else ""
+
+    @field_validator("relevant_coursework", mode="before")
+    @classmethod
+    def coerce_list_fields(cls, v: object) -> list:
+        return v if isinstance(v, list) else []
+
     start_date: str | None = None
     end_date: str | None = None
     grade: str | None = None

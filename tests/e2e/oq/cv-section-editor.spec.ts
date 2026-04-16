@@ -66,6 +66,26 @@ const MOCK_CV_HTML_UPDATED = `<html><body>
   <p id="intro">My edited introduction text for E2E test</p>
 </body></html>`;
 
+const MOCK_CV_SECTIONS = {
+  sections: [
+    {
+      section_id: "introduction",
+      label: "Introduction",
+      content: "Erfahrener Entwickler mit fünf Jahren Erfahrung.",
+      has_override: false,
+      gaps: [{ id: "Python", label: "Python" }],
+    },
+    {
+      section_id: "skills",
+      label: "Skills",
+      content: "Java, Spring Boot",
+      has_override: false,
+      gaps: [],
+    },
+  ],
+  general_gaps: [],
+};
+
 /**
  * Click a section button in Browse mode.
  * Uses a button role selector since sections are styled as buttons,
@@ -108,6 +128,19 @@ test.describe("CV Section Editor — Browse/Edit/Save", () => {
         contentType: "text/html",
         body: MOCK_CV_HTML,
       });
+    });
+
+    // GET /api/cv/{id}/sections — fetched by ContentTab to populate section list
+    await page.route(`**/api/cv/${TEST_CV_ID}/sections`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(MOCK_CV_SECTIONS),
+        });
+      } else {
+        await route.continue();
+      }
     });
 
     await page.route(
@@ -298,6 +331,19 @@ test.describe("CV Section Editor — KaileChat Rewrite", () => {
       });
     });
 
+    // GET /api/cv/{id}/sections — fetched by ContentTab to populate section list
+    await page.route(`**/api/cv/${TEST_CV_ID}/sections`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(MOCK_CV_SECTIONS),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
     await page.route(
       `**/api/cv/${TEST_CV_ID}/sections/**`,
       async (route) => {
@@ -409,6 +455,19 @@ test.describe("CV Section Editor — Actions Tab", () => {
         contentType: "text/html",
         body: MOCK_CV_HTML,
       });
+    });
+
+    // GET /api/cv/{id}/sections — fetched by ContentTab to populate section list
+    await page.route(`**/api/cv/${TEST_CV_ID}/sections`, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(MOCK_CV_SECTIONS),
+        });
+      } else {
+        await route.continue();
+      }
     });
   });
 

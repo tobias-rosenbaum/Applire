@@ -32,6 +32,8 @@ const BASE_PROPS = {
   onNext: vi.fn(),
   onDownloadPdf: vi.fn(),
   onGenerateCoverLetter: vi.fn(),
+  collapsed: false,
+  onToggleCollapse: vi.fn(),
 };
 
 const MOCK_SECTIONS_RESPONSE = {
@@ -110,4 +112,57 @@ describe("RefinementPanel", () => {
     expect(screen.getByText("Siemens AG")).toBeTruthy();
     expect(screen.getByText("automatisch erkannt")).toBeTruthy();
   });
+});
+
+describe("RefinementPanel collapse", () => {
+  it("renders collapse button when expanded", () => {
+    render(
+      <RefinementPanel
+        {...BASE_PROPS}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("cv-panel-collapse-btn")).toBeTruthy();
+  });
+
+  it("calls onToggleCollapse when collapse button clicked", () => {
+    const toggle = vi.fn();
+    render(
+      <RefinementPanel
+        {...BASE_PROPS}
+        collapsed={false}
+        onToggleCollapse={toggle}
+      />
+    );
+    fireEvent.click(screen.getByTestId("cv-panel-collapse-btn"));
+    expect(toggle).toHaveBeenCalledOnce();
+  });
+
+  it("renders icon rail when collapsed", () => {
+    render(
+      <RefinementPanel
+        {...BASE_PROPS}
+        collapsed={true}
+        onToggleCollapse={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("cv-panel-expand-btn")).toBeTruthy();
+    expect(screen.getByTestId("cv-tab-icon-content")).toBeTruthy();
+    expect(screen.getByTestId("cv-tab-icon-actions")).toBeTruthy();
+    expect(screen.getByTestId("cv-tab-icon-appearance")).toBeTruthy();
+  });
+
+  it("clicking tab icon in collapsed state calls onToggleCollapse", () => {
+    const toggle = vi.fn();
+    render(
+      <RefinementPanel
+        {...BASE_PROPS}
+        collapsed={true}
+        onToggleCollapse={toggle}
+      />
+    );
+    fireEvent.click(screen.getByTestId("cv-tab-icon-content"));
+    expect(toggle).toHaveBeenCalledOnce();
+    });
 });

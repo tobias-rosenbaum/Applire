@@ -57,11 +57,6 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
     // Uncomment to add WebKit testing in the future
     // {
     //   name: 'webkit',
