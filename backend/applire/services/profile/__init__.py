@@ -35,6 +35,7 @@ from applire.providers.llm.base import LLMProvider
 from applire.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from applire.services.profile.merge import merge_profiles
 from applire.services.reviewer import review_and_refine
+from applire.services.skill_enrichment import enrich_skills
 from applire.schemas.profile import (
     ConflictSummary,
     CVUploadResponse,
@@ -239,6 +240,7 @@ async def _import_from_text(
         generator_max_tokens=8192,
     )
     incoming = MasterProfileData.model_validate(data)
+    incoming = await enrich_skills(incoming, provider)
     now = datetime.now(timezone.utc)
 
     existing = await _get_latest(db)
