@@ -489,3 +489,34 @@ async def test_enrich_skills_language_skills_not_sent_to_llm():
     german = next(s for s in result.skills if s.name == "German")
     assert german.source is None
     assert german.work_entry_refs == []
+
+
+# ---------------------------------------------------------------------------
+# Task 7: CV extraction review prompt smoke tests
+# ---------------------------------------------------------------------------
+
+class TestCVExtractionReviewPrompt:
+    def test_review_system_prompt_references_work_experience(self):
+        from applire.prompts.review_cv_extraction import CV_EXTRACTION_REVIEW_SYSTEM_PROMPT
+        assert "work_experience" in CV_EXTRACTION_REVIEW_SYSTEM_PROMPT
+        # Must NOT use the LinkedIn field names
+        assert "work_history" not in CV_EXTRACTION_REVIEW_SYSTEM_PROMPT
+
+    def test_review_prompt_includes_source_and_draft(self):
+        from applire.prompts.review_cv_extraction import build_cv_extraction_review_prompt
+        prompt = build_cv_extraction_review_prompt(
+            "Max Mustermann, Software Engineer",
+            {"work_experience": [{"company": "Siemens AG", "role": "Engineer"}]},
+        )
+        assert "Max Mustermann" in prompt
+        assert "Siemens AG" in prompt
+
+    def test_retry_prompt_includes_feedback_and_source(self):
+        from applire.prompts.review_cv_extraction import build_cv_extraction_retry_prompt
+        prompt = build_cv_extraction_retry_prompt(
+            raw_cv_text="Max Mustermann CV",
+            previous_draft={"work_experience": []},
+            feedback="Missing work entries",
+        )
+        assert "Missing work entries" in prompt
+        assert "Max Mustermann CV" in prompt
