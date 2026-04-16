@@ -126,6 +126,12 @@ class Skill(BaseModel):
     years_experience: int | None = None
     source: str | None = None  # which role/interview surfaced this
     last_used: date | None = None
+    work_entry_refs: list[str] = Field(default_factory=list)
+
+    @field_validator("work_entry_refs", mode="before")
+    @classmethod
+    def coerce_work_entry_refs(cls, v: object) -> list:
+        return v if isinstance(v, list) else []
 
     @field_validator("category", mode="before")
     @classmethod
