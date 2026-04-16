@@ -19,6 +19,10 @@ from datetime import date
 
 from applire.providers.llm.base import LLMProvider
 from applire.schemas.profile import MasterProfileData, Skill
+from applire.prompts.skill_estimation import (
+    SKILL_ESTIMATION_SYSTEM_PROMPT,
+    build_skill_estimation_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -169,3 +173,62 @@ def _match_and_enrich(
             unmatched.append(skill)
 
     return enriched, unmatched
+
+
+async def enrich_skills(
+    profile: MasterProfileData,
+    provider: LLMProvider,
+) -> MasterProfileData:
+    """Enrich all skills with deterministic calculation and LLM estimation.
+
+    Phase 1 (deterministic): Match each technical/soft skill against
+        WorkEntry.technologies. Calculate non-overlapping years from date ranges.
+        Derive proficiency from years, apply floor. Record work_entry_refs.
+
+    Phase 2 (LLM): For unmatched technical/soft skills, make a single batch
+        LLM call with the full work history. Apply same floor rule.
+
+    language/domain skills are passed through unchanged in both phases.
+
+    Returns a new MasterProfileData — does not mutate the input.
+    """
+    if not profile.skills:
+        return profile
+
+    enriched_skills, unmatched_skills = _match_and_enrich(profile)
+
+    if unmatched_skills:
+        work_exp_dicts = [e.model_dump(mode="json") for e in profile.work_experience]
+        skill_names = [s.name for s in unmatched_skills]
+
+        try:
+            estimates: dict = await provider.aparse_json(
+                build_skill_estimation_prompt(work_exp_dicts, skill_names),
+                system=SKILL_ESTIMATION_SYSTEM_PROMPT,
+                temperature=0.1,
+            )
+        except Exception:
+            logger.warning(
+                "Skill estimation LLM call failed — unmatched skills stored without years."
+            )
+            estimates = {}
+
+        for skill in unmatched_skills:
+            raw = estimates.get(skill.name)
+            if isinstance(raw, (int, float)) and raw > 0:
+                years = max(1, int(round(raw)))
+                calc_prof = _years_to_proficiency(years)
+                final_prof = _apply_floor(calc_prof, skill.proficiency)
+                enriched_skills.append(skill.model_copy(update={
+                    "years_experience": years,
+                    "proficiency": final_prof,
+                    "work_entry_refs": [],
+                    "source": "llm_estimated",
+                }))
+            else:
+                enriched_skills.append(skill.model_copy(update={
+                    "work_entry_refs": [],
+                    "source": "llm_estimated",
+                }))
+
+    return profile.model_copy(update={"skills": enriched_skills})

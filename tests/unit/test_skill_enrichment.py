@@ -340,3 +340,152 @@ class TestMatchAndEnrich:
         enriched, unmatched = _match_and_enrich(profile)
         assert len(unmatched) == 1
         assert unmatched[0].name == "Python"
+
+
+# ---------------------------------------------------------------------------
+# Task 6: LLM estimation phase and enrich_skills()
+# ---------------------------------------------------------------------------
+
+import pytest
+from unittest.mock import AsyncMock
+
+
+@pytest.mark.asyncio
+async def test_enrich_skills_empty_profile_returns_unchanged():
+    from applire.schemas.profile import MasterProfileData
+    from applire.services.skill_enrichment import enrich_skills
+
+    profile = MasterProfileData()
+    mock_provider = AsyncMock()
+    result = await enrich_skills(profile, mock_provider)
+
+    assert result.skills == []
+    mock_provider.aparse_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_enrich_skills_unmatched_calls_llm_estimation():
+    from applire.schemas.profile import MasterProfileData, Skill, WorkEntry
+    from applire.services.skill_enrichment import enrich_skills
+
+    profile = MasterProfileData(
+        skills=[
+            Skill(name="Agile", category="soft", proficiency="intermediate"),
+        ],
+        work_experience=[
+            WorkEntry(
+                company="Siemens AG",
+                role="Scrum Master",
+                start_date="2018-01",
+                end_date="2021-01",
+                technologies=["Jira"],  # "Agile" not in technologies
+            )
+        ],
+    )
+    mock_provider = AsyncMock()
+    # LLM returns 4 years for Agile
+    mock_provider.aparse_json.return_value = {"Agile": 4}
+
+    result = await enrich_skills(profile, mock_provider)
+
+    mock_provider.aparse_json.assert_called_once()
+    skill = result.skills[0]
+    assert skill.name == "Agile"
+    assert skill.years_experience == 4
+    assert skill.source == "llm_estimated"
+    assert skill.proficiency == "advanced"  # 4 years → advanced
+    assert skill.work_entry_refs == []
+
+
+@pytest.mark.asyncio
+async def test_enrich_skills_floor_applied_to_llm_estimate():
+    from applire.schemas.profile import MasterProfileData, Skill
+    from applire.services.skill_enrichment import enrich_skills
+
+    profile = MasterProfileData(
+        skills=[
+            Skill(name="Leadership", category="soft", proficiency="expert"),
+        ],
+        work_experience=[],
+    )
+    mock_provider = AsyncMock()
+    # LLM estimates only 1 year — should not downgrade existing expert
+    mock_provider.aparse_json.return_value = {"Leadership": 1}
+
+    result = await enrich_skills(profile, mock_provider)
+
+    skill = result.skills[0]
+    assert skill.years_experience == 1
+    assert skill.proficiency == "expert"  # floor preserved
+
+
+@pytest.mark.asyncio
+async def test_enrich_skills_null_llm_estimate_leaves_skill_without_years():
+    from applire.schemas.profile import MasterProfileData, Skill
+    from applire.services.skill_enrichment import enrich_skills
+
+    profile = MasterProfileData(
+        skills=[
+            Skill(name="Blockchain", category="technical", proficiency="basic"),
+        ],
+        work_experience=[],
+    )
+    mock_provider = AsyncMock()
+    mock_provider.aparse_json.return_value = {"Blockchain": None}
+
+    result = await enrich_skills(profile, mock_provider)
+
+    skill = result.skills[0]
+    assert skill.years_experience is None
+    assert skill.source == "llm_estimated"
+    assert skill.proficiency == "basic"  # unchanged
+
+
+@pytest.mark.asyncio
+async def test_enrich_skills_does_not_mutate_input():
+    from applire.schemas.profile import MasterProfileData, Skill
+    from applire.services.skill_enrichment import enrich_skills
+
+    profile = MasterProfileData(
+        skills=[Skill(name="Python", category="technical", proficiency="basic")],
+        work_experience=[],
+    )
+    mock_provider = AsyncMock()
+    mock_provider.aparse_json.return_value = {"Python": 3}
+
+    result = await enrich_skills(profile, mock_provider)
+
+    # Original profile untouched
+    assert profile.skills[0].years_experience is None
+    assert profile.skills[0].source is None
+    # New profile enriched
+    assert result.skills[0].years_experience == 3
+
+
+@pytest.mark.asyncio
+async def test_enrich_skills_language_skills_not_sent_to_llm():
+    from applire.schemas.profile import MasterProfileData, Skill
+    from applire.services.skill_enrichment import enrich_skills
+
+    profile = MasterProfileData(
+        skills=[
+            Skill(name="German", category="language", proficiency="expert"),
+            Skill(name="Python", category="technical", proficiency="basic"),
+        ],
+        work_experience=[],
+    )
+    mock_provider = AsyncMock()
+    mock_provider.aparse_json.return_value = {"Python": 2}
+
+    result = await enrich_skills(profile, mock_provider)
+
+    # Only Python sent to LLM — verify the call's arguments
+    call_args = mock_provider.aparse_json.call_args
+    prompt_arg = call_args[0][0]  # first positional arg is the user prompt
+    assert "Python" in prompt_arg
+    assert "German" not in prompt_arg
+
+    # German skill passes through unchanged
+    german = next(s for s in result.skills if s.name == "German")
+    assert german.source is None
+    assert german.work_entry_refs == []
