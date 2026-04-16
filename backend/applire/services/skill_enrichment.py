@@ -75,3 +75,32 @@ def _calculate_years(ranges: list[tuple[date, date]]) -> int:
     total_days = sum((end - start).days for start, end in merged)
     years = total_days / 365.25
     return max(1, round(years))
+
+
+def _years_to_proficiency(years: int) -> str:
+    """Map years of experience to a proficiency level.
+
+    Thresholds:
+        < 1  → basic
+        1–2  → intermediate
+        3–5  → advanced
+        ≥ 6  → expert
+    """
+    if years < 1:
+        return "basic"
+    if years < 3:
+        return "intermediate"
+    if years < 6:
+        return "advanced"
+    return "expert"
+
+
+def _apply_floor(calculated: str, existing: str) -> str:
+    """Return the higher of two proficiency levels.
+
+    The LLM-extracted proficiency is never lowered by the calculation.
+    Uses rank order: basic(0) < intermediate(1) < advanced(2) < expert(3).
+    """
+    calc_rank = _PROFICIENCY_RANK.get(calculated, 0)
+    exist_rank = _PROFICIENCY_RANK.get(existing, 1)  # default intermediate if unknown
+    return calculated if calc_rank > exist_rank else existing

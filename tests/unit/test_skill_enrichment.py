@@ -113,3 +113,61 @@ class TestCalculateYears:
         from applire.services.skill_enrichment import _calculate_years
         result = _calculate_years([(date(2016, 1, 1), date(2022, 1, 1))])
         assert result == 6
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Proficiency thresholds and floor rule
+# ---------------------------------------------------------------------------
+
+class TestYearsToProficiency:
+    def test_zero_years_is_basic(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(0) == "basic"
+
+    def test_one_year_is_intermediate(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(1) == "intermediate"
+
+    def test_two_years_is_intermediate(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(2) == "intermediate"
+
+    def test_three_years_is_advanced(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(3) == "advanced"
+
+    def test_five_years_is_advanced(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(5) == "advanced"
+
+    def test_six_years_is_expert(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(6) == "expert"
+
+    def test_ten_years_is_expert(self):
+        from applire.services.skill_enrichment import _years_to_proficiency
+        assert _years_to_proficiency(10) == "expert"
+
+
+class TestApplyFloor:
+    def test_calculated_higher_than_existing(self):
+        from applire.services.skill_enrichment import _apply_floor
+        # calculated=advanced (rank 2) > existing=basic (rank 0) → use advanced
+        assert _apply_floor("advanced", "basic") == "advanced"
+
+    def test_existing_higher_than_calculated(self):
+        from applire.services.skill_enrichment import _apply_floor
+        # calculated=basic (rank 0) < existing=expert (rank 3) → keep expert
+        assert _apply_floor("basic", "expert") == "expert"
+
+    def test_equal_levels_returns_either(self):
+        from applire.services.skill_enrichment import _apply_floor
+        assert _apply_floor("intermediate", "intermediate") == "intermediate"
+
+    def test_calculated_expert_upgrades_intermediate(self):
+        from applire.services.skill_enrichment import _apply_floor
+        assert _apply_floor("expert", "intermediate") == "expert"
+
+    def test_never_downgrades_expert_to_advanced(self):
+        from applire.services.skill_enrichment import _apply_floor
+        assert _apply_floor("advanced", "expert") == "expert"
