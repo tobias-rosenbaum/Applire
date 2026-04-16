@@ -329,6 +329,7 @@ async def patch_profile_section(
     db: AsyncSession,
     source: str = "manual_edit",
     source_session_id: str | None = None,
+    provider: LLMProvider | None = None,
 ) -> MasterProfileResponse:
     if section not in _VALID_SECTIONS:
         raise ValueError(f"Invalid section '{section}'. Valid: {sorted(_VALID_SECTIONS)}")
@@ -344,6 +345,10 @@ async def patch_profile_section(
     updated_dict = profile_data.model_dump(mode="json")
     updated_dict[section] = value
     validated = MasterProfileData.model_validate(updated_dict)
+
+    # Re-run enrichment when skills or work_experience are patched (keeps years fresh)
+    if section in {"work_experience", "skills"} and provider is not None:
+        validated = await enrich_skills(validated, provider)
 
     # Build enrichment record
     action = "updated" if old_value else "added"

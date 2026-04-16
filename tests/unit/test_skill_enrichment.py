@@ -520,3 +520,128 @@ class TestCVExtractionReviewPrompt:
         )
         assert "Missing work entries" in prompt
         assert "Max Mustermann CV" in prompt
+
+
+# ---------------------------------------------------------------------------
+# Task 10: patch_profile_section with provider
+# ---------------------------------------------------------------------------
+
+import pytest
+import pytest_asyncio
+from unittest.mock import AsyncMock, patch
+
+
+@pytest_asyncio.fixture
+async def sqlite_session_for_patch():
+    """In-memory SQLite session with MasterProfile table."""
+    from applire.db.session import Base
+    from applire.models.profile import MasterProfile
+    from applire.models.user import User
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(
+            lambda c: Base.metadata.create_all(
+                c,
+                tables=[MasterProfile.__table__, User.__table__],
+            )
+        )
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        yield session
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_patch_profile_section_without_provider_skips_enrichment(sqlite_session_for_patch):
+    """Patching without a provider must not call enrich_skills."""
+    from applire.schemas.profile import MasterProfileData, ProfileMetadata
+    from applire.models.profile import MasterProfile
+    from applire.services.profile import patch_profile_section
+    from datetime import datetime, timezone
+
+    # Seed a profile
+    profile_data = MasterProfileData(
+        skills=[],
+        work_experience=[],
+    )
+    profile_data.metadata = ProfileMetadata(
+        completeness_score=0.0,
+        created_via="manual",
+        created_at=datetime.now(timezone.utc),
+        last_updated=datetime.now(timezone.utc),
+    )
+    record = MasterProfile(profile_json=profile_data.model_dump(mode="json"))
+    sqlite_session_for_patch.add(record)
+    await sqlite_session_for_patch.commit()
+
+    with patch("applire.services.profile.enrich_skills") as mock_enrich:
+        await patch_profile_section(
+            section="skills",
+            value=[{"name": "Python", "category": "technical", "proficiency": "basic"}],
+            db=sqlite_session_for_patch,
+        )
+        mock_enrich.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_patch_profile_section_with_provider_calls_enrich_for_skills(sqlite_session_for_patch):
+    """Patching skills with a provider must call enrich_skills."""
+    from applire.schemas.profile import MasterProfileData, ProfileMetadata
+    from applire.models.profile import MasterProfile
+    from applire.services.profile import patch_profile_section
+    from datetime import datetime, timezone
+
+    profile_data = MasterProfileData(skills=[], work_experience=[])
+    profile_data.metadata = ProfileMetadata(
+        completeness_score=0.0,
+        created_via="manual",
+        created_at=datetime.now(timezone.utc),
+        last_updated=datetime.now(timezone.utc),
+    )
+    record = MasterProfile(profile_json=profile_data.model_dump(mode="json"))
+    sqlite_session_for_patch.add(record)
+    await sqlite_session_for_patch.commit()
+
+    mock_provider = AsyncMock()
+
+    with patch("applire.services.profile.enrich_skills", new=AsyncMock(side_effect=lambda p, _: p)) as mock_enrich:
+        await patch_profile_section(
+            section="skills",
+            value=[{"name": "Python", "category": "technical", "proficiency": "basic"}],
+            db=sqlite_session_for_patch,
+            provider=mock_provider,
+        )
+        mock_enrich.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_patch_personal_info_with_provider_does_not_call_enrich(sqlite_session_for_patch):
+    """Patching personal_info (non-skills section) must not call enrich_skills even with provider."""
+    from applire.schemas.profile import MasterProfileData, ProfileMetadata
+    from applire.models.profile import MasterProfile
+    from applire.services.profile import patch_profile_section
+    from datetime import datetime, timezone
+
+    profile_data = MasterProfileData(skills=[], work_experience=[])
+    profile_data.metadata = ProfileMetadata(
+        completeness_score=0.0,
+        created_via="manual",
+        created_at=datetime.now(timezone.utc),
+        last_updated=datetime.now(timezone.utc),
+    )
+    record = MasterProfile(profile_json=profile_data.model_dump(mode="json"))
+    sqlite_session_for_patch.add(record)
+    await sqlite_session_for_patch.commit()
+
+    mock_provider = AsyncMock()
+
+    with patch("applire.services.profile.enrich_skills") as mock_enrich:
+        await patch_profile_section(
+            section="personal_info",
+            value={"name": "Max Mustermann"},
+            db=sqlite_session_for_patch,
+            provider=mock_provider,
+        )
+        mock_enrich.assert_not_called()
