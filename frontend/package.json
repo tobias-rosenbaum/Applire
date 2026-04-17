@@ -7,9 +7,10 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "next lint",
+    "lint": "next lint && npm run i18n:check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:check": "node ../scripts/check-i18n-parity.js"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",
