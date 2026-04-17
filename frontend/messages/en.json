@@ -37,7 +37,7 @@
     "analyzingJD": "Analyzing job description…",
     "buildingProfile": "Building profile…",
     "jdSkipped": "Job description skipped",
-    "jdUrlInvalid": "That URL didn't look valid — you can add it later",
+    "jdUrlInvalid": "That doesn't look like a valid URL — you can add it later",
     "jdFetchFailed": "The site blocked us — you can paste the text later",
     "cancel": "Cancel"
   },

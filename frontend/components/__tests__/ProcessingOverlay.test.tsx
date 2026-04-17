@@ -7,6 +7,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
 import { ProcessingOverlay } from "../processing-overlay";
+import { withIntl } from "@/lib/test-utils/with-intl";
 
 // next/navigation must be mocked — jsdom has no router
 vi.mock("next/navigation", () => ({
@@ -68,7 +69,7 @@ describe("ProcessingOverlay — JD URL error handling", () => {
       } as Response;
     });
 
-    render(<ProcessingOverlay {...DEFAULT_PROPS} />);
+    render(withIntl(<ProcessingOverlay {...DEFAULT_PROPS} />));
 
     // JD step skip message must appear
     await waitFor(
@@ -120,7 +121,7 @@ describe("ProcessingOverlay — JD URL error handling", () => {
       return { ok: true, status: 200, json: async () => ({}) } as Response;
     });
 
-    render(<ProcessingOverlay {...DEFAULT_PROPS} />);
+    render(withIntl(<ProcessingOverlay {...DEFAULT_PROPS} />));
 
     await waitFor(
       () => {
@@ -151,7 +152,7 @@ describe("ProcessingOverlay — JD URL error handling", () => {
       return { ok: true, status: 200, json: async () => ({}) } as Response;
     });
 
-    render(<ProcessingOverlay {...DEFAULT_PROPS} />);
+    render(withIntl(<ProcessingOverlay {...DEFAULT_PROPS} />));
 
     await waitFor(
       () => {

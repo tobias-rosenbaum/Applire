@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { ProgressLinear } from "@/components/ui/progress";
 import { StepChecklist, StepItem, StepState } from "@/components/ui/step-checklist";
@@ -21,13 +22,6 @@ async function apiErrorMessage(res: Response): Promise<string> {
   }
 }
 
-const STEPS: StepItem[] = [
-  { key: "analyze_jd", label: "Analyzing Job Description" },
-  { key: "upload", label: "Uploading CV" },
-  { key: "build_profile", label: "Building Master Profile" },
-  { key: "detect_gaps", label: "Detecting Gaps" },
-];
-
 const INITIAL_STATES: Record<string, StepState> = {
   analyze_jd: "pending",
   upload: "pending",
@@ -45,6 +39,15 @@ interface Props {
 
 export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Props) {
   const router = useRouter();
+  const t = useTranslations("processing");
+
+  const STEPS: StepItem[] = [
+    { key: "analyze_jd", label: t("analyzingJD") },
+    { key: "upload", label: "Uploading CV" },
+    { key: "build_profile", label: t("buildingProfile") },
+    { key: "detect_gaps", label: "Detecting Gaps" },
+  ];
+
   const [stepStates, setStepStates] = useState<Record<string, StepState>>(INITIAL_STATES);
   const [stepDetails, setStepDetails] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -86,10 +89,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
                   : null;
               const errorCode = detail?.error_code;
               if (errorCode === "jd_url_invalid") {
-                markStep("analyze_jd", "skipped", "That doesn't look like a valid URL — you can add it later");
+                markStep("analyze_jd", "skipped", t("jdUrlInvalid"));
                 jdFailReason = "url_invalid";
               } else if (errorCode === "jd_fetch_failed") {
-                markStep("analyze_jd", "skipped", "The site blocked us — you can paste the text later");
+                markStep("analyze_jd", "skipped", t("jdFetchFailed"));
                 jdFailReason = "fetch_failed";
               } else {
                 // Unrecognised 422 — hard stop
