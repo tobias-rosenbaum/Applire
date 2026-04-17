@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 const POLL_INTERVAL_MS = 3000;
@@ -22,12 +23,6 @@ interface GenerationProgressProps {
   onRetry: () => void;
 }
 
-const STEPS = [
-  { key: "queued", label: "In der Warteschlange…" },
-  { key: "generating", label: "Lebenslauf wird gerendert…" },
-  { key: "ready", label: "Fertig!" },
-];
-
 function activeStepIndex(status: CVStatus): number {
   if (status === "pending") return 0;
   if (status === "generating") return 1;
@@ -36,6 +31,7 @@ function activeStepIndex(status: CVStatus): number {
 }
 
 export function GenerationProgress({ cvId, flowId, onReady, onRetry }: GenerationProgressProps) {
+  const t = useTranslations("cv");
   const [status, setStatus] = useState<CVStatus>("pending");
   const [error, setError] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
@@ -70,7 +66,7 @@ export function GenerationProgress({ cvId, flowId, onReady, onRetry }: Generatio
           onReady(cvId);
         } else if (data.status === "failed") {
           if (intervalRef.current) clearInterval(intervalRef.current);
-          setError(data.error_message ?? "Generierung fehlgeschlagen.");
+          setError(data.error_message ?? t("generationFailed"));
         }
       } catch {
         // Continue polling on network errors
@@ -83,19 +79,25 @@ export function GenerationProgress({ cvId, flowId, onReady, onRetry }: Generatio
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [cvId, flowId, onReady]);
+  }, [cvId, flowId, onReady, t]);
+
+  const steps = [
+    { key: "queued",     label: t("stepQueued") },
+    { key: "generating", label: t("stepRendering") },
+    { key: "ready",      label: t("stepDone") },
+  ];
 
   const activeIndex = activeStepIndex(status);
 
   return (
     <div className="max-w-md mx-auto animate-fade-in">
       <h1 className="text-2xl font-heading font-bold text-neutral-dark mb-1">
-        Lebenslauf wird erstellt
+        {t("generationTitle")}
       </h1>
-      <p className="text-sm text-gray-500 mb-8">Das dauert normalerweise 20–40 Sekunden.</p>
+      <p className="text-sm text-gray-500 mb-8">{t("generationHint")}</p>
 
       <div className="bg-white rounded-xl shadow-soft p-6 space-y-5 mb-6">
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const isDone = i < activeIndex;
           const isActive = i === activeIndex && status !== "failed";
           return (
@@ -106,9 +108,7 @@ export function GenerationProgress({ cvId, flowId, onReady, onRetry }: Generatio
                 </span>
               ) : isActive ? (
                 <span className="w-6 h-6 rounded-full border-2 border-teal flex items-center justify-center shrink-0">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full bg-teal animate-spin"
-                  />
+                  <span className="w-2.5 h-2.5 rounded-full bg-teal animate-spin" />
                 </span>
               ) : (
                 <span className="w-6 h-6 rounded-full border-2 border-gray-200 shrink-0" />
@@ -132,7 +132,7 @@ export function GenerationProgress({ cvId, flowId, onReady, onRetry }: Generatio
 
       {stale && !error && (
         <div className="border-l-4 border-warning bg-warning-container rounded-r-lg p-3 text-sm text-neutral-dark">
-          Dauert länger als erwartet — du kannst später zurückkommen.
+          {t("generationStale")}
         </div>
       )}
 
@@ -144,7 +144,7 @@ export function GenerationProgress({ cvId, flowId, onReady, onRetry }: Generatio
             onClick={onRetry}
             className="text-sm font-semibold text-critical hover:underline"
           >
-            Erneut versuchen →
+            {t("retryGeneration")}
           </button>
         </div>
       )}

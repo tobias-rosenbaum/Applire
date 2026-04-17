@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { use } from "react";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -16,11 +17,11 @@ const STEP_ROUTE: Record<string, string> = {
   complete:      "cv",
 };
 
-const STEP_LABELS: { step: string; label: string }[] = [
-  { step: "cv_import",     label: "1 Profil" },
-  { step: "gap_analysis",  label: "2 Lücken" },
-  { step: "interview",     label: "3 Interview" },
-  { step: "cv_generation", label: "4 Lebenslauf" },
+const STEP_KEYS: { step: string; labelKey: "stepProfile" | "stepGaps" | "stepInterview" | "stepCV" }[] = [
+  { step: "cv_import",     labelKey: "stepProfile" },
+  { step: "gap_analysis",  labelKey: "stepGaps" },
+  { step: "interview",     labelKey: "stepInterview" },
+  { step: "cv_generation", labelKey: "stepCV" },
 ];
 
 interface FlowState {
@@ -105,6 +106,7 @@ export default function FlowLayout({
   const { flowId } = use(params);
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("flow");
   const [flowState, setFlowState] = useState<FlowState | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -158,12 +160,12 @@ export default function FlowLayout({
         </a>
 
         <div style={s.stepper}>
-          {STEP_LABELS.map(({ step, label }, idx) => {
+          {STEP_KEYS.map(({ step, labelKey }, idx) => {
             const isActive = STEP_ROUTE[step] === currentSegment;
             const isDone = currentStepIndex > idx;
             return (
               <span key={step} style={s.stepBadge(isActive, isDone)}>
-                {label}
+                {t(labelKey)}
               </span>
             );
           })}
@@ -177,7 +179,7 @@ export default function FlowLayout({
       </div>
 
       <div style={currentSegment === "cv" ? s.main : s.mainConstrained}>
-        {ready ? children : <div style={s.loading}>Lade …</div>}
+        {ready ? children : <div style={s.loading}>{t("loading")}</div>}
       </div>
     </div>
   );

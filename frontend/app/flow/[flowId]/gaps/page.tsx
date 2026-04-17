@@ -167,6 +167,9 @@ function GapClickPanel({
   onUpdate: (patch: Partial<GapClickState>) => void;
   onResolved: () => void;
 }) {
+  const t = useTranslations("gaps");
+  const tc = useTranslations("common");
+
   async function startMicroSession() {
     onUpdate({ status: "loading", error: "" });
     try {
@@ -217,7 +220,7 @@ function GapClickPanel({
         className="mt-2 text-xs text-teal underline hover:no-underline"
         onClick={() => void startMicroSession()}
       >
-        Answer this gap →
+        {t("answerGap")}
       </button>
     );
   }
@@ -226,7 +229,7 @@ function GapClickPanel({
     return (
       <div className="mt-2 flex items-center gap-2">
         <div className="animate-spin h-3 w-3 border-2 border-teal border-t-transparent rounded-full" />
-        <span className="text-xs text-gray-500">Loading question…</span>
+        <span className="text-xs text-gray-500">{t("loadingQuestion")}</span>
       </div>
     );
   }
@@ -243,7 +246,7 @@ function GapClickPanel({
             "focus:outline-none focus:ring-1 focus:ring-teal/50 focus:border-teal",
             "disabled:opacity-50 min-h-[72px]",
           )}
-          placeholder="Your answer…"
+          placeholder={t("answerPlaceholder")}
           value={state.answer}
           onChange={(e) => onUpdate({ answer: e.target.value, status: "answering" })}
           onKeyDown={(e) => {
@@ -255,12 +258,12 @@ function GapClickPanel({
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="outline" className="text-xs py-1 h-auto"
             onClick={() => onUpdate(EMPTY_GAP_STATE)}>
-            Cancel
+            {tc("cancel")}
           </Button>
           <Button data-testid="gap-submit-button" size="sm" className="text-xs py-1 h-auto"
             disabled={!state.answer.trim() || state.sending}
             onClick={() => void sendAnswer()}>
-            {state.sending ? "Saving…" : "Submit"}
+            {state.sending ? t("savingAnswer") : t("submitAnswer")}
           </Button>
         </div>
       </div>
@@ -460,7 +463,7 @@ export default function GapsPage({
       <div data-testid="loading-indicator" className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-teal border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-sm text-gray-500">Analyzing your profile…</p>
+          <p className="text-sm text-gray-500">{t("analyzing")}</p>
         </div>
       </div>
     );
@@ -482,13 +485,13 @@ export default function GapsPage({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="font-heading text-xl font-bold text-neutral-dark">Master Profile Created</h2>
+          <h2 className="font-heading text-xl font-bold text-neutral-dark">{t("masterProfileCreated")}</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard value={profileStats.positions} label="Positions" />
-          <StatCard value={profileStats.projects} label="Projects" />
-          <StatCard value={profileStats.certifications} label="Certifications" />
-          <StatCard value={profileStats.data_points} label="Data Points" />
+          <StatCard value={profileStats.positions} label={t("statPositions")} />
+          <StatCard value={profileStats.projects} label={t("statProjects")} />
+          <StatCard value={profileStats.certifications} label={t("statCertifications")} />
+          <StatCard value={profileStats.data_points} label={t("statDataPoints")} />
         </div>
       </div>
 
@@ -503,16 +506,16 @@ export default function GapsPage({
             </p>
             <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
               {gaps?.category_a && gaps.category_a.length > 0 && (
-                <Badge variant="success">{gaps.category_a.length} direct matches</Badge>
+                <Badge variant="success">{t("directMatchesBadge", { count: gaps.category_a.length })}</Badge>
               )}
               {activeGapB.length > 0 && (
-                <Badge variant="warning">{activeGapB.length} likely matches</Badge>
+                <Badge variant="warning">{t("likelyMatchesBadge", { count: activeGapB.length })}</Badge>
               )}
               {activeGapC.length > 0 && (
-                <Badge variant="critical">{activeGapC.length} gaps to address</Badge>
+                <Badge variant="critical">{t("gapsToAddress", { count: activeGapC.length })}</Badge>
               )}
               {resolvedGaps.size > 0 && (
-                <Badge variant="success">{resolvedGaps.size} gap{resolvedGaps.size !== 1 ? "s" : ""} resolved ✓</Badge>
+                <Badge variant="success">{t("resolvedBadge", { count: resolvedGaps.size })}</Badge>
               )}
             </div>
           </div>
@@ -524,10 +527,10 @@ export default function GapsPage({
         <div data-testid="gaps-section" className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-heading text-lg font-bold text-neutral-dark">
-              {totalGaps} gap{totalGaps !== 1 ? "s" : ""} identified
+              {t("gapsIdentified", { count: totalGaps })}
             </h3>
             {resolvedGaps.size === 0 && (
-              <p className="text-xs text-gray-400">Click a gap to answer it directly</p>
+              <p className="text-xs text-gray-400">{t("clickGapHint")}</p>
             )}
           </div>
 
@@ -550,7 +553,7 @@ export default function GapsPage({
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-neutral-dark">{gap}</p>
                       <p className="text-sm text-gray-500 italic mt-0.5">
-                        We&apos;ll help you address this in the interview.
+                        {t("gapCHint")}
                       </p>
                       <GapClickPanel
                         gap={gap}
@@ -588,7 +591,7 @@ export default function GapsPage({
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-500 italic mt-0.5">
-                        We think you might have this — confirm to strengthen your profile.
+                        {t("gapBHint")}
                       </p>
                       <GapClickPanel
                         gap={gap}
@@ -617,7 +620,7 @@ export default function GapsPage({
                 </div>
                 <div>
                   <p className="font-semibold text-success">{gap}</p>
-                  <p className="text-xs text-success/70 mt-0.5">Resolved — profile updated</p>
+                  <p className="text-xs text-success/70 mt-0.5">{t("resolvedStatus")}</p>
                 </div>
               </div>
             ))}
@@ -628,42 +631,42 @@ export default function GapsPage({
       {/* Detailed breakdown */}
       <details className="mb-8">
         <summary className="cursor-pointer text-sm text-teal hover:underline mb-2">
-          View detailed breakdown
+          {t("viewBreakdown")}
         </summary>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <Card className="p-4 border-t-4 border-t-success">
-            <h4 className="font-semibold text-sm mb-2 text-success">A — Direct Match</h4>
+            <h4 className="font-semibold text-sm mb-2 text-success">{t("categoryALabel")}</h4>
             <div className="flex flex-wrap gap-1">
               {gaps?.category_a?.length ? (
                 gaps.category_a.map((item, i) => (
                   <Badge key={i} variant="success" className="text-xs">{item}</Badge>
                 ))
               ) : (
-                <span className="text-xs text-gray-400 italic">None</span>
+                <span className="text-xs text-gray-400 italic">{t("none")}</span>
               )}
             </div>
           </Card>
           <Card className="p-4 border-t-4 border-t-warning">
-            <h4 className="font-semibold text-sm mb-2 text-warning">B — Likely Match</h4>
+            <h4 className="font-semibold text-sm mb-2 text-warning">{t("categoryBLabel")}</h4>
             <div className="flex flex-wrap gap-1">
               {gaps?.category_b?.length ? (
                 gaps.category_b.map((item, i) => (
                   <Badge key={i} variant="warning" className="text-xs">{item}</Badge>
                 ))
               ) : (
-                <span className="text-xs text-gray-400 italic">None</span>
+                <span className="text-xs text-gray-400 italic">{t("none")}</span>
               )}
             </div>
           </Card>
           <Card className="p-4 border-t-4 border-t-critical">
-            <h4 className="font-semibold text-sm mb-2 text-critical">C — Gaps</h4>
+            <h4 className="font-semibold text-sm mb-2 text-critical">{t("categoryCLabel")}</h4>
             <div className="flex flex-wrap gap-1">
               {gaps?.category_c?.length ? (
                 gaps.category_c.map((item, i) => (
                   <Badge key={i} variant="critical" className="text-xs">{item}</Badge>
                 ))
               ) : (
-                <span className="text-xs text-gray-400 italic">None</span>
+                <span className="text-xs text-gray-400 italic">{t("none")}</span>
               )}
             </div>
           </Card>
@@ -676,7 +679,7 @@ export default function GapsPage({
           <p className="text-sm text-critical">{error}</p>
           {!gaps && (
             <Button variant="outline" size="sm" onClick={retryGapAnalysis} className="mt-2">
-              Retry Analysis
+              {t("retryAnalysis")}
             </Button>
           )}
         </div>
@@ -696,7 +699,7 @@ export default function GapsPage({
               {t("startInterview")}
             </Button>
             <p className="text-xs italic text-gray-500 mt-2">
-              Answer a few questions to close the gaps
+              {t("gapInterviewHint")}
             </p>
           </div>
         )}
@@ -708,14 +711,14 @@ export default function GapsPage({
           className="min-w-[200px]"
           data-testid="generate-cv-button"
         >
-          Generate CV Now
+          {t("generateCV")}
         </Button>
         <a
           href="#"
           className="text-sm text-teal underline hover:no-underline"
           onClick={(e) => e.preventDefault()}
         >
-          Explore Profile
+          {t("exploreProfile")}
         </a>
       </div>
     </div>
