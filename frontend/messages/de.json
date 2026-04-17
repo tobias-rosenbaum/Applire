@@ -115,7 +115,11 @@
     "copySummary": "Jetzt bewerben — Zusammenfassung kopieren",
     "summaryCopied": "Zusammenfassung kopiert ✓",
     "startNewApplication": "Neue Bewerbung starten",
-    "backToHome": "Zurück zur Startseite"
+    "backToHome": "Zurück zur Startseite",
+    "expired": "Abgelaufen",
+    "availableUntil": "Verfügbar bis",
+    "templateClassic": "Klassischer Lebenslauf",
+    "templateModern": "Modern Swiss CV"
   },
   "saveScopePrompt": {
     "saveToProfile": "Im Master-Profil speichern?",

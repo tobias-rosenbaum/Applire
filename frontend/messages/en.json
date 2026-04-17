@@ -115,7 +115,11 @@
     "copySummary": "Apply now — Copy summary",
     "summaryCopied": "Summary copied ✓",
     "startNewApplication": "Start new application",
-    "backToHome": "Back to home"
+    "backToHome": "Back to home",
+    "expired": "Expired",
+    "availableUntil": "Available until",
+    "templateClassic": "Classic German CV",
+    "templateModern": "Modern Swiss CV"
   },
   "saveScopePrompt": {
     "saveToProfile": "Save to your Master Profile?",
