@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 function OfflineBanner() {
+  const t = useTranslations("offline");
   const [isOffline, setIsOffline] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
@@ -61,7 +63,7 @@ function OfflineBanner() {
           />
         </svg>
         <span className="text-sm font-medium">
-          You appear to be offline. Some features may not work.
+          {t("message")}
         </span>
       </div>
       

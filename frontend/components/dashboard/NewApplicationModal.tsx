@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ interface NewApplicationModalProps {
 }
 
 export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalProps) {
+  const t = useTranslations("dashboard");
   const [jdMode, setJdMode] = useState<JdMode>("url");
   const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
@@ -90,7 +92,7 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
       <Card className="w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-heading text-xl font-bold text-neutral-dark">
-            New Application
+            {t("newApplication")}
           </h2>
           <button
             onClick={onClose}

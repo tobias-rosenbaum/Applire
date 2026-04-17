@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,7 @@ export function ApplicationCard({
   onDelete,
   onClick,
 }: ApplicationCardProps) {
+  const t = useTranslations("dashboard");
   const workflowConfig = WORKFLOW_STATUS_CONFIG[workflowStatus] || WORKFLOW_STATUS_CONFIG.none;
   const userConfig = USER_STATUS_CONFIG[userStatus] || USER_STATUS_CONFIG.tracking;
 
@@ -110,7 +112,7 @@ export function ApplicationCard({
                   onResume();
                 }}
               >
-                Resume
+                {t("resume")}
               </Button>
             )}
             {showViewCV && onViewCV && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApplicationCard } from "./ApplicationCard";
@@ -44,6 +45,7 @@ interface ApplicationsResponse {
 
 export function Dashboard() {
   const router = useRouter();
+  const t = useTranslations("dashboard");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileExistsResponse | null>(null);
   const [profileFull, setProfileFull] = useState<ProfileResponse | null>(null);
@@ -198,7 +200,7 @@ export function Dashboard() {
           {/* New Application CTA */}
           <div className="mb-8 flex justify-center">
             <Button size="lg" onClick={handleNewApplication} className="min-w-[200px]">
-              + New Application
+              + {t("newApplication")}
             </Button>
           </div>
 
@@ -220,7 +222,7 @@ export function Dashboard() {
             {applications.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-gray-500 mb-4">
-                  {searchQuery ? "No applications match your search." : "No applications yet."}
+                  {searchQuery ? "No applications match your search." : t("noApplications")}
                 </p>
                 {!searchQuery && (
                   <Button onClick={handleNewApplication}>Create your first application</Button>

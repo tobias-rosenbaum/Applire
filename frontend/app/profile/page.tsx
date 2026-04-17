@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const t = useTranslations("profile");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [enrichmentHistory, setEnrichmentHistory] = useState<EnrichmentRecord[]>([]);
@@ -200,7 +202,7 @@ export default function ProfilePage() {
             >
               ← Back
             </button>
-            <h1 className="font-heading text-2xl font-bold text-neutral-dark">My Profile</h1>
+            <h1 className="font-heading text-2xl font-bold text-neutral-dark">{t("title")}</h1>
           </div>
           {profile && (
             <span
