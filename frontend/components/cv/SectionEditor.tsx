@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { GapHint } from "./GapHint";
 import { SaveScopePrompt } from "./SaveScopePrompt";
 
@@ -29,6 +30,7 @@ interface SectionEditorProps {
 }
 
 export function SectionEditor({ cvId, section, onSaved, onUnsavedChange, onAddressGap }: SectionEditorProps) {
+  const t = useTranslations("cv");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(section.content);
   const [savedContent, setSavedContent] = useState(section.content);
@@ -128,6 +130,7 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange, onAddre
         value={content}
         onChange={(e) => handleContentChange(e.target.value)}
         data-testid="section-textarea"
+        placeholder={t("placeholder")}
         className="w-full min-h-[180px] resize-y text-sm font-mono border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-teal"
       />
 
@@ -147,7 +150,7 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange, onAddre
           data-testid="section-save"
           className="flex-1 bg-teal text-white font-semibold py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
         >
-          {saving ? "Speichern…" : "Speichern"}
+          {saving ? t("saving") : t("save")}
         </button>
         <button
           type="button"
@@ -156,13 +159,13 @@ export function SectionEditor({ cvId, section, onSaved, onUnsavedChange, onAddre
           data-testid="section-cancel"
           className="flex-1 border border-gray-300 text-gray-600 font-semibold py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
         >
-          Abbrechen
+          {t("cancel")}
         </button>
       </div>
 
       {visibleGaps.length > 0 && (
         <div className="mt-1">
-          <p className="text-xs text-gray-500 mb-1">Lücken in diesem Abschnitt:</p>
+          <p className="text-xs text-gray-500 mb-1">{t("gapHints")}</p>
           {visibleGaps.map((gap) => (
             <GapHint
               key={gap.id}

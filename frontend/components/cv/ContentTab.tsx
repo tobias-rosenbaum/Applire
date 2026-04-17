@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { SectionEditor } from "./SectionEditor";
 import { KaileChat } from "./KaileChat";
 
@@ -37,6 +38,8 @@ interface ContentTabProps {
 }
 
 export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }: ContentTabProps) {
+  const t = useTranslations("cv");
+  const tUnsaved = useTranslations("unsavedChanges");
   const [mode, setMode] = useState<"browse" | "edit">("browse");
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [preSelectedGapIds, setPreSelectedGapIds] = useState<string[]>([]);
@@ -84,7 +87,7 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
   const handleBrowseToEdit = useCallback(
     (sectionId: string, preselectedGaps: string[] = []) => {
       if (hasUnsaved) {
-        if (!confirm("You have unsaved changes. Are you sure you want to leave this section?")) {
+        if (!confirm(tUnsaved("title"))) {
           return;
         }
       }
@@ -98,7 +101,7 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
 
   const handleBackToBrowse = useCallback(() => {
     if (hasUnsaved) {
-      if (!confirm("You have unsaved changes. Are you sure you want to leave this section?")) {
+      if (!confirm(tUnsaved("title"))) {
         return;
       }
     }
@@ -238,7 +241,7 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            {allGaps.map((gap) => (
+            {sections.flatMap((s) => s.gaps).map((gap) => (
               <button
                 key={gap.id}
                 type="button"
@@ -249,6 +252,22 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
                 <span className="text-xs text-neutral-medium font-medium">{gap.label}</span>
               </button>
             ))}
+            {generalGaps.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-neutral-dark mt-1">{t("generalGaps")}</p>
+                {generalGaps.map((gap) => (
+                  <button
+                    key={gap.id}
+                    type="button"
+                    onClick={() => handleAddressGap(gap.id)}
+                    className="text-left text-sm border border-neutral-medium rounded-lg p-2.5 hover:border-teal transition-colors"
+                    data-testid="gap-card"
+                  >
+                    <span className="text-xs text-neutral-medium font-medium">{gap.label}</span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
           <hr className="border-neutral-medium" />
         </>
@@ -259,7 +278,7 @@ export function ContentTab({ cvId, flowSummary, onSectionSave, onUnsavedChange }
       </h4>
       {sections.length === 0 && (
         <p className="text-xs text-gray-500">
-          Kein Inhalt zum Bearbeiten verfügbar. Bitte den Lebenslauf neu generieren.
+          {t("noSections")}
         </p>
       )}
       <div className="flex flex-col gap-1.5">
