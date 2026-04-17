@@ -107,7 +107,15 @@
     "placeholder": "Edit this section…",
     "gapHints": "Related gaps",
     "directionPlaceholder": "Give Kaile a direction, correction, or extra context…",
-    "rewriting": "Rewriting…"
+    "rewriting": "Rewriting…",
+    "cvReady": "Your CV is ready!",
+    "cvReadyTagline": "Precise. Confident. Future-Ready.",
+    "shareWithRole": "My CV for the role \"{roleTitle}\" was optimised with Applire. Precise. Confident. Future-Ready.",
+    "shareGeneric": "My CV was optimised with Applire. Precise. Confident. Future-Ready.",
+    "copySummary": "Apply now — Copy summary",
+    "summaryCopied": "Summary copied ✓",
+    "startNewApplication": "Start new application",
+    "backToHome": "Back to home"
   },
   "saveScopePrompt": {
     "saveToProfile": "Save to your Master Profile?",

@@ -107,7 +107,15 @@
     "placeholder": "Diesen Abschnitt bearbeiten…",
     "gapHints": "Verwandte Lücken",
     "directionPlaceholder": "Gib Kaile eine Richtung, Korrektur oder zusätzlichen Kontext…",
-    "rewriting": "Wird neu geschrieben…"
+    "rewriting": "Wird neu geschrieben…",
+    "cvReady": "Dein Lebenslauf ist bereit!",
+    "cvReadyTagline": "Präzise. Überzeugend. Zukunftsfähig.",
+    "shareWithRole": "Mein Lebenslauf für die Stelle \"{roleTitle}\" wurde mit Applire optimiert. Präzise. Überzeugend. Zukunftsfähig.",
+    "shareGeneric": "Mein Lebenslauf wurde mit Applire optimiert. Präzise. Überzeugend. Zukunftsfähig.",
+    "copySummary": "Jetzt bewerben — Zusammenfassung kopieren",
+    "summaryCopied": "Zusammenfassung kopiert ✓",
+    "startNewApplication": "Neue Bewerbung starten",
+    "backToHome": "Zurück zur Startseite"
   },
   "saveScopePrompt": {
     "saveToProfile": "Im Master-Profil speichern?",

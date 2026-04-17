@@ -111,7 +111,7 @@ describe("RefinementPanel", () => {
     render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("tab-appearance"));
     expect(screen.getByText("Siemens AG")).toBeTruthy();
-    expect(screen.getByText("automatisch erkannt")).toBeTruthy();
+    expect(screen.getByText("auto-detected")).toBeTruthy();
   });
 });
 

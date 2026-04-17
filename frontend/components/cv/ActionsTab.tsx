@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { TemplateSelector } from "./TemplateSelector";
 
 type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_developer" | "creative_sidebar" | "academic" | "compact_pro";
@@ -28,6 +29,7 @@ export function ActionsTab({
   onNext,
   onGenerateCoverLetter,
 }: ActionsTabProps) {
+  const t = useTranslations("cv");
   return (
     <div className="flex flex-col gap-4 p-3">
       {matchScore !== null && (
@@ -81,7 +83,7 @@ export function ActionsTab({
           className="w-full bg-teal text-white text-sm font-medium py-2.5 rounded hover:opacity-90 transition-opacity"
           data-testid="download-pdf-btn"
         >
-          PDF herunterladen
+          {t("download")}
         </button>
         <button
           type="button"
@@ -89,7 +91,7 @@ export function ActionsTab({
           className="w-full border border-neutral-medium text-sm py-2.5 rounded hover:border-teal transition-colors"
           data-testid="regenerate-same-btn"
         >
-          Erneut generieren (gleiche Vorlage)
+          {t("regenerate")}
         </button>
       </div>
 
