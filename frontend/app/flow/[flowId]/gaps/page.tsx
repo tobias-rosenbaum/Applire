@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { use } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,7 @@ const EMPTY_GAP_STATE: GapClickState = {
 function JdRecoveryBannerInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("gaps");
   const [dismissed, setDismissed] = useState(false);
 
   const jdStatus = searchParams.get("jd_status");
@@ -93,8 +95,8 @@ function JdRecoveryBannerInner() {
 
   const copy =
     jdStatus === "url_invalid"
-      ? "That URL didn't look valid. Paste the job description text to run gap analysis."
-      : "We couldn't load that job posting — it may be blocked or taken down. Paste the job description text to run gap analysis.";
+      ? t("jdMissingBannerUrl")
+      : t("jdMissingBannerFetch");
 
   return (
     <div
@@ -123,7 +125,7 @@ function JdRecoveryBannerInner() {
           className="mt-1 text-sm font-medium text-amber-700 underline hover:no-underline"
           onClick={() => router.push("/")}
         >
-          Add job description →
+          {t("addJobDescription")}
         </button>
       </div>
       <button
@@ -279,6 +281,7 @@ export default function GapsPage({
 }) {
   const { flowId } = use(params);
   const router = useRouter();
+  const t = useTranslations("gaps");
 
   const [gaps, setGaps] = useState<GapAnalysis | null>(null);
   const [flowState, setFlowState] = useState<FlowState | null>(null);
@@ -496,7 +499,7 @@ export default function GapsPage({
           <div className="flex-1 text-center lg:text-left">
             <h3 className="font-heading text-lg font-bold text-neutral-dark mb-2">{roleTitle}</h3>
             <p data-testid="match-score-display" className="text-sm text-gray-500 mb-4">
-              Your profile matches {matchScore}% of this role&apos;s requirements.
+              {t("matchScore")}: {matchScore}%
             </p>
             <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
               {gaps?.category_a && gaps.category_a.length > 0 && (
@@ -581,7 +584,7 @@ export default function GapsPage({
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-neutral-dark">{gap}</p>
                         <Badge variant="secondary" className="text-xs bg-teal/10 text-teal border-teal/20">
-                          Likely match
+                          {t("categoryB")}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-500 italic mt-0.5">
@@ -690,7 +693,7 @@ export default function GapsPage({
               className="min-w-[240px]"
               data-testid="interview-button"
             >
-              Quick Interview (3 min)
+              {t("startInterview")}
             </Button>
             <p className="text-xs italic text-gray-500 mt-2">
               Answer a few questions to close the gaps
