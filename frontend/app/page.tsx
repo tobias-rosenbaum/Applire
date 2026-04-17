@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 type JdMode = "url" | "text";
 
 export default function Home() {
+  const t = useTranslations("home");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { files, addFiles, removeFile } = useFileUpload();
   const [jdMode, setJdMode] = useState<JdMode>("url");
@@ -51,7 +55,7 @@ export default function Home() {
 
   function handleSubmit() {
     if (!hasFiles) {
-      setError("Please upload at least one CV to continue.");
+      setError(tErrors("uploadAtLeastOne"));
       return;
     }
     setError("");
@@ -61,7 +65,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dim">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">{tCommon("loading")}</p>
       </div>
     );
   }
@@ -88,7 +92,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <h1 className="font-heading text-2xl font-bold text-neutral-dark">Applire</h1>
           <p className="text-sm text-gray-500 hidden sm:block">
-            AI-Powered CV Transformation
+            {t("tagline")}
           </p>
         </div>
       </header>
@@ -101,10 +105,10 @@ export default function Home() {
             {/* Left Column - CV Upload */}
             <div>
               <h2 className="font-heading text-xl font-bold text-neutral-dark mb-1">
-                Your CVs
+                {t("yourCVs")}
               </h2>
               <p className="text-sm text-gray-500 mb-4">
-                Upload 2-4 CVs for the richest profile. We'll merge them automatically.
+                {t("cvUploadHint")}
               </p>
 
               {/* Dropzone */}
@@ -129,7 +133,7 @@ export default function Home() {
                   ))}
                   {files.length < 4 && (
                     <p className="text-xs text-gray-500 mt-2">
-                      Add more files for a richer profile
+                      {t("addMoreFiles")}
                     </p>
                   )}
                 </div>
@@ -139,10 +143,10 @@ export default function Home() {
             {/* Right Column - JD Input */}
             <div>
               <h2 className="font-heading text-xl font-bold text-neutral-dark mb-1">
-                Job Description
+                {t("jobDescription")}
               </h2>
               <p className="text-sm text-gray-500 mb-4">
-                Paste a JD so we can tailor your profile immediately.
+                {t("jdHint")}
               </p>
 
               <Card className="p-4">
@@ -173,7 +177,7 @@ export default function Home() {
                         : "text-gray-500 hover:text-neutral-dark"
                     )}
                   >
-                    Paste Text
+                    {t("pasteText")}
                     {jdMode === "text" && (
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal" />
                     )}
@@ -200,7 +204,7 @@ export default function Home() {
                 )}
 
                 <p className="text-xs italic text-gray-400 mt-3">
-                  (Optional — you can add this later)
+                  {t("optional")}
                 </p>
               </Card>
             </div>
@@ -222,15 +226,15 @@ export default function Home() {
               className="min-w-[240px]"
               data-testid="submit-button"
             >
-              Analyze & Build Profile
+              {t("analyzeButton")}
             </Button>
             {!canSubmit && !showOverlay && (
               <p className="text-xs text-amber-600 mt-2">
-                Upload at least one CV to continue
+                {t("uploadAtLeastOne")}
               </p>
             )}
             <p className="text-xs text-gray-500 mt-3">
-              This usually takes about 30 seconds
+              {t("usuallyTakes")}
             </p>
           </div>
         </div>
