@@ -322,10 +322,9 @@ async def test_upload_cv_first_import(sqlite_session, tmp_path):
     from applire.storage.local import LocalStorageProvider
     from applire.ocr.tesseract import TesseractExtractor
 
-    # Mock provider: returns a valid minimal MasterProfileData dict
     mock_provider = AsyncMock()
     mock_provider.__class__.__name__ = "MockProvider"
-    mock_provider.aparse_json.return_value = {
+    profile_data = {
         "personal_info": {"name": "Max Mustermann", "email": "max@example.de"},
         "work_experience": [
             {
@@ -355,13 +354,12 @@ async def test_upload_cv_first_import(sqlite_session, tmp_path):
             {"language": "English", "level": "C1"},
         ],
     }
-
-    # Mock OCR extractor (not called for text-based content)
+    mock_provider.aparse_json.return_value = profile_data
     mock_ocr = AsyncMock()
 
-    # Mock cv_parser.extract_text to return plain text (bypass pymupdf)
-    # Patch extract_text (the dispatcher) to bypass pymupdf entirely
-    with patch("applire.services.cv_parser.extract_text", new=AsyncMock(return_value="Max Mustermann\nSoftware Engineer\nSiemens AG")):
+    with patch("applire.services.cv_parser.extract_text", new=AsyncMock(return_value="Max Mustermann\nSoftware Engineer\nSiemens AG")), \
+         patch("applire.services.profile.review_and_refine", new=AsyncMock(side_effect=lambda **kw: kw["draft"])), \
+         patch("applire.services.profile.enrich_skills", new=AsyncMock(side_effect=lambda p, _: p)):
         storage = LocalStorageProvider(str(tmp_path))
         response = await upload_cv(
             file_bytes=b"fake-pdf",
@@ -377,10 +375,7 @@ async def test_upload_cv_first_import(sqlite_session, tmp_path):
     assert response.completeness_score > 0.0
     assert response.expires_at is not None
     assert response.enrichment_record_id is not None
-    # No conflicts on first import
     assert response.conflicts == []
-    # With work + education + skills + personal_info + languages, completeness should be
-    # above 0.5 (weights: 0.30 + 0.20 + 0.20 + 0.15 + 0.10 = 0.95 if all present)
     assert response.completeness_score >= 0.5
     assert response.status == "COMPLETE"
 
@@ -414,7 +409,6 @@ async def test_upload_cv_second_import_triggers_merge(sqlite_session, tmp_path):
         "languages": [{"language": "German", "level": "Native"}],
     }
 
-    # Second CV: same position at BMW but different start_date → should conflict
     second_profile = {
         "personal_info": {"name": "Anna Schmidt"},
         "work_experience": [
@@ -433,8 +427,10 @@ async def test_upload_cv_second_import_triggers_merge(sqlite_session, tmp_path):
     mock_provider = AsyncMock()
     mock_provider.__class__.__name__ = "MockProvider"
 
-    with patch("applire.services.cv_parser.extract_text", new=AsyncMock(return_value="Anna Schmidt\nBMW Group")):
-        # First upload
+    with patch("applire.services.cv_parser.extract_text", new=AsyncMock(return_value="Anna Schmidt\nBMW Group")), \
+         patch("applire.services.profile.review_and_refine", new=AsyncMock(side_effect=lambda **kw: kw["draft"])), \
+         patch("applire.services.profile.enrich_skills", new=AsyncMock(side_effect=lambda p, _: p)):
+
         mock_provider.aparse_json.return_value = first_profile
         await upload_cv(
             file_bytes=b"cv1",
@@ -446,7 +442,6 @@ async def test_upload_cv_second_import_triggers_merge(sqlite_session, tmp_path):
             ocr_extractor=mock_ocr,
         )
 
-        # Second upload — should trigger merge
         mock_provider.aparse_json.return_value = second_profile
         response = await upload_cv(
             file_bytes=b"cv2",
@@ -458,9 +453,7 @@ async def test_upload_cv_second_import_triggers_merge(sqlite_session, tmp_path):
             ocr_extractor=mock_ocr,
         )
 
-    # Conflicts should be surfaced (start_date mismatch)
     assert len(response.conflicts) >= 1
     conflict_fields = [c.field for c in response.conflicts]
     assert "start_date" in conflict_fields
-    # Status is DRAFT because conflicts present
     assert response.status == "DRAFT"

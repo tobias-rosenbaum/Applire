@@ -29,12 +29,18 @@ from applire.prompts.review_profile_extraction import (
     REVIEW_SYSTEM_PROMPT as _EXTRACTION_REVIEW_SYSTEM_PROMPT,
     build_review_prompt as _build_extraction_review_prompt,
 )
+from applire.prompts.review_cv_extraction import (
+    CV_EXTRACTION_REVIEW_SYSTEM_PROMPT as _CV_EXTRACTION_REVIEW_SYSTEM_PROMPT,
+    build_cv_extraction_review_prompt as _build_cv_extraction_review_prompt,
+    build_cv_extraction_retry_prompt as _build_cv_extraction_retry_prompt,
+)
 from applire.providers.embedding.base import EmbeddingProvider
 from applire.providers.embedding.noop import NoopEmbeddingProvider
 from applire.providers.llm.base import LLMProvider
 from applire.services.linkedin import parse_linkedin_pdf, parse_linkedin_zip
 from applire.services.profile.merge import merge_profiles
 from applire.services.reviewer import review_and_refine
+from applire.services.skill_enrichment import enrich_skills
 from applire.schemas.profile import (
     ConflictSummary,
     CVUploadResponse,
@@ -239,6 +245,7 @@ async def _import_from_text(
         generator_max_tokens=8192,
     )
     incoming = MasterProfileData.model_validate(data)
+    incoming = await enrich_skills(incoming, provider)
     now = datetime.now(timezone.utc)
 
     existing = await _get_latest(db)
@@ -322,6 +329,7 @@ async def patch_profile_section(
     db: AsyncSession,
     source: str = "manual_edit",
     source_session_id: str | None = None,
+    provider: LLMProvider | None = None,
 ) -> MasterProfileResponse:
     if section not in _VALID_SECTIONS:
         raise ValueError(f"Invalid section '{section}'. Valid: {sorted(_VALID_SECTIONS)}")
@@ -337,6 +345,10 @@ async def patch_profile_section(
     updated_dict = profile_data.model_dump(mode="json")
     updated_dict[section] = value
     validated = MasterProfileData.model_validate(updated_dict)
+
+    # Re-run enrichment when skills or work_experience are patched (keeps years fresh)
+    if section in {"work_experience", "skills"} and provider is not None:
+        validated = await enrich_skills(validated, provider)
 
     # Build enrichment record
     action = "updated" if old_value else "added"
@@ -535,7 +547,7 @@ async def upload_cv(
                 "language_requirement": job_record.language_requirement,
             }
 
-    # 3. LLM extraction
+    # 3. LLM extraction + review layer + skill enrichment
     if job_analysis_dict:
         prompt = build_jd_aware_prompt(raw_text, job_analysis_dict)
         system = JD_AWARE_CV_EXTRACTION_PROMPT
@@ -544,7 +556,19 @@ async def upload_cv(
         system = GENERIC_CV_EXTRACTION_PROMPT
 
     data: dict = await provider.aparse_json(prompt, system=system, temperature=0.1, max_tokens=8192)
+    data = await review_and_refine(
+        source=raw_text,
+        draft=data,
+        generator_prompt_fn=_build_cv_extraction_retry_prompt,
+        generator_system=system,
+        reviewer_prompt_fn=_build_cv_extraction_review_prompt,
+        reviewer_system=_CV_EXTRACTION_REVIEW_SYSTEM_PROMPT,
+        provider=provider,
+        max_retries=LLM_REVIEW_MAX_RETRIES,
+        generator_max_tokens=8192,
+    )
     incoming = MasterProfileData.model_validate(data)
+    incoming = await enrich_skills(incoming, provider)
     now = datetime.now(timezone.utc)
     emb_provider = embedding_provider or _DEFAULT_EMBEDDING_PROVIDER
 

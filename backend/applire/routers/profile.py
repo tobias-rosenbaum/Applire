@@ -344,10 +344,11 @@ async def patch_section(
     request: Request,
     db: AsyncSession = Depends(get_db),
     _auth: AuthProvider = Depends(get_auth_provider),
+    provider: LLMProvider = Depends(_get_provider),
 ) -> MasterProfileResponse:
     body = await request.json()
     try:
-        return await patch_profile_section(section, body, db)
+        return await patch_profile_section(section, body, db, provider=provider)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
