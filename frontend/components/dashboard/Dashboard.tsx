@@ -46,6 +46,8 @@ interface ApplicationsResponse {
 export function Dashboard() {
   const router = useRouter();
   const t = useTranslations("dashboard");
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileExistsResponse | null>(null);
   const [profileFull, setProfileFull] = useState<ProfileResponse | null>(null);
@@ -138,7 +140,7 @@ export function Dashboard() {
   };
 
   const handleDeleteApplication = async (appId: string) => {
-    if (!confirm("Remove this application from your pipeline? This cannot be undone.")) {
+    if (!confirm(t("deleteConfirm"))) {
       return;
     }
     try {
@@ -156,7 +158,7 @@ export function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dim">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">{tCommon("loading")}</p>
       </div>
     );
   }
@@ -178,7 +180,7 @@ export function Dashboard() {
                   : "bg-gray-400 text-white"
               )}
             >
-              Profile: {Math.round(completenessScore * 100)}%
+              {t("profileBadge", { pct: Math.round(completenessScore * 100) })}
             </span>
           )}
         </div>
@@ -190,10 +192,12 @@ export function Dashboard() {
           {/* Welcome Section */}
           <div className="mb-8">
             <h2 className="font-heading text-3xl font-bold text-neutral-dark mb-2">
-              Welcome back{userName ? `, ${userName.split(" ")[0]}` : ""}
+              {userName
+                ? t("welcomeBackNamed", { name: userName.split(" ")[0] })
+                : t("welcomeBack")}
             </h2>
             <p className="text-gray-500">
-              Manage your applications and tailor your CV for each role.
+              {t("subtitle")}
             </p>
           </div>
 
@@ -207,11 +211,11 @@ export function Dashboard() {
           {/* Applications List */}
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-heading text-xl font-semibold text-neutral-dark">
-              Active Applications ({applications.length})
+              {t("activeApplications", { count: applications.length })}
             </h3>
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20"
@@ -222,10 +226,10 @@ export function Dashboard() {
             {applications.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-gray-500 mb-4">
-                  {searchQuery ? "No applications match your search." : t("noApplications")}
+                  {searchQuery ? t("noSearchResults") : t("noApplications")}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={handleNewApplication}>Create your first application</Button>
+                  <Button onClick={handleNewApplication}>{t("createFirstApplication")}</Button>
                 )}
               </Card>
             ) : (
@@ -256,13 +260,13 @@ export function Dashboard() {
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
           <a href="/profile" className="text-sm text-teal hover:underline">
-            My Profile
+            {tNav("profile")}
           </a>
           <a href="/settings" className="text-sm text-teal hover:underline">
-            Settings
+            {tNav("settings")}
           </a>
           <a href="/help" className="text-sm text-gray-500 hover:underline">
-            Help
+            {tNav("help")}
           </a>
         </div>
       </footer>

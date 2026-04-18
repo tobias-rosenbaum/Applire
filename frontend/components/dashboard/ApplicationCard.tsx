@@ -6,19 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const WORKFLOW_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  analyzing: { label: "Analyzing", className: "bg-teal text-white" },
-  interviewing: { label: "Interviewing", className: "bg-teal text-white" },
-  cv_generating: { label: "Generating CV", className: "bg-teal text-white" },
-  completed: { label: "CV Ready", className: "bg-success text-white" },
-  none: { label: "Tracking", className: "bg-gray-400 text-white" },
+type WorkflowStatusKey = "statusAnalyzing" | "statusInterviewing" | "statusGeneratingCV" | "statusCVReady" | "statusTracking";
+type UserStatusKey = "statusTracking" | "statusApplied" | "statusRejected" | "statusOffer";
+
+const WORKFLOW_STATUS_CONFIG: Record<string, { labelKey: WorkflowStatusKey; className: string }> = {
+  analyzing:    { labelKey: "statusAnalyzing",    className: "bg-teal text-white" },
+  interviewing: { labelKey: "statusInterviewing", className: "bg-teal text-white" },
+  cv_generating: { labelKey: "statusGeneratingCV", className: "bg-teal text-white" },
+  completed:    { labelKey: "statusCVReady",       className: "bg-success text-white" },
+  none:         { labelKey: "statusTracking",      className: "bg-gray-400 text-white" },
 };
 
-const USER_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  tracking: { label: "Tracking", className: "bg-gray-400 text-white" },
-  applied: { label: "Applied", className: "bg-blue-500 text-white" },
-  rejected: { label: "Rejected", className: "bg-critical text-white" },
-  offer: { label: "Offer", className: "bg-success text-white" },
+const USER_STATUS_CONFIG: Record<string, { labelKey: UserStatusKey; className: string }> = {
+  tracking: { labelKey: "statusTracking",  className: "bg-gray-400 text-white" },
+  applied:  { labelKey: "statusApplied",   className: "bg-blue-500 text-white" },
+  rejected: { labelKey: "statusRejected",  className: "bg-critical text-white" },
+  offer:    { labelKey: "statusOffer",     className: "bg-success text-white" },
 };
 
 export interface ApplicationCardProps {
@@ -75,7 +78,7 @@ export function ApplicationCard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-heading text-base font-semibold text-neutral-dark truncate">
-            {roleTitle || "Unbekannte Rolle"}
+            {roleTitle || t("unknownRole")}
           </h3>
           {companyName && (
             <p className="text-sm text-gray-500 truncate">{companyName}</p>
@@ -84,21 +87,21 @@ export function ApplicationCard({
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <Badge className={workflowConfig.className}>
-            {workflowConfig.label}
+            {t(workflowConfig.labelKey)}
           </Badge>
 
           <Badge className={userConfig.className}>
-            {userConfig.label}
+            {t(userConfig.labelKey)}
           </Badge>
 
           {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
             <span className="text-xs text-amber-600 whitespace-nowrap">
-              {daysUntilDeadline} {daysUntilDeadline === 1 ? "day" : "days"} left
+              {t("deadlineDays", { count: daysUntilDeadline })}
             </span>
           )}
           {daysUntilDeadline !== null && daysUntilDeadline <= 0 && (
             <span className="text-xs text-critical whitespace-nowrap">
-              Deadline passed
+              {t("deadlinePassed")}
             </span>
           )}
 
@@ -124,7 +127,7 @@ export function ApplicationCard({
                   onViewCV();
                 }}
               >
-                View CV
+                {t("viewCV")}
               </Button>
             )}
             {showResubmit && onResubmit && (
@@ -136,7 +139,7 @@ export function ApplicationCard({
                   onResubmit();
                 }}
               >
-                Resubmit
+                {t("resubmit")}
               </Button>
             )}
             {onDelete && (

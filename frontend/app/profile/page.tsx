@@ -71,19 +71,30 @@ type SectionKey =
   | "languages"
   | "certifications";
 
-const SECTION_LABELS: Record<SectionKey, string> = {
-  personal_info: "Personal Info",
-  professional_summary: "Professional Summary",
-  work_experience: "Work Experience",
-  education: "Education",
-  skills: "Skills",
-  languages: "Languages",
-  certifications: "Certifications",
+type SectionLabelKey =
+  | "sectionPersonalInfo"
+  | "sectionSummary"
+  | "sectionWorkExperience"
+  | "sectionEducation"
+  | "sectionSkills"
+  | "sectionLanguages"
+  | "sectionCertifications";
+
+const SECTION_LABEL_KEYS: Record<SectionKey, SectionLabelKey> = {
+  personal_info: "sectionPersonalInfo",
+  professional_summary: "sectionSummary",
+  work_experience: "sectionWorkExperience",
+  education: "sectionEducation",
+  skills: "sectionSkills",
+  languages: "sectionLanguages",
+  certifications: "sectionCertifications",
 };
 
 export default function ProfilePage() {
   const router = useRouter();
   const t = useTranslations("profile");
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [enrichmentHistory, setEnrichmentHistory] = useState<EnrichmentRecord[]>([]);
@@ -108,7 +119,7 @@ export default function ProfilePage() {
             data.profile.personal_info?.photo_url ?? null
           );
         } else {
-          setError("No profile found. Please import a CV first.");
+          setError(t("noProfile"));
         }
 
         if (enrichmentRes.ok) {
@@ -117,7 +128,7 @@ export default function ProfilePage() {
         }
       } catch (err) {
         console.error("Failed to load profile:", err);
-        setError("Failed to load profile data.");
+        setError(t("loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -156,11 +167,11 @@ export default function ProfilePage() {
         setEditValue("");
       } else {
         const err = await res.json();
-        setError(err.detail || "Failed to save section.");
+        setError(err.detail || t("saveFailed"));
       }
     } catch (err) {
       console.error("Save failed:", err);
-      setError("Failed to save section.");
+      setError(t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -176,7 +187,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dim">
-        <p className="text-gray-500">Loading profile...</p>
+        <p className="text-gray-500">{t("loading")}</p>
       </div>
     );
   }
@@ -185,7 +196,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-surface-dim">
         <p className="text-critical mb-4">{error}</p>
-        <Button onClick={() => router.push("/")}>Back to Home</Button>
+        <Button onClick={() => router.push("/")}>{t("backToHome")}</Button>
       </div>
     );
   }
@@ -200,7 +211,7 @@ export default function ProfilePage() {
               onClick={() => router.push("/")}
               className="text-sm text-teal hover:underline"
             >
-              ← Back
+              {t("back")}
             </button>
             <h1 className="font-heading text-2xl font-bold text-neutral-dark">{t("title")}</h1>
           </div>
@@ -215,7 +226,7 @@ export default function ProfilePage() {
                   : "bg-gray-400 text-white"
               )}
             >
-              {Math.round(completenessScore * 100)}% Complete
+              {t("complete", { pct: Math.round(completenessScore * 100) })}
             </span>
           )}
         </div>
@@ -239,7 +250,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Profile Sections */}
-          {(Object.keys(SECTION_LABELS) as SectionKey[]).map((section) => {
+          {(Object.keys(SECTION_LABEL_KEYS) as SectionKey[]).map((section) => {
             const isEditing = editingSection === section;
             const value = profile?.profile[section];
             const hasValue = value !== undefined && value !== null && value !== "";
@@ -248,7 +259,7 @@ export default function ProfilePage() {
               <Card key={section} className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-heading text-base font-semibold text-neutral-dark">
-                    {SECTION_LABELS[section]}
+                    {t(SECTION_LABEL_KEYS[section])}
                   </h3>
                   {!isEditing && (
                     <Button
@@ -256,7 +267,7 @@ export default function ProfilePage() {
                       size="sm"
                       onClick={() => handleEdit(section)}
                     >
-                      Edit
+                      {t("edit")}
                     </Button>
                   )}
                 </div>
@@ -270,10 +281,10 @@ export default function ProfilePage() {
                     />
                     <div className="flex gap-2">
                       <Button onClick={handleSave} disabled={saving}>
-                        {saving ? "Saving..." : "Save"}
+                        {saving ? t("saving") : tCommon("save")}
                       </Button>
                       <Button variant="outline" onClick={handleCancel}>
-                        Cancel
+                        {tCommon("cancel")}
                       </Button>
                     </div>
                   </div>
@@ -288,7 +299,7 @@ export default function ProfilePage() {
                         </pre>
                       )
                     ) : (
-                      <p className="text-gray-400 italic">Not provided</p>
+                      <p className="text-gray-400 italic">{t("notProvided")}</p>
                     )}
                   </div>
                 )}
@@ -300,7 +311,7 @@ export default function ProfilePage() {
           {enrichmentHistory.length > 0 && (
             <Card className="p-4 mt-6">
               <h3 className="font-heading text-base font-semibold text-neutral-dark mb-4">
-                Enrichment History
+                {t("enrichmentHistory")}
               </h3>
               <div className="space-y-2">
                 {enrichmentHistory.map((record, idx) => (
@@ -329,13 +340,13 @@ export default function ProfilePage() {
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
           <a href="/" className="text-sm text-teal hover:underline">
-            Dashboard
+            {tNav("dashboard")}
           </a>
           <a href="/settings" className="text-sm text-teal hover:underline">
-            Settings
+            {tNav("settings")}
           </a>
           <a href="/help" className="text-sm text-gray-500 hover:underline">
-            Help
+            {tNav("help")}
           </a>
         </div>
       </footer>

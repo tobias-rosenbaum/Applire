@@ -18,6 +18,7 @@ interface NewApplicationModalProps {
 
 export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalProps) {
   const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
   const [jdMode, setJdMode] = useState<JdMode>("url");
   const [jdUrl, setJdUrl] = useState("");
   const [jdText, setJdText] = useState("");
@@ -45,7 +46,7 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
 
       if (!analyzeRes.ok) {
         const err = await analyzeRes.json();
-        setError(err.detail || "Failed to analyze job description.");
+        setError(err.detail || t("analyzeError"));
         setLoading(false);
         return;
       }
@@ -66,9 +67,9 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
       if (!createRes.ok) {
         const err = await createRes.json();
         if (createRes.status === 409) {
-          setError("You already have an application for this job.");
+          setError(t("duplicateApplication"));
         } else {
-          setError(err.detail || "Failed to create application.");
+          setError(err.detail || t("createError"));
         }
         setLoading(false);
         return;
@@ -104,8 +105,7 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
         </div>
 
         <p className="text-sm text-gray-500 mb-6">
-          Paste a job description URL or text to start a new application.
-          Your existing profile will be used — no need to re-upload your CV.
+          {t("modalDescription")}
         </p>
 
         {error && (
@@ -128,7 +128,7 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
                   : "text-gray-500 hover:text-neutral-dark"
               )}
             >
-              URL
+              {t("jdTabUrl")}
               {jdMode === "url" && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal" />
               )}
@@ -143,7 +143,7 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
                   : "text-gray-500 hover:text-neutral-dark"
               )}
             >
-              Paste Text
+              {t("jdTabText")}
               {jdMode === "text" && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal" />
               )}
@@ -162,7 +162,7 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
           ) : (
             <textarea
               className="flex min-h-[180px] w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-neutral-dark placeholder:text-gray-400 transition-colors focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-              placeholder="Paste the full job description here..."
+              placeholder={t("jdPlaceholder")}
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
               disabled={loading}
@@ -173,13 +173,13 @@ export function NewApplicationModal({ onClose, onSuccess }: NewApplicationModalP
         {/* Actions */}
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!canSubmit || loading}
           >
-            {loading ? "Analyzing..." : "Start Application"}
+            {loading ? t("analyzing") : t("startApplication")}
           </Button>
         </div>
       </Card>

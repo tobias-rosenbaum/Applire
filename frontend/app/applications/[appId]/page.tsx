@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,19 +11,22 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
-const USER_STATUS_OPTIONS = [
-  { value: "tracking", label: "Tracking", className: "bg-gray-400 text-white" },
-  { value: "applied", label: "Applied", className: "bg-blue-500 text-white" },
-  { value: "rejected", label: "Rejected", className: "bg-critical text-white" },
-  { value: "offer", label: "Offer", className: "bg-success text-white" },
+type WorkflowStatusLabelKey = "statusAnalyzing" | "statusInterviewing" | "statusGeneratingCV" | "statusCVReady" | "statusTracking";
+type UserStatusLabelKey = "statusTracking" | "statusApplied" | "statusRejected" | "statusOffer";
+
+const USER_STATUS_OPTIONS: Array<{ value: string; labelKey: UserStatusLabelKey; className: string }> = [
+  { value: "tracking", labelKey: "statusTracking",  className: "bg-gray-400 text-white" },
+  { value: "applied",  labelKey: "statusApplied",   className: "bg-blue-500 text-white" },
+  { value: "rejected", labelKey: "statusRejected",  className: "bg-critical text-white" },
+  { value: "offer",    labelKey: "statusOffer",     className: "bg-success text-white" },
 ];
 
-const WORKFLOW_STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  analyzing: { label: "Analyzing", className: "bg-teal text-white" },
-  interviewing: { label: "Interviewing", className: "bg-teal text-white" },
-  cv_generating: { label: "Generating CV", className: "bg-teal text-white" },
-  completed: { label: "CV Ready", className: "bg-success text-white" },
-  none: { label: "Tracking", className: "bg-gray-400 text-white" },
+const WORKFLOW_STATUS_CONFIG: Record<string, { labelKey: WorkflowStatusLabelKey; className: string }> = {
+  analyzing:    { labelKey: "statusAnalyzing",    className: "bg-teal text-white" },
+  interviewing: { labelKey: "statusInterviewing", className: "bg-teal text-white" },
+  cv_generating: { labelKey: "statusGeneratingCV", className: "bg-teal text-white" },
+  completed:    { labelKey: "statusCVReady",       className: "bg-success text-white" },
+  none:         { labelKey: "statusTracking",      className: "bg-gray-400 text-white" },
 };
 
 interface ApplicationDetail {
@@ -43,6 +47,9 @@ interface ApplicationDetail {
 export default function ApplicationDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const t = useTranslations("applications");
+  const tDash = useTranslations("dashboard");
+  const tNav = useTranslations("nav");
   const appId = params.appId as string;
 
   const [loading, setLoading] = useState(true);
@@ -67,11 +74,11 @@ export default function ApplicationDetailPage() {
           setNotes(data.notes || "");
           setDeadline(data.deadline ? data.deadline.slice(0, 16) : "");
         } else {
-          setError("Application not found.");
+          setError(t("notFound"));
         }
       } catch (err) {
         console.error("Failed to load application:", err);
-        setError("Failed to load application data.");
+        setError(t("loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -94,7 +101,7 @@ export default function ApplicationDetailPage() {
       }
 
       if (Object.keys(payload).length === 0) {
-        setSuccess("No changes to save.");
+        setSuccess(t("noChanges"));
         setSaving(false);
         return;
       }
@@ -108,14 +115,14 @@ export default function ApplicationDetailPage() {
       if (res.ok) {
         const updated: ApplicationDetail = await res.json();
         setApplication(updated);
-        setSuccess("Changes saved successfully.");
+        setSuccess(t("saveSuccess"));
       } else {
         const err = await res.json();
-        setError(err.detail || "Failed to save changes.");
+        setError(err.detail || t("saveFailed"));
       }
     } catch (err) {
       console.error("Save failed:", err);
-      setError("Failed to save changes.");
+      setError(t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -136,7 +143,7 @@ export default function ApplicationDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dim">
-        <p className="text-gray-500">Loading application details...</p>
+        <p className="text-gray-500">{t("loadingDetails")}</p>
       </div>
     );
   }
@@ -145,14 +152,14 @@ export default function ApplicationDetailPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-surface-dim">
         <p className="text-critical mb-4">{error}</p>
-        <Button onClick={() => router.push("/")}>Back to Dashboard</Button>
+        <Button onClick={() => router.push("/")}>{t("backToDashboard")}</Button>
       </div>
     );
   }
 
   if (!application) return null;
 
-  const workflowConfig = WORKFLOW_STATUS_CONFIG[application.workflow_status] || WORKFLOW_STATUS_CONFIG.none;
+  const workflowConfig = WORKFLOW_STATUS_CONFIG[application.workflow_status] ?? WORKFLOW_STATUS_CONFIG.none;
   const daysUntilDeadline = application.deadline
     ? Math.ceil((new Date(application.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
@@ -167,18 +174,21 @@ export default function ApplicationDetailPage() {
               onClick={() => router.push("/")}
               className="text-sm text-teal hover:underline"
             >
-              ← Back to Dashboard
+              {t("backToDashboard")}
             </button>
             <h1 className="font-heading text-2xl font-bold text-neutral-dark">
-              {application.role_title || "Unbekannte Rolle"}
+              {application.role_title || t("unknownRole")}
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <Badge className={workflowConfig.className}>
-              {workflowConfig.label}
+              {tDash(workflowConfig.labelKey)}
             </Badge>
-            <Badge className={USER_STATUS_OPTIONS.find(s => s.value === userStatus)?.className || "bg-gray-400 text-white"}>
-              {USER_STATUS_OPTIONS.find(s => s.value === userStatus)?.label || userStatus}
+            <Badge className={USER_STATUS_OPTIONS.find(s => s.value === userStatus)?.className ?? "bg-gray-400 text-white"}>
+              {(() => {
+                const opt = USER_STATUS_OPTIONS.find(s => s.value === userStatus);
+                return opt ? tDash(opt.labelKey) : userStatus;
+              })()}
             </Badge>
           </div>
         </div>
@@ -202,17 +212,17 @@ export default function ApplicationDetailPage() {
           {/* Company Info */}
           <Card className="p-6">
             <h2 className="font-heading text-xl font-bold text-neutral-dark mb-4">
-              Company & Role
+              {t("companyAndRole")}
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Company</label>
+                <label className="text-sm font-medium text-gray-500">{t("company")}</label>
                 <p className="text-base text-neutral-dark mt-1">
                   {application.company_name || "—"}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Role</label>
+                <label className="text-sm font-medium text-gray-500">{t("role")}</label>
                 <p className="text-base text-neutral-dark mt-1">
                   {application.role_title || "—"}
                 </p>
@@ -223,13 +233,13 @@ export default function ApplicationDetailPage() {
           {/* Status Management */}
           <Card className="p-6">
             <h2 className="font-heading text-xl font-bold text-neutral-dark mb-4">
-              Status Management
+              {t("statusManagement")}
             </h2>
             <div className="space-y-4">
               {/* User Status Dropdown */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Application Status
+                  {t("applicationStatus")}
                 </label>
                 <select
                   value={userStatus}
@@ -238,7 +248,7 @@ export default function ApplicationDetailPage() {
                 >
                   {USER_STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {tDash(option.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -247,7 +257,7 @@ export default function ApplicationDetailPage() {
               {/* Deadline */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Deadline
+                  {t("deadline")}
                 </label>
                 <Input
                   type="datetime-local"
@@ -261,8 +271,8 @@ export default function ApplicationDetailPage() {
                     daysUntilDeadline > 0 ? "text-gray-500" : "text-critical"
                   )}>
                     {daysUntilDeadline > 0
-                      ? `${daysUntilDeadline} ${daysUntilDeadline === 1 ? "day" : "days"} remaining`
-                      : "Deadline has passed"}
+                      ? t("deadlineDaysRemaining", { count: daysUntilDeadline })
+                      : t("deadlineHasPassed")}
                   </p>
                 )}
               </div>
@@ -270,20 +280,20 @@ export default function ApplicationDetailPage() {
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                  {t("notes")}
                 </label>
                 <textarea
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm min-h-[100px] focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add notes about this application..."
+                  placeholder={t("notesPlaceholder")}
                 />
               </div>
 
               {/* Save Button */}
               <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={saving}>
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? t("saving") : t("saveChanges")}
                 </Button>
               </div>
             </div>
@@ -293,11 +303,11 @@ export default function ApplicationDetailPage() {
           {application.flow_session_id && (
             <Card className="p-6">
               <h2 className="font-heading text-xl font-bold text-neutral-dark mb-4">
-                Flow Progress
+                {t("flowProgress")}
               </h2>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Current Step</span>
+                  <span className="text-sm text-gray-500">{t("currentStep")}</span>
                   <span className="text-sm font-medium text-neutral-dark">
                     {application.flow_current_step || "—"}
                   </span>
@@ -305,12 +315,12 @@ export default function ApplicationDetailPage() {
                 <div className="flex gap-2">
                   {application.flow_current_step && application.flow_current_step !== "complete" && (
                     <Button variant="secondary" onClick={handleResume}>
-                      Resume Flow
+                      {t("resumeFlow")}
                     </Button>
                   )}
                   {application.workflow_status === "completed" && (
                     <Button variant="outline" onClick={handleViewCV}>
-                      View CV
+                      {t("viewCV")}
                     </Button>
                   )}
                 </div>
@@ -321,24 +331,24 @@ export default function ApplicationDetailPage() {
           {/* Metadata */}
           <Card className="p-6">
             <h2 className="font-heading text-xl font-bold text-neutral-dark mb-4">
-              Details
+              {t("details")}
             </h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <label className="text-gray-500">Created</label>
+                <label className="text-gray-500">{t("created")}</label>
                 <p className="text-neutral-dark mt-1">
                   {new Date(application.created_at).toLocaleDateString()}
                 </p>
               </div>
               <div>
-                <label className="text-gray-500">Last Updated</label>
+                <label className="text-gray-500">{t("lastUpdated")}</label>
                 <p className="text-neutral-dark mt-1">
                   {new Date(application.updated_at).toLocaleDateString()}
                 </p>
               </div>
               {application.applied_at && (
                 <div>
-                  <label className="text-gray-500">Applied At</label>
+                  <label className="text-gray-500">{t("appliedAt")}</label>
                   <p className="text-neutral-dark mt-1">
                     {new Date(application.applied_at).toLocaleDateString()}
                   </p>
@@ -353,13 +363,13 @@ export default function ApplicationDetailPage() {
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
           <a href="/" className="text-sm text-teal hover:underline">
-            Dashboard
+            {tNav("dashboard")}
           </a>
           <a href="/profile" className="text-sm text-teal hover:underline">
-            My Profile
+            {tNav("profile")}
           </a>
           <a href="/settings" className="text-sm text-teal hover:underline">
-            Settings
+            {tNav("settings")}
           </a>
         </div>
       </footer>
