@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
+import { withIntl } from "@/lib/test-utils/with-intl";
 import { KaileChat } from "../KaileChat";
 
 const GAPS = [
@@ -23,30 +24,30 @@ describe("KaileChat", () => {
   });
 
   it("renders textarea and Rewrite button", () => {
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     expect(screen.getByTestId("kaile-directions-input")).toBeTruthy();
     expect(screen.getByTestId("kaile-rewrite-btn")).toBeTruthy();
   });
 
   it("renders gap chips when gaps are provided", () => {
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     expect(screen.getByTestId("gap-chip-EU GMP Audit")).toBeTruthy();
     expect(screen.getByTestId("gap-chip-Post-Brexit")).toBeTruthy();
   });
 
   it("does not render gap chip section when gaps is empty", () => {
-    render(<KaileChat {...BASE_PROPS} gaps={[]} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} gaps={[]} />));
     expect(screen.queryByTestId("gap-chip-EU GMP Audit")).toBeNull();
   });
 
   it("pre-selects chips passed in preSelectedGapIds", () => {
-    render(<KaileChat {...BASE_PROPS} preSelectedGapIds={["EU GMP Audit"]} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} preSelectedGapIds={["EU GMP Audit"]} />));
     const chip = screen.getByTestId("gap-chip-EU GMP Audit");
     expect(chip.getAttribute("data-selected")).toBe("true");
   });
 
   it("toggling a chip changes its selected state", () => {
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     const chip = screen.getByTestId("gap-chip-EU GMP Audit");
     expect(chip.getAttribute("data-selected")).toBe("false");
     fireEvent.click(chip);
@@ -61,7 +62,7 @@ describe("KaileChat", () => {
       json: async () => ({ suggestion: "Updated section text" }),
     } as Response);
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     fireEvent.change(screen.getByTestId("kaile-directions-input"), {
       target: { value: "I also did chromatography" },
     });
@@ -87,7 +88,7 @@ describe("KaileChat", () => {
       json: async () => ({ suggestion: "Updated section text" }),
     } as Response);
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("kaile-rewrite-btn"));
     await screen.findByTestId("kaile-suggestion");
 
@@ -102,7 +103,7 @@ describe("KaileChat", () => {
       json: async () => ({ suggestion: "New suggestion text" }),
     } as Response);
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("kaile-rewrite-btn"));
     await screen.findByTestId("apply-suggestion-btn");
 
@@ -116,7 +117,7 @@ describe("KaileChat", () => {
       json: async () => ({ suggestion: "New suggestion text" }),
     } as Response);
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("kaile-rewrite-btn"));
     await screen.findByTestId("apply-suggestion-btn");
 
@@ -130,7 +131,7 @@ describe("KaileChat", () => {
       json: async () => ({ suggestion: "New suggestion text" }),
     } as Response);
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("kaile-rewrite-btn"));
     await screen.findByTestId("apply-suggestion-btn");
 
@@ -148,7 +149,7 @@ describe("KaileChat", () => {
       }),
     );
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("kaile-rewrite-btn"));
     expect(screen.getByTestId("kaile-loading")).toBeTruthy();
     await screen.findByTestId("kaile-suggestion");
@@ -160,7 +161,7 @@ describe("KaileChat", () => {
       json: async () => ({ suggestion: "Updated section text" }),
     } as Response);
 
-    render(<KaileChat {...BASE_PROPS} />);
+    render(withIntl(<KaileChat {...BASE_PROPS} />));
     // Toggle first gap chip
     fireEvent.click(screen.getByTestId("gap-chip-EU GMP Audit"));
     // Toggle second gap chip

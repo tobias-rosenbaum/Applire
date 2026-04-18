@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { CoverLetterDocument } from "@/components/cover-letter/CoverLetterDocument";
 import { CoverLetterRefinementPanel } from "@/components/cover-letter/CoverLetterRefinementPanel";
 import { GenerateCoverLetterModal } from "@/components/cover-letter/GenerateCoverLetterModal";
@@ -36,6 +37,8 @@ export default function CoverLetterPage({
   params: Promise<{ flowId: string }>;
 }) {
   const { flowId } = use(params);
+  const t = useTranslations("coverLetter");
+  const tc = useTranslations("common");
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [clState, setClState] = useState<CLState | null>(null);
@@ -120,7 +123,7 @@ export default function CoverLetterPage({
     setDownloading(true);
     try {
       const res = await fetch(`${API_BASE}/api/cover-letter/${clState.coverLetterId}/pdf`);
-      if (!res.ok) throw new Error("PDF nicht verfügbar");
+      if (!res.ok) throw new Error(tc("error"));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -155,7 +158,7 @@ export default function CoverLetterPage({
   if (phase === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen text-neutral-400 text-sm">
-        Lade Anschreiben…
+        {tc("loading")}
       </div>
     );
   }
@@ -163,15 +166,15 @@ export default function CoverLetterPage({
   if (phase === "not_found") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className="text-neutral-500 text-sm">Kein Anschreiben gefunden.</p>
+        <p className="text-neutral-500 text-sm">{t("generating")}</p>
         <Link href={`/flow/${flowId}/cv`} className="text-blue-600 hover:underline text-sm">
-          ← Zurück zum Lebenslauf
+          {t("viewCV")}
         </Link>
       </div>
     );
   }
 
-  const roleTitle = clState?.roleTitle ?? "Anschreiben";
+  const roleTitle = clState?.roleTitle ?? t("generate");
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -188,7 +191,7 @@ export default function CoverLetterPage({
             className="px-3 py-1.5 text-sm border border-blue-500 text-blue-600 rounded hover:bg-blue-50 transition-colors"
             data-testid="cl-view-cv-btn"
           >
-            ← Lebenslauf
+            {t("viewCV")}
           </Link>
           <button
             type="button"
@@ -197,7 +200,7 @@ export default function CoverLetterPage({
             className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
             data-testid="cl-topbar-download-btn"
           >
-            {downloading ? "…" : "PDF herunterladen"}
+            {downloading ? "…" : t("download")}
           </button>
         </div>
       </div>
@@ -205,7 +208,7 @@ export default function CoverLetterPage({
       {/* Body */}
       {phase === "generating" ? (
         <div className="flex items-center justify-center flex-1 text-neutral-400 text-sm">
-          Anschreiben wird generiert…
+          {t("generating")}
         </div>
       ) : (
         <div className="flex flex-1 min-h-0">

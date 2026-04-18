@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -12,6 +13,7 @@ interface WhatNextProps {
 
 export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
   const router = useRouter();
+  const t = useTranslations("cv");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -25,8 +27,8 @@ export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
 
   async function handleCopy() {
     const text = roleTitle
-      ? `Mein Lebenslauf für die Stelle „${roleTitle}" wurde mit Applire optimiert. Präzise. Überzeugend. Zukunftsfähig.`
-      : "Mein Lebenslauf wurde mit Applire optimiert. Präzise. Überzeugend. Zukunftsfähig.";
+      ? t("shareWithRole", { roleTitle })
+      : t("shareGeneric");
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -43,10 +45,10 @@ export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
       </div>
 
       <h1 className="text-2xl font-heading font-bold text-neutral-dark mb-2">
-        Dein Lebenslauf ist bereit!
+        {t("cvReady")}
       </h1>
       <p className="text-sm text-gray-500 mb-8">
-        Präzise. Überzeugend. Zukunftsfähig.
+        {t("cvReadyTagline")}
       </p>
 
       <div className="flex flex-col gap-3">
@@ -56,7 +58,7 @@ export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
           className="w-full bg-gold text-white font-semibold py-3 rounded-lg text-sm hover:opacity-90 transition-opacity"
           data-testid="apply-button"
         >
-          {copied ? "Zusammenfassung kopiert ✓" : "Jetzt bewerben — Zusammenfassung kopieren"}
+          {copied ? t("summaryCopied") : t("copySummary")}
         </button>
 
         <button
@@ -64,7 +66,7 @@ export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
           onClick={() => router.push("/")}
           className="w-full bg-teal text-white font-semibold py-3 rounded-lg text-sm hover:opacity-90 transition-colors"
         >
-          Neue Bewerbung starten
+          {t("startNewApplication")}
         </button>
 
         <button
@@ -72,7 +74,7 @@ export function WhatNext({ flowId, roleTitle }: WhatNextProps) {
           onClick={() => router.push("/")}
           className="text-sm text-teal hover:underline"
         >
-          Zurück zur Startseite
+          {t("backToHome")}
         </button>
       </div>
     </div>

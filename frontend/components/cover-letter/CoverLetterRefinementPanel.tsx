@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { CoverLetterContentTab } from "./CoverLetterContentTab";
 import { CoverLetterDesignTab } from "./CoverLetterDesignTab";
 import { CoverLetterActionsTab } from "./CoverLetterActionsTab";
@@ -30,10 +31,10 @@ interface CoverLetterRefinementPanelProps {
   onToggleCollapse: () => void;
 }
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "content", label: "Inhalt", icon: "✏️" },
-  { id: "design", label: "Design", icon: "🎨" },
-  { id: "actions", label: "Aktionen", icon: "⚡" },
+const TABS_META: { id: TabId; icon: string }[] = [
+  { id: "content", icon: "✏️" },
+  { id: "design", icon: "🎨" },
+  { id: "actions", icon: "⚡" },
 ];
 
 export function CoverLetterRefinementPanel({
@@ -49,7 +50,13 @@ export function CoverLetterRefinementPanel({
   collapsed,
   onToggleCollapse,
 }: CoverLetterRefinementPanelProps) {
+  const t = useTranslations("coverLetter");
   const [activeTab, setActiveTab] = useState<TabId>("content");
+
+  const TABS = TABS_META.map((m) => ({
+    ...m,
+    label: t(`${m.id}Tab` as "contentTab" | "designTab" | "actionsTab"),
+  }));
 
   if (collapsed) {
     return (
@@ -58,7 +65,7 @@ export function CoverLetterRefinementPanel({
           type="button"
           onClick={onToggleCollapse}
           className="w-8 h-8 flex items-center justify-center rounded hover:bg-neutral-100 text-neutral-500 text-sm"
-          title="Panel öffnen"
+          title={t("contentTab")}
           data-testid="cl-panel-expand-btn"
         >
           ❮
@@ -109,7 +116,7 @@ export function CoverLetterRefinementPanel({
           type="button"
           onClick={onToggleCollapse}
           className="ml-auto px-2 py-3 text-neutral-400 hover:text-neutral-600 text-sm"
-          title="Panel einklappen"
+          title={t("designTab")}
           data-testid="cl-panel-collapse-btn"
         >
           ❯

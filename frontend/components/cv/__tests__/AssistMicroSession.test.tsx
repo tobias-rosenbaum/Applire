@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
 import { AssistMicroSession } from "../AssistMicroSession";
+import { withIntl } from "@/lib/test-utils/with-intl";
 
 const GAP = { id: "Python", label: "Python" };
 const BASE_PROPS = {
@@ -23,7 +24,7 @@ describe("AssistMicroSession", () => {
       json: async () => ({ session_id: "s1", question: "Wie lange Python?" }),
     } as Response);
 
-    render(<AssistMicroSession {...BASE_PROPS} />);
+    render(withIntl(<AssistMicroSession {...BASE_PROPS} />));
     // Initially shows loading
     expect(screen.getByTestId("assist-loading")).toBeTruthy();
 
@@ -42,7 +43,7 @@ describe("AssistMicroSession", () => {
         json: async () => ({ suggestion: "Erfahrener Python-Entwickler." }),
       } as Response);
 
-    render(<AssistMicroSession {...BASE_PROPS} />);
+    render(withIntl(<AssistMicroSession {...BASE_PROPS} />));
     await screen.findByTestId("assist-answer");
     fireEvent.change(screen.getByTestId("assist-answer"), {
       target: { value: "5 Jahre" },
@@ -67,7 +68,7 @@ describe("AssistMicroSession", () => {
         json: async () => ({ suggestion: "Verbessert." }),
       } as Response);
 
-    render(<AssistMicroSession {...BASE_PROPS} onAccept={onAccept} />);
+    render(withIntl(<AssistMicroSession {...BASE_PROPS} onAccept={onAccept} />));
     await screen.findByTestId("assist-answer");
     fireEvent.change(screen.getByTestId("assist-answer"), { target: { value: "Antwort" } });
     fireEvent.click(screen.getByTestId("assist-submit"));
@@ -88,7 +89,7 @@ describe("AssistMicroSession", () => {
         json: async () => ({ suggestion: "Verbessert." }),
       } as Response);
 
-    render(<AssistMicroSession {...BASE_PROPS} onEdit={onEdit} />);
+    render(withIntl(<AssistMicroSession {...BASE_PROPS} onEdit={onEdit} />));
     await screen.findByTestId("assist-answer");
     fireEvent.change(screen.getByTestId("assist-answer"), { target: { value: "Antwort" } });
     fireEvent.click(screen.getByTestId("assist-submit"));
@@ -109,7 +110,7 @@ describe("AssistMicroSession", () => {
         json: async () => ({ suggestion: "Verbessert." }),
       } as Response);
 
-    render(<AssistMicroSession {...BASE_PROPS} onReject={onReject} />);
+    render(withIntl(<AssistMicroSession {...BASE_PROPS} onReject={onReject} />));
     await screen.findByTestId("assist-answer");
     fireEvent.change(screen.getByTestId("assist-answer"), { target: { value: "Antwort" } });
     fireEvent.click(screen.getByTestId("assist-submit"));

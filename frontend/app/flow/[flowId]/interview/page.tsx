@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { use } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -79,26 +80,27 @@ async function apiErrorMessage(res: Response): Promise<string> {
   }
 }
 
-function translateError(status: number, detail?: string): string {
+function translateError(status: number, t: ReturnType<typeof useTranslations>, detail?: string): string {
   switch (status) {
-    case 504: return "This is taking longer than usual. Please try again.";
-    case 503: return "Service temporarily busy. Please wait and retry.";
-    case 502: return "Processing error. Please try a different format.";
-    default:  return detail ?? `An error occurred (${status}). Please try again.`;
+    case 504: return t("http504");
+    case 503: return t("http503");
+    case 502: return t("http502");
+    default:  return detail ?? t("generic", { status });
   }
 }
 
-const REASON_LABELS: Record<string, string> = {
-  gaps_resolved:        "Interview Complete — Gaps Closed!",
-  user_ended:           "Interview Ended",
-  max_questions_reached: "Interview Limit Reached",
-};
+function getReasonLabel(reason: string, t: ReturnType<typeof useTranslations>): string {
+  if (reason === "gaps_resolved") return t("reasonGapsResolved");
+  if (reason === "user_ended") return t("reasonUserEnded");
+  return t("reasonMaxReached");
+}
 
 // ---------------------------------------------------------------------------
 // Animated completion gauge (SVG circle)
 // ---------------------------------------------------------------------------
 
 function CompletenessGauge({ score }: { score: number }) {
+  const t = useTranslations("interview");
   const [displayed, setDisplayed] = useState(0);
   const pct = Math.round(score * 100);
   const radius = 54;
@@ -138,7 +140,7 @@ function CompletenessGauge({ score }: { score: number }) {
           {displayed}%
         </text>
       </svg>
-      <p className="text-xs text-gray-500 font-body">Profile completeness</p>
+      <p className="text-xs text-gray-500 font-body">{t("profileCompleteness")}</p>
     </div>
   );
 }
@@ -154,6 +156,7 @@ function ConflictCard({
   conflict: ConflictSummary;
   onResolved: () => void;
 }) {
+  const t = useTranslations("interview");
   const [resolving, setResolving] = useState(false);
 
   async function resolve(resolution: "existing" | "incoming") {
@@ -174,7 +177,7 @@ function ConflictCard({
 
   return (
     <div data-testid="conflict-card" className="rounded-lg border border-warning/40 bg-warning/5 p-4 mt-3">
-      <p className="text-sm font-semibold text-neutral-dark mb-1">Discrepancy detected</p>
+      <p className="text-sm font-semibold text-neutral-dark mb-1">{t("discrepancyDetected")}</p>
       <p className="text-xs text-gray-600 mb-3">
         <span className="font-medium">{conflict.field}</span>: &ldquo;{conflict.old_value}&rdquo; vs &ldquo;{conflict.new_value}&rdquo;
       </p>
@@ -187,7 +190,7 @@ function ConflictCard({
           disabled={resolving}
           className="text-xs"
         >
-          Keep &ldquo;{conflict.old_value}&rdquo;
+          {t("keepOld", { value: conflict.old_value })}
         </Button>
         <Button
           data-testid="conflict-use-new"
@@ -197,7 +200,7 @@ function ConflictCard({
           disabled={resolving}
           className="text-xs"
         >
-          Use &ldquo;{conflict.new_value}&rdquo;
+          {t("useNew", { value: conflict.new_value })}
         </Button>
       </div>
     </div>
@@ -215,6 +218,9 @@ export default function InterviewPage({
 }) {
   const { flowId } = use(params);
   const router = useRouter();
+  const t = useTranslations("interview");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -245,7 +251,7 @@ export default function InterviewPage({
       try {
         // Load flow state
         const fsRes = await fetch(`${API_BASE}/api/flow/${flowId}/state`);
-        if (!fsRes.ok) throw new Error("Flow not found");
+        if (!fsRes.ok) throw new Error(tErrors("flowNotFound"));
         const fs: FlowState = await fsRes.json();
         setFlowState(fs);
 
@@ -280,7 +286,7 @@ export default function InterviewPage({
           console.warn("advance_flow:", await advRes.text());
         }
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to start interview");
+        setError(e instanceof Error ? e.message : tErrors("failedToStart"));
       } finally {
         setLoading(false);
       }
@@ -311,7 +317,7 @@ export default function InterviewPage({
       });
       if (!res.ok) {
         const msg = await apiErrorMessage(res);
-        throw new Error(translateError(res.status, msg));
+        throw new Error(translateError(res.status, tErrors, msg));
       }
       const data: MessageResponse = await res.json();
 
@@ -337,7 +343,7 @@ export default function InterviewPage({
         }
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to send");
+      setError(e instanceof Error ? e.message : tErrors("failedToStart"));
     } finally {
       setSending(false);
     }
@@ -374,7 +380,7 @@ export default function InterviewPage({
       <div data-testid="interview-loading" className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-4 border-teal border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-sm text-gray-500 font-body">Starting interview…</p>
+          <p className="text-sm text-gray-500 font-body">{t("loading")}</p>
         </div>
       </div>
     );
@@ -401,12 +407,12 @@ export default function InterviewPage({
               )}
             </div>
             <h2 className="font-heading text-2xl font-bold text-neutral-dark mb-2">
-              {REASON_LABELS[completion.reason] ?? "Interview Complete"}
+              {getReasonLabel(completion.reason, t)}
             </h2>
             <p className="text-sm text-gray-500 font-body">
               {completion.reason === "gaps_resolved"
-                ? "Great work! Your profile has been enriched."
-                : "Your answers have been saved to your Master Profile."}
+                ? t("completionGapsResolved")
+                : t("completionOther")}
             </p>
           </div>
 
@@ -414,11 +420,11 @@ export default function InterviewPage({
           <div className="flex justify-center gap-8 mb-8">
             <div className="text-center">
               <p className="text-3xl font-bold font-heading text-primary">{completion.questions_asked}</p>
-              <p className="text-xs text-gray-500 font-body mt-1">Questions answered</p>
+              <p className="text-xs text-gray-500 font-body mt-1">{t("questionsAnswered")}</p>
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold font-heading text-success">{completion.gaps_resolved}</p>
-              <p className="text-xs text-gray-500 font-body mt-1">Gaps resolved</p>
+              <p className="text-xs text-gray-500 font-body mt-1">{t("gapsResolved")}</p>
             </div>
           </div>
 
@@ -436,14 +442,14 @@ export default function InterviewPage({
               disabled={advancingToCV}
               className="min-w-[220px]"
             >
-              {advancingToCV ? "Preparing…" : "Generate Tailored CV"}
+              {advancingToCV ? t("advancingToCV") : t("generateCV")}
             </Button>
             <a
               href="#"
               className="inline-flex items-center justify-center text-sm text-teal underline hover:no-underline px-4 py-2"
               onClick={(e) => e.preventDefault()}
             >
-              View Updated Profile
+              {t("viewProfile")}
             </a>
           </div>
         </Card>
@@ -456,6 +462,7 @@ export default function InterviewPage({
   // -------------------------------------------------------------------------
 
   const currentQuestion = messages.filter((m) => m.role === "assistant").at(-1)?.content ?? "";
+  const exchangeCount = messages.length - 1;
 
   return (
     <div data-testid="interview-page" className="max-w-4xl mx-auto">
@@ -466,12 +473,12 @@ export default function InterviewPage({
             <svg className="w-4 h-4 text-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
             </svg>
-            <p className="text-sm text-teal font-medium">Welcome back — continuing where you left off.</p>
+            <p className="text-sm text-teal font-medium">{t("resumeBanner")}</p>
           </div>
           <button
             onClick={() => setShowResumeBanner(false)}
             className="text-teal hover:text-teal/70 text-lg leading-none"
-            aria-label="Dismiss"
+            aria-label={tCommon("close")}
           >
             ×
           </button>
@@ -485,12 +492,12 @@ export default function InterviewPage({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-medium text-gray-500 font-body">
-                Question {questionsAsked} of ~{estimatedQuestions} — Closing gaps for{" "}
+                {t("questionOf", { current: questionsAsked, total: estimatedQuestions })} — {t("closingGapsFor")}{" "}
                 <span className="text-primary font-semibold">{roleTitle}</span>
               </p>
               {gapsTotal > 0 && (
                 <p className="text-xs text-gray-400 font-body">
-                  {gapsRemaining} gap{gapsRemaining !== 1 ? "s" : ""} remaining
+                  {t("gapsRemaining", { count: gapsRemaining })}
                 </p>
               )}
             </div>
@@ -506,7 +513,7 @@ export default function InterviewPage({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
                 </svg>
                 <p className="text-xs text-teal font-medium">
-                  We think you might have this experience based on your background — help us confirm.
+                  {t("categoryBBadge")}
                 </p>
               </div>
             )}
@@ -529,7 +536,7 @@ export default function InterviewPage({
           {messages.length > 2 && (
             <details className="mb-4">
               <summary className="cursor-pointer text-xs text-teal hover:underline mb-2">
-                View conversation history ({messages.length - 1} exchange{messages.length > 3 ? "s" : ""})
+                {t("viewHistory", { count: exchangeCount })}
               </summary>
               <div className="max-h-48 overflow-y-auto space-y-2 px-1 py-2">
                 {messages.slice(0, -1).map((msg, i) => (
@@ -560,14 +567,14 @@ export default function InterviewPage({
           {showDoneConfirm && (
             <div data-testid="done-confirm" className="mb-3 px-4 py-3 rounded-lg bg-amber/10 border border-amber/30">
               <p className="text-sm font-medium text-neutral-dark mb-2">
-                You have {gapsRemaining} gap{gapsRemaining !== 1 ? "s" : ""} remaining — are you sure you want to end?
+                {t("gapsRemainingConfirm", { count: gapsRemaining })}
               </p>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => void sendAnswer("done")}>
-                  End interview
+                  {t("endInterview")}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => setShowDoneConfirm(false)}>
-                  Continue
+                  {t("continue")}
                 </Button>
               </div>
             </div>
@@ -584,7 +591,7 @@ export default function InterviewPage({
                 "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary",
                 "disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
               )}
-              placeholder="Type your answer… (Enter to send, Shift+Enter for new line)"
+              placeholder={t("placeholder")}
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               onKeyDown={(e) => {
@@ -607,7 +614,7 @@ export default function InterviewPage({
                 disabled={sending}
                 type="button"
               >
-                I&apos;m done
+                {t("iAmDone")}
               </button>
               <div className="flex items-center gap-2">
                 {sending && (
@@ -619,7 +626,7 @@ export default function InterviewPage({
                   onClick={() => void sendAnswer()}
                   disabled={!answer.trim() || sending}
                 >
-                  Send
+                  {tCommon("send")}
                 </Button>
               </div>
             </div>
@@ -631,7 +638,7 @@ export default function InterviewPage({
           <div className="w-52 shrink-0">
             <Card className="p-4">
               <p className="font-heading text-xs font-bold text-neutral-dark mb-3 uppercase tracking-wide">
-                Role Requirements
+                {t("roleRequirements")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {requiredSkills.slice(0, 12).map((skill) => (

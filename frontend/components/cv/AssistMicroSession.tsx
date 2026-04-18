@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -29,6 +30,7 @@ export function AssistMicroSession({
   onEdit,
   onReject,
 }: AssistMicroSessionProps) {
+  const t = useTranslations("cv");
   const [phase, setPhase] = useState<Phase>("loading");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
@@ -58,7 +60,7 @@ export function AssistMicroSession({
       setQuestion(data.question);
       setPhase("question");
     } catch {
-      setErrorMsg("Kaile konnte keine Frage generieren. Bitte erneut versuchen.");
+      setErrorMsg(t("assistQuestionError"));
       setPhase("error");
     }
   }
@@ -81,7 +83,7 @@ export function AssistMicroSession({
       setSuggestion(data.suggestion);
       setPhase("suggestion");
     } catch {
-      setErrorMsg("Vorschlag konnte nicht generiert werden. Bitte erneut versuchen.");
+      setErrorMsg(t("assistSuggestionError"));
       setPhase("question");
     }
   }
@@ -92,7 +94,7 @@ export function AssistMicroSession({
 
       {phase === "loading" && (
         <div data-testid="assist-loading" className="flex items-center gap-2 text-gray-500">
-          <span className="animate-pulse">Frage wird generiert…</span>
+          <span className="animate-pulse">{t("assistLoading")}</span>
         </div>
       )}
 
@@ -105,7 +107,7 @@ export function AssistMicroSession({
             data-testid="assist-answer"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Deine Antwort…"
+            placeholder={t("assistPlaceholder")}
             className="w-full min-h-[60px] resize-y text-xs border border-gray-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-teal"
             disabled={phase === "submitting"}
           />
@@ -118,14 +120,14 @@ export function AssistMicroSession({
               disabled={phase === "submitting" || !answer.trim()}
               className="flex-1 bg-teal text-white py-1.5 rounded text-xs font-semibold disabled:opacity-40"
             >
-              {phase === "submitting" ? "Wird generiert…" : "Absenden"}
+              {phase === "submitting" ? t("assistSending") : t("assistSend")}
             </button>
             <button
               type="button"
               onClick={onReject}
               className="text-xs text-gray-500 underline hover:opacity-70"
             >
-              Abbrechen
+              {t("cancel")}
             </button>
           </div>
         </>
@@ -133,7 +135,7 @@ export function AssistMicroSession({
 
       {phase === "suggestion" && (
         <>
-          <p className="text-gray-500 mb-1">Kaile schlägt vor:</p>
+          <p className="text-gray-500 mb-1">{t("assistSuggests")}</p>
           <p className="text-gray-800 bg-white border border-gray-100 rounded p-2 mb-3">
             {suggestion}
           </p>
@@ -144,7 +146,7 @@ export function AssistMicroSession({
               onClick={() => onAccept(suggestion)}
               className="flex-1 bg-teal text-white py-1.5 rounded text-xs font-semibold hover:opacity-90"
             >
-              Übernehmen
+              {t("apply")}
             </button>
             <button
               type="button"
@@ -152,7 +154,7 @@ export function AssistMicroSession({
               onClick={() => onEdit(suggestion)}
               className="flex-1 border border-teal text-teal py-1.5 rounded text-xs font-semibold hover:opacity-90"
             >
-              Bearbeiten
+              {t("assistEditBtn")}
             </button>
             <button
               type="button"
@@ -160,7 +162,7 @@ export function AssistMicroSession({
               onClick={onReject}
               className="flex-1 border border-gray-300 text-gray-500 py-1.5 rounded text-xs font-semibold hover:opacity-90"
             >
-              Ablehnen
+              {t("assistReject")}
             </button>
           </div>
         </>
@@ -174,7 +176,7 @@ export function AssistMicroSession({
             onClick={() => void startSession()}
             className="text-xs text-teal underline"
           >
-            Erneut versuchen
+            {t("assistRetry")}
           </button>
         </>
       )}

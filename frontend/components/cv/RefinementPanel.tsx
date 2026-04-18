@@ -2,17 +2,12 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ContentTab } from "./ContentTab";
 import { ActionsTab } from "./ActionsTab";
 import { DesignTab } from "./DesignTab";
 
 type Tab = "content" | "actions" | "appearance";
-
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "content", label: "Inhalt", icon: "📝" },
-  { id: "actions", label: "Aktionen", icon: "⚙️" },
-  { id: "appearance", label: "Design", icon: "🎨" },
-];
 
 interface RefinementPanelProps {
   cvId: string;
@@ -59,7 +54,14 @@ export function RefinementPanel({
   collapsed,
   onToggleCollapse,
 }: RefinementPanelProps) {
+  const t = useTranslations("cv");
   const [activeTab, setActiveTab] = useState<Tab>("content");
+
+  const TABS: { id: Tab; label: string; icon: string }[] = [
+    { id: "content", label: t("contentTab"), icon: "📝" },
+    { id: "actions", label: t("actionsTab"), icon: "⚙️" },
+    { id: "appearance", label: t("designTab"), icon: "🎨" },
+  ];
 
   const flowSummary = {
     job_summary: jobSummary,
@@ -124,7 +126,7 @@ export function RefinementPanel({
           aria-selected={activeTab === "content"}
           data-testid="tab-content"
         >
-          &#x1f4dd; Inhalt
+          &#x1f4dd; {t("contentTab")}
         </button>
         <button
           type="button"
@@ -138,7 +140,7 @@ export function RefinementPanel({
           aria-selected={activeTab === "actions"}
           data-testid="tab-actions"
         >
-          &#x2699;&#xfe0f; Aktionen
+          &#x2699;&#xfe0f; {t("actionsTab")}
         </button>
         <button
           type="button"
@@ -152,7 +154,7 @@ export function RefinementPanel({
           aria-selected={activeTab === "appearance"}
           data-testid="tab-appearance"
         >
-          🎨 Design
+          🎨 {t("designTab")}
         </button>
         <button
           type="button"

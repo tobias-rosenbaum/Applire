@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -29,6 +30,7 @@ export function KaileChat({
   onEditFirst,
   onCancel,
 }: KaileChatProps) {
+  const t = useTranslations("cv");
   const [directions, setDirections] = useState("");
   const [selectedGaps, setSelectedGaps] = useState<Set<string>>(
     new Set(preSelectedGapIds),
@@ -89,7 +91,7 @@ export function KaileChat({
             className="text-xs bg-teal text-white px-3 py-1.5 rounded hover:opacity-90 transition-opacity"
             data-testid="apply-suggestion-btn"
           >
-            Anwenden
+            {t("apply")}
           </button>
           <button
             type="button"
@@ -97,7 +99,7 @@ export function KaileChat({
             className="text-xs border border-teal text-teal px-3 py-1.5 rounded hover:bg-teal hover:text-white transition-colors"
             data-testid="edit-first-btn"
           >
-            Erst bearbeiten
+            {t("editFirst")}
           </button>
           <button
             type="button"
@@ -105,7 +107,7 @@ export function KaileChat({
             className="text-xs text-gray-500 underline"
             data-testid="discard-suggestion-btn"
           >
-            Verwerfen
+            {t("discardSuggestion")}
           </button>
         </div>
       </div>
@@ -143,7 +145,7 @@ export function KaileChat({
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
           setDirections(e.target.value)
         }
-        placeholder="z.B. Erwaehne, dass ich auch Chromatografie-Analyse gemacht habe..."
+        placeholder={t("directionPlaceholder")}
         className="w-full text-sm border border-neutral-medium rounded p-2 resize-none focus:outline-none focus:ring-2 focus:ring-teal/50"
         rows={3}
         data-testid="kaile-directions-input"
@@ -157,9 +159,9 @@ export function KaileChat({
           className="text-xs bg-teal text-white px-3 py-1.5 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {loading ? (
-            <span data-testid="kaile-loading">Wird umgeschrieben...</span>
+            <span data-testid="kaile-loading">{t("rewriting")}</span>
           ) : (
-            "\u21bb Abschnitt umschreiben"
+            `↻ ${t("rewriteSection")}`
           )}
         </button>
       </div>

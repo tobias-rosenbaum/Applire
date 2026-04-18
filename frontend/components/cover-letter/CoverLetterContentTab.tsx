@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface LetterData {
   header?: { name?: string; address?: string; phone?: string; email?: string };
@@ -22,6 +23,7 @@ export function CoverLetterContentTab({
   letterData,
   onSectionSaved,
 }: CoverLetterContentTabProps) {
+  const tc = useTranslations("common");
   const [bodyText, setBodyText] = useState(
     letterData?.body?.paragraphs?.join("\n\n") ?? ""
   );
@@ -122,7 +124,7 @@ export function CoverLetterContentTab({
               className="flex-1 bg-blue-600 text-white text-xs py-1.5 rounded hover:bg-blue-700 disabled:opacity-50"
               data-testid="cl-save-body-btn"
             >
-              {saving ? "Speichern…" : "Speichern"}
+              {saving ? tc("preparing") : tc("save")}
             </button>
             <button
               type="button"
@@ -133,7 +135,7 @@ export function CoverLetterContentTab({
               disabled={saving}
               className="flex-1 border border-neutral-300 text-xs py-1.5 rounded hover:border-neutral-500 disabled:opacity-50"
             >
-              Abbrechen
+              {tc("cancel")}
             </button>
           </div>
         )}

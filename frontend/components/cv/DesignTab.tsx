@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -36,6 +37,7 @@ export function DesignTab({
   onColorApplied,
   onChangeTemplate,
 }: DesignTabProps) {
+  const t = useTranslations("cv");
   const [selectedHex, setSelectedHex] = useState(currentAccentHex);
   const [appliedHex, setAppliedHex] = useState(currentAccentHex);
   const [applying, setApplying] = useState(false);
@@ -109,7 +111,7 @@ export function DesignTab({
               </p>
               <p className="text-xs text-neutral-medium font-mono">{detectedCompany.hex}</p>
               <span className="text-xs font-semibold text-teal bg-teal-container rounded-full px-2 py-0.5 inline-block mt-0.5">
-                automatisch erkannt
+                {t("colorAutoDetected")}
               </span>
             </div>
           </div>
@@ -177,7 +179,7 @@ export function DesignTab({
         disabled={!isDirty || applying}
         className="w-full py-2 rounded text-sm font-semibold bg-teal text-white disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
       >
-        {applying ? "Wird angewendet…" : "Farbe übernehmen"}
+        {applying ? t("applyColor") : t("applyColor")}
       </button>
     </div>
   );

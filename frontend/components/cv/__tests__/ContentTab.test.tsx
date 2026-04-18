@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach, beforeEach } from "vitest";
+import { withIntl } from "@/lib/test-utils/with-intl";
 import { ContentTab } from "../ContentTab";
 
 const MOCK_SECTIONS = [
@@ -48,14 +49,14 @@ describe("ContentTab", () => {
   });
 
   it("Browse mode: renders gap count with role title", async () => {
-    render(<ContentTab {...BASE_PROPS} />);
+    render(withIntl(<ContentTab {...BASE_PROPS} />));
     await waitFor(() =>
       expect(screen.getByText(/1 Lücke gefunden für "Senior Software Engineer"/)).toBeTruthy()
     );
   });
 
   it("Browse mode: renders section list with gap badges", async () => {
-    render(<ContentTab {...BASE_PROPS} />);
+    render(withIntl(<ContentTab {...BASE_PROPS} />));
     await waitFor(() => expect(screen.getByText("Introduction")).toBeTruthy());
     expect(screen.getByText("Skills")).toBeTruthy();
     // Introduction has 1 gap
@@ -63,7 +64,7 @@ describe("ContentTab", () => {
   });
 
   it("Browse mode: clicking section transitions to Edit mode", async () => {
-    render(<ContentTab {...BASE_PROPS} />);
+    render(withIntl(<ContentTab {...BASE_PROPS} />));
     await waitFor(() => expect(screen.getByText("Skills")).toBeTruthy());
     fireEvent.click(screen.getByText("Skills"));
     // Should show back button and section label
@@ -71,14 +72,14 @@ describe("ContentTab", () => {
   });
 
   it("Browse mode: clicking gap card navigates to owning section", async () => {
-    render(<ContentTab {...BASE_PROPS} />);
+    render(withIntl(<ContentTab {...BASE_PROPS} />));
     await waitFor(() => expect(screen.getByText("Python")).toBeTruthy());
     fireEvent.click(screen.getByText("Python"));
     expect(screen.getByText(/zur/)).toBeTruthy();
   });
 
   it("Edit mode: 'Back to overview' returns to Browse", async () => {
-    render(<ContentTab {...BASE_PROPS} />);
+    render(withIntl(<ContentTab {...BASE_PROPS} />));
     await waitFor(() => expect(screen.getByText("Skills")).toBeTruthy());
     fireEvent.click(screen.getByText("Skills"));
     fireEvent.click(screen.getByText(/zur/i));

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
+import { withIntl } from "@/lib/test-utils/with-intl";
 import { SectionEditor } from "../SectionEditor";
 
 const MOCK_SECTION = {
@@ -24,19 +25,19 @@ describe("SectionEditor", () => {
   });
 
   it("pre-fills textarea with section content", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     const textarea = screen.getByTestId("section-textarea") as HTMLTextAreaElement;
     expect(textarea.value).toBe("Original content");
   });
 
   it("disables Save and Cancel when content is unchanged", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     expect((screen.getByTestId("section-save") as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByTestId("section-cancel") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("enables Save and Cancel when content changes", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     fireEvent.change(screen.getByTestId("section-textarea"), {
       target: { value: "New content" },
     });
@@ -45,7 +46,7 @@ describe("SectionEditor", () => {
   });
 
   it("Cancel reverts textarea to original content", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     fireEvent.change(screen.getByTestId("section-textarea"), {
       target: { value: "New content" },
     });
@@ -55,7 +56,7 @@ describe("SectionEditor", () => {
   });
 
   it("Save shows scope prompt when no remembered choice", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     fireEvent.change(screen.getByTestId("section-textarea"), {
       target: { value: "New content" },
     });
@@ -74,7 +75,7 @@ describe("SectionEditor", () => {
       }),
     } as Response);
 
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     fireEvent.change(screen.getByTestId("section-textarea"), {
       target: { value: "New content" },
     });
@@ -96,7 +97,7 @@ describe("SectionEditor", () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
     sessionStorage.setItem("finetune_save_scope", "cv");
 
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     fireEvent.change(screen.getByTestId("section-textarea"), {
       target: { value: "New content" },
     });
@@ -106,19 +107,19 @@ describe("SectionEditor", () => {
   });
 
   it("renders gap hints", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     expect(screen.getByText("Python")).toBeTruthy();
     expect(screen.getByTestId("write-myself-btn")).toBeTruthy();
     expect(screen.getByTestId("kaile-help-btn")).toBeTruthy();
   });
 
   it("'Kaile hilft' button is enabled", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     expect((screen.getByTestId("kaile-help-btn") as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("dismissing a gap removes it from the list", () => {
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("write-myself-btn"));
     expect(screen.queryByText("Python")).toBeNull();
   });
@@ -136,7 +137,7 @@ describe("SectionEditor", () => {
 
     sessionStorage.setItem("finetune_save_scope", "cv");
 
-    render(<SectionEditor {...BASE_PROPS} onSaved={onSaved} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} onSaved={onSaved} />));
     fireEvent.change(screen.getByTestId("section-textarea"), {
       target: { value: "Updated content" },
     });
@@ -158,7 +159,7 @@ describe("SectionEditor", () => {
     } as Response);
     sessionStorage.setItem("finetune_save_scope", "cv");
 
-    render(<SectionEditor {...BASE_PROPS} />);
+    render(withIntl(<SectionEditor {...BASE_PROPS} />));
     expect(screen.queryAllByTestId("write-myself-btn").length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByTestId("section-textarea"), {

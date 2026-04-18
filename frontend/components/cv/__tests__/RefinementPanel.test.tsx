@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach, beforeEach } from "vitest";
+import { withIntl } from "@/lib/test-utils/with-intl";
 import { RefinementPanel } from "../RefinementPanel";
 
 const BASE_PROPS = {
@@ -57,7 +58,7 @@ describe("RefinementPanel", () => {
   });
 
   it("renders with Content tab active by default", async () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     expect(screen.getByTestId("tab-content")).toBeTruthy();
     expect(screen.getByTestId("tab-actions")).toBeTruthy();
     // Content tab should show gap count after sections load
@@ -67,21 +68,21 @@ describe("RefinementPanel", () => {
   });
 
   it("switching to Actions tab shows Actions component", () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("tab-actions"));
     // ActionsTab shows match score
     expect(screen.getByText("82%")).toBeTruthy();
   });
 
   it("switching to Design tab shows template label and change button", () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("tab-appearance"));
     expect(screen.getByText("Klassischer Lebenslauf")).toBeTruthy();
     expect(screen.getByTestId("change-template-btn")).toBeTruthy();
   });
 
   it("switching back to Content tab restores Content", async () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("tab-actions"));
     fireEvent.click(screen.getByTestId("tab-content"));
     await waitFor(() =>
@@ -90,7 +91,7 @@ describe("RefinementPanel", () => {
   });
 
   it("tab-content has correct aria-selected when active", () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     const contentTab = screen.getByTestId("tab-content");
     expect(contentTab.getAttribute("aria-selected")).toBe("true");
     const actionsTab = screen.getByTestId("tab-actions");
@@ -98,7 +99,7 @@ describe("RefinementPanel", () => {
   });
 
   it("tab-actions has correct aria-selected when active", () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("tab-actions"));
     const actionsTab = screen.getByTestId("tab-actions");
     expect(actionsTab.getAttribute("aria-selected")).toBe("true");
@@ -107,21 +108,21 @@ describe("RefinementPanel", () => {
   });
 
   it("renders Design tab and shows company color card when clicked", () => {
-    render(<RefinementPanel {...BASE_PROPS} />);
+    render(withIntl(<RefinementPanel {...BASE_PROPS} />));
     fireEvent.click(screen.getByTestId("tab-appearance"));
     expect(screen.getByText("Siemens AG")).toBeTruthy();
-    expect(screen.getByText("automatisch erkannt")).toBeTruthy();
+    expect(screen.getByText("auto-detected")).toBeTruthy();
   });
 });
 
 describe("RefinementPanel collapse", () => {
   it("renders collapse button when expanded", () => {
     render(
-      <RefinementPanel
+      withIntl(<RefinementPanel
         {...BASE_PROPS}
         collapsed={false}
         onToggleCollapse={vi.fn()}
-      />
+      />)
     );
     expect(screen.getByTestId("cv-panel-collapse-btn")).toBeTruthy();
   });
@@ -129,11 +130,11 @@ describe("RefinementPanel collapse", () => {
   it("calls onToggleCollapse when collapse button clicked", () => {
     const toggle = vi.fn();
     render(
-      <RefinementPanel
+      withIntl(<RefinementPanel
         {...BASE_PROPS}
         collapsed={false}
         onToggleCollapse={toggle}
-      />
+      />)
     );
     fireEvent.click(screen.getByTestId("cv-panel-collapse-btn"));
     expect(toggle).toHaveBeenCalledOnce();
@@ -141,11 +142,11 @@ describe("RefinementPanel collapse", () => {
 
   it("renders icon rail when collapsed", () => {
     render(
-      <RefinementPanel
+      withIntl(<RefinementPanel
         {...BASE_PROPS}
         collapsed={true}
         onToggleCollapse={vi.fn()}
-      />
+      />)
     );
     expect(screen.getByTestId("cv-panel-expand-btn")).toBeTruthy();
     expect(screen.getByTestId("cv-tab-icon-content")).toBeTruthy();
@@ -156,11 +157,11 @@ describe("RefinementPanel collapse", () => {
   it("clicking tab icon in collapsed state calls onToggleCollapse", () => {
     const toggle = vi.fn();
     render(
-      <RefinementPanel
+      withIntl(<RefinementPanel
         {...BASE_PROPS}
         collapsed={true}
         onToggleCollapse={toggle}
-      />
+      />)
     );
     fireEvent.click(screen.getByTestId("cv-tab-icon-content"));
     expect(toggle).toHaveBeenCalledOnce();

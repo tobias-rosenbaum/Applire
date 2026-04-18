@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface CoverLetterActionsTabProps {
   onRegenerateCoverLetter: () => void;
   onDownloadPdf: () => void;
@@ -11,6 +13,7 @@ export function CoverLetterActionsTab({
   onDownloadPdf,
   downloading,
 }: CoverLetterActionsTabProps) {
+  const t = useTranslations("coverLetter");
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="flex flex-col gap-2">
@@ -21,7 +24,7 @@ export function CoverLetterActionsTab({
           className="w-full bg-blue-600 text-white text-sm font-medium py-2.5 rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
           data-testid="cl-download-pdf-btn"
         >
-          {downloading ? "PDF wird erstellt…" : "PDF herunterladen"}
+          {downloading ? t("generating") : t("download")}
         </button>
       </div>
 
@@ -38,7 +41,7 @@ export function CoverLetterActionsTab({
           className="w-full border border-neutral-300 text-sm py-2.5 rounded hover:border-neutral-500 transition-colors"
           data-testid="cl-regenerate-btn"
         >
-          ↻ Anschreiben neu generieren
+          ↻ {t("regenerate")}
         </button>
       </div>
     </div>

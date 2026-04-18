@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { use } from "react";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -96,6 +97,7 @@ export default function ImportPage({
 }) {
   const { flowId } = use(params);
   const router = useRouter();
+  const t = useTranslations("import");
 
   const [mode, setMode] = useState<ImportMode>("pdf");
   const [loading, setLoading] = useState(false);
@@ -204,7 +206,7 @@ export default function ImportPage({
 
   return (
     <div>
-      <div style={s.heading}>Hast du einen bestehenden Lebenslauf?</div>
+      <div style={s.heading}>{t("title")}</div>
       <div style={s.sub}>
         Lade deinen CV hoch oder starte frisch — das System passt sich an.
       </div>

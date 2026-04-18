@@ -3,6 +3,7 @@
 
 import { useRef } from "react";
 import { use, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { TemplateSelector } from "@/components/cv/TemplateSelector";
 import { GenerationProgress } from "@/components/cv/GenerationProgress";
@@ -32,6 +33,7 @@ export default function CVPage({
 }) {
   const { flowId } = use(params);
   const router = useRouter();
+  const t = useTranslations("cv");
 
   const [phase, setPhase] = useState<Phase | null>(null); // null = initializing
   const [cvId, setCvId] = useState<string | null>(null);
@@ -142,9 +144,9 @@ export default function CVPage({
       : false;
 
     const expiryWarning = isExpired
-      ? { level: "critical" as const, expiresIn: "Abgelaufen" }
+      ? { level: "critical" as const, expiresIn: t("expired") }
       : flowState?.cv_summary
-        ? { level: "warning" as const, expiresIn: `VerfÃ¼gbar bis ${new Date(flowState.cv_summary.expires_at).toLocaleDateString("de-DE")}` }
+        ? { level: "warning" as const, expiresIn: `${t("availableUntil")} ${new Date(flowState.cv_summary.expires_at).toLocaleDateString()}` }
         : null;
 
     return (
@@ -173,7 +175,7 @@ export default function CVPage({
             cvSummary={{
               sections: (flowState?.cv_summary as any)?.sections ?? [],
             }}
-            template={{ label: template === "classic_german" ? "Klassischer Lebenslauf" : "Modern Swiss CV" }}
+            template={{ label: template === "classic_german" ? t("templateClassic") : t("templateModern") }}
             matchScore={flowState?.gap_summary?.match_score ?? null}
             expiryWarning={expiryWarning}
             coverLetterId={flowState?.cover_letter_summary?.cover_letter_id ?? null}

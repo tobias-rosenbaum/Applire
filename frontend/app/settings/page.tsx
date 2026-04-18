@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useLocale } from "@/lib/providers/locale-provider";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
 function DefaultColorPicker() {
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const [hex, setHex] = useState("#2b5fa8");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -49,13 +53,55 @@ function DefaultColorPicker() {
         onClick={handleSave}
         className="px-3 py-1.5 text-sm font-medium bg-teal text-white rounded hover:opacity-90"
       >
-        {saved ? "Gespeichert ✓" : "Speichern"}
+        {saved ? t("saved") : tCommon("save")}
       </button>
     </div>
   );
 }
 
+function LanguageSwitcher() {
+  const t = useTranslations("settings");
+  const { locale, setLocale } = useLocale();
+  const [saving, setSaving] = useState(false);
+
+  async function handleSwitch(lang: "de" | "en") {
+    if (lang === locale) return;
+    setSaving(true);
+    await setLocale(lang);
+    setSaving(false);
+  }
+
+  return (
+    <section className="rounded-lg border border-neutral-medium p-4">
+      <h2 className="text-base font-semibold text-neutral-dark mb-1">{t("language")}</h2>
+      <p className="text-sm text-neutral-medium mb-4">{t("languageHint")}</p>
+      <div className="flex gap-2" aria-disabled={saving}>
+        {(["de", "en"] as const).map((lang) => (
+          <button
+            key={lang}
+            type="button"
+            onClick={() => void handleSwitch(lang)}
+            disabled={saving}
+            className={`px-4 py-1.5 text-sm font-medium rounded border transition-colors ${
+              locale === lang
+                ? "bg-teal text-white border-teal"
+                : "bg-white text-neutral-dark border-neutral-medium hover:border-teal"
+            }`}
+            data-testid={`lang-switch-${lang}`}
+          >
+            {lang.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function SettingsPage() {
+  const t = useTranslations("settings");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -80,11 +126,10 @@ export default function SettingsPage() {
         document.body.removeChild(a);
       } else {
         const err = await res.json();
-        setError(err.detail || "Export failed.");
+        setError(err.detail || tErrors("exportFailed"));
       }
-    } catch (err) {
-      console.error("Export failed:", err);
-      setError("Export failed. Please try again.");
+    } catch {
+      setError(tErrors("exportFailed"));
     } finally {
       setExporting(false);
     }
@@ -92,25 +137,21 @@ export default function SettingsPage() {
 
   const handleDelete = async () => {
     if (deleteConfirmation !== "DELETE") {
-      setError('Please type "DELETE" to confirm.');
+      setError(tErrors("typeDeleteToConfirm"));
       return;
     }
     setDeleting(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/api/profile`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`${API_BASE}/api/profile`, { method: "DELETE" });
       if (res.status === 202 || res.ok) {
-        // Redirect to home after deletion
         router.push("/");
       } else {
         const err = await res.json();
-        setError(err.detail || "Deletion failed.");
+        setError(err.detail || tErrors("deletionFailed"));
       }
-    } catch (err) {
-      console.error("Delete failed:", err);
-      setError("Deletion failed. Please try again.");
+    } catch {
+      setError(tErrors("deletionFailed"));
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
@@ -120,22 +161,17 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-dim">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/")}
-              className="text-sm text-teal hover:underline"
-            >
-              ← Back
+            <button onClick={() => router.push("/")} className="text-sm text-teal hover:underline">
+              {t("back")}
             </button>
-            <h1 className="font-heading text-2xl font-bold text-neutral-dark">Settings</h1>
+            <h1 className="font-heading text-2xl font-bold text-neutral-dark">{t("title")}</h1>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {error && (
@@ -144,81 +180,62 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Language switcher */}
+          <LanguageSwitcher />
+
           {/* GDPR Section */}
           <Card className="p-6">
             <h2 className="font-heading text-xl font-bold text-neutral-dark mb-4">
-              Data & Privacy
+              {t("dataPrivacy")}
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Manage your personal data in accordance with GDPR (Art. 17 & 20).
-            </p>
+            <p className="text-sm text-gray-500 mb-6">{t("gdprHint")}</p>
 
             <div className="space-y-4">
-              {/* Export Data */}
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <h3 className="font-medium text-neutral-dark">Export My Data</h3>
-                  <p className="text-sm text-gray-500">
-                    Download a complete JSON export of all your data (GDPR Art. 20).
-                  </p>
+                  <h3 className="font-medium text-neutral-dark">{t("exportMyData")}</h3>
+                  <p className="text-sm text-gray-500">{t("exportHint")}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handleExport}
-                  disabled={exporting}
-                >
-                  {exporting ? "Exporting..." : "Export"}
+                <Button variant="outline" onClick={handleExport} disabled={exporting}>
+                  {exporting ? t("exporting") : tCommon("export")}
                 </Button>
               </div>
 
-              {/* Delete Data */}
               <div className="flex items-center justify-between p-4 bg-critical/5 rounded-lg border border-critical/20">
                 <div>
-                  <h3 className="font-medium text-critical">Delete All My Data</h3>
-                  <p className="text-sm text-gray-500">
-                    Permanently erase all your data, including applications, CVs, and profile (GDPR Art. 17).
-                  </p>
+                  <h3 className="font-medium text-critical">{t("deleteAllData")}</h3>
+                  <p className="text-sm text-gray-500">{t("deleteHint")}</p>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={deleting}
-                >
-                  Delete
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleting}>
+                  {tCommon("delete")}
                 </Button>
               </div>
             </div>
           </Card>
 
-          {/* Standard-Farbe für Lebensläufe */}
+          {/* Default CV Color */}
           <section className="rounded-lg border border-neutral-medium p-4">
-            <h2 className="text-base font-semibold text-neutral-dark mb-1">
-              Standard-Farbe für Lebensläufe
-            </h2>
-            <p className="text-sm text-neutral-medium mb-4">
-              Wird verwendet, wenn keine Firmenfarbe erkannt werden kann.
-            </p>
+            <h2 className="text-base font-semibold text-neutral-dark mb-1">{t("defaultCVColor")}</h2>
+            <p className="text-sm text-neutral-medium mb-4">{t("defaultCVColorHint")}</p>
             <DefaultColorPicker />
           </section>
 
-          {/* Delete Confirmation Dialog */}
+          {/* Delete Confirmation */}
           {showDeleteConfirm && (
             <Card className="p-6 border-2 border-critical/30">
               <h3 className="font-heading text-lg font-bold text-critical mb-2">
-                Confirm Data Deletion
+                {t("confirmDeletion")}
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                This action is <strong>irreversible</strong>. All your data will be permanently erased:
-              </p>
+              <p className="text-sm text-gray-600 mb-4">{t("deletionIrreversible")}</p>
               <ul className="text-sm text-gray-600 list-disc list-inside mb-4 space-y-1">
-                <li>Master Profile and enrichment history</li>
-                <li>All applications and their flow sessions</li>
-                <li>Interview sessions and transcripts</li>
-                <li>Generated CVs and uploaded files</li>
+                <li>{t("deletionItemMasterProfile")}</li>
+                <li>{t("deletionItemApplications")}</li>
+                <li>{t("deletionItemInterviews")}</li>
+                <li>{t("deletionItemCVs")}</li>
               </ul>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type <code className="bg-gray-100 px-1 rounded">DELETE</code> to confirm:
+                  {t("typeDeleteLabel")} <code className="bg-gray-100 px-1 rounded">DELETE</code>
                 </label>
                 <input
                   type="text"
@@ -234,17 +251,13 @@ export default function SettingsPage() {
                   onClick={handleDelete}
                   disabled={deleting || deleteConfirmation !== "DELETE"}
                 >
-                  {deleting ? "Deleting..." : "Confirm Delete"}
+                  {deleting ? t("deleting") : t("confirmDeleteButton")}
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    setDeleteConfirmation("");
-                    setError("");
-                  }}
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmation(""); setError(""); }}
                 >
-                  Cancel
+                  {tCommon("cancel")}
                 </Button>
               </div>
             </Card>
@@ -252,21 +265,12 @@ export default function SettingsPage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
-          <a href="/" className="text-sm text-teal hover:underline">
-            Dashboard
-          </a>
-          <a href="/profile" className="text-sm text-teal hover:underline">
-            My Profile
-          </a>
-          <a href="/admin/appearance" className="text-sm text-teal hover:underline">
-            Admin
-          </a>
-          <a href="/help" className="text-sm text-gray-500 hover:underline">
-            Help
-          </a>
+          <a href="/" className="text-sm text-teal hover:underline">{tNav("dashboard")}</a>
+          <a href="/profile" className="text-sm text-teal hover:underline">{tNav("profile")}</a>
+          <a href="/admin/appearance" className="text-sm text-teal hover:underline">{tNav("admin")}</a>
+          <a href="/help" className="text-sm text-gray-500 hover:underline">{tNav("help")}</a>
         </div>
       </footer>
     </div>

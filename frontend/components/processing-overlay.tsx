@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { ProgressLinear } from "@/components/ui/progress";
 import { StepChecklist, StepItem, StepState } from "@/components/ui/step-checklist";
@@ -21,13 +22,6 @@ async function apiErrorMessage(res: Response): Promise<string> {
   }
 }
 
-const STEPS: StepItem[] = [
-  { key: "analyze_jd", label: "Analyzing Job Description" },
-  { key: "upload", label: "Uploading CV" },
-  { key: "build_profile", label: "Building Master Profile" },
-  { key: "detect_gaps", label: "Detecting Gaps" },
-];
-
 const INITIAL_STATES: Record<string, StepState> = {
   analyze_jd: "pending",
   upload: "pending",
@@ -45,6 +39,15 @@ interface Props {
 
 export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Props) {
   const router = useRouter();
+  const t = useTranslations("processing");
+
+  const STEPS: StepItem[] = [
+    { key: "analyze_jd", label: t("analyzingJD") },
+    { key: "upload", label: t("uploadingCV") },
+    { key: "build_profile", label: t("buildingProfile") },
+    { key: "detect_gaps", label: t("detectingGaps") },
+  ];
+
   const [stepStates, setStepStates] = useState<Record<string, StepState>>(INITIAL_STATES);
   const [stepDetails, setStepDetails] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -86,10 +89,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
                   : null;
               const errorCode = detail?.error_code;
               if (errorCode === "jd_url_invalid") {
-                markStep("analyze_jd", "skipped", "That doesn't look like a valid URL — you can add it later");
+                markStep("analyze_jd", "skipped", t("jdUrlInvalid"));
                 jdFailReason = "url_invalid";
               } else if (errorCode === "jd_fetch_failed") {
-                markStep("analyze_jd", "skipped", "The site blocked us — you can paste the text later");
+                markStep("analyze_jd", "skipped", t("jdFetchFailed"));
                 jdFailReason = "fetch_failed";
               } else {
                 // Unrecognised 422 — hard stop
@@ -104,7 +107,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           } else {
             const data = await res.json();
             jobId = data.id;
-            markStep("analyze_jd", "completed", data.role_title ? `Role: ${data.role_title}` : "Job description analyzed");
+            markStep("analyze_jd", "completed", data.role_title ? t("roleLabel", { title: data.role_title }) : t("jdAnalyzed"));
           }
         } else if (jdMode === "text" && jdText.trim()) {
           const res = await fetch(`${API_BASE}/api/job/analyze`, {
@@ -115,9 +118,9 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           if (!res.ok) throw new Error(await apiErrorMessage(res));
           const data = await res.json();
           jobId = data.id;
-          markStep("analyze_jd", "completed", data.role_title ? `Role: ${data.role_title}` : "Job description analyzed");
+          markStep("analyze_jd", "completed", data.role_title ? t("roleLabel", { title: data.role_title }) : t("jdAnalyzed"));
         } else {
-          markStep("analyze_jd", "completed", "No job description — skipped");
+          markStep("analyze_jd", "completed", t("jdNoDescription"));
         }
 
         // Step 2: Create flow session + Upload CVs
@@ -157,23 +160,18 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           if (!uploadRes.ok) throw new Error(await apiErrorMessage(uploadRes));
         }
 
-        const cvLabel = files.length === 1 ? "1 CV uploaded" : `${files.length} CVs uploaded`;
-        markStep("upload", "completed", cvLabel);
+        markStep("upload", "completed", t("cvUploaded", { count: files.length }));
 
         // Step 3: Build profile (instant — upload already did the work)
         markStep("build_profile", "in_progress");
         await new Promise((r) => setTimeout(r, 400));
-        const profileDetail =
-          files.length === 1
-            ? "Updated master profile with 1 new CV"
-            : `Updated master profile with ${files.length} new CVs`;
-        markStep("build_profile", "completed", profileDetail);
+        markStep("build_profile", "completed", t("profileUpdated", { count: files.length }));
 
         // Step 4: Detect gaps (only if a job was linked)
         markStep("detect_gaps", "in_progress");
 
         if (!jobId) {
-          markStep("detect_gaps", "completed", "No job linked — skipped");
+          markStep("detect_gaps", "completed", t("jdNoJobLinked"));
           await new Promise((r) => setTimeout(r, 400));
           const gapsUrl = jdFailReason
             ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}`
@@ -230,10 +228,10 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
       <Card className="w-full max-w-[560px] p-8">
         <div className="text-center mb-8">
           <h2 className="font-heading text-2xl font-bold text-neutral-dark mb-2">
-            Processing Your Profile
+            {t("title")}
           </h2>
           <p className="text-sm text-gray-500">
-            Analyzing your CV and building your master profile
+            {t("subtitle")}
           </p>
         </div>
 
@@ -248,7 +246,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
                 data-testid="cancel-button"
                 className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-neutral-dark transition-colors"
               >
-                ← Go back and try again
+                {t("goBack")}
               </button>
             </div>
           </div>
@@ -262,7 +260,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
               </p>
             </div>
             <p className="text-xs text-gray-500 text-center mt-6">
-              This usually takes about 30 seconds
+              {t("usuallyTakes")}
             </p>
           </>
         )}

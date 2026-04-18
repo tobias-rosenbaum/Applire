@@ -29,6 +29,7 @@ async def db():
     import applire.models.uploads
     import applire.models.color_profile
     import applire.models.company
+    import applire.models.cover_letter
     import applire.models.user_settings
     from applire.models.user import User
     from applire.services.color_detection import _CE_STUB_USER_ID
@@ -56,7 +57,7 @@ class TestSettingsEndpoint:
     @pytest.mark.asyncio
     async def test_patch_settings_stores_default_color(self, db):
         from applire.routers.settings import update_settings, get_settings
-        await update_settings("#334455", db)
+        await update_settings(db, accent_hex="#334455")
         result = await get_settings(db)
         assert result["default_accent_hex"] == "#334455"
 
@@ -64,12 +65,65 @@ class TestSettingsEndpoint:
     async def test_patch_settings_raises_on_invalid_hex(self, db):
         from applire.routers.settings import update_settings
         with pytest.raises(ValueError):
-            await update_settings("not-hex", db)
+            await update_settings(db, accent_hex="not-hex")
 
     @pytest.mark.asyncio
     async def test_patch_settings_updates_existing_row(self, db):
         from applire.routers.settings import update_settings, get_settings
-        await update_settings("#aabbcc", db)
-        await update_settings("#112233", db)
+        await update_settings(db, accent_hex="#aabbcc")
+        await update_settings(db, accent_hex="#112233")
         result = await get_settings(db)
         assert result["default_accent_hex"] == "#112233"
+
+
+class TestLanguageSettings:
+    @pytest.mark.asyncio
+    async def test_get_settings_detects_german_from_accept_language(self, db):
+        from applire.routers.settings import get_settings
+        result = await get_settings(db, accept_language="de-DE,de;q=0.9,en;q=0.8")
+        assert result["ui_language"] == "de"
+
+    @pytest.mark.asyncio
+    async def test_get_settings_detects_english_for_non_german(self, db):
+        from applire.routers.settings import get_settings
+        result = await get_settings(db, accept_language="fr-FR,fr;q=0.9")
+        assert result["ui_language"] == "en"
+
+    @pytest.mark.asyncio
+    async def test_get_settings_defaults_to_english_with_no_header(self, db):
+        from applire.routers.settings import get_settings
+        result = await get_settings(db, accept_language="")
+        assert result["ui_language"] == "en"
+
+    @pytest.mark.asyncio
+    async def test_get_settings_persists_detected_language_when_row_exists(self, db):
+        from applire.routers.settings import get_settings, update_settings
+        # Create a row first via a color update
+        await update_settings(db, accent_hex="#112233")
+        # GET with German header — should detect and persist
+        result = await get_settings(db, accept_language="de-AT")
+        assert result["ui_language"] == "de"
+        # Second GET without header — should return persisted value
+        result2 = await get_settings(db, accept_language="")
+        assert result2["ui_language"] == "de"
+
+    @pytest.mark.asyncio
+    async def test_patch_settings_stores_ui_language(self, db):
+        from applire.routers.settings import update_settings, get_settings
+        await update_settings(db, ui_language="de")
+        result = await get_settings(db)
+        assert result["ui_language"] == "de"
+
+    @pytest.mark.asyncio
+    async def test_patch_settings_rejects_invalid_language(self, db):
+        from applire.routers.settings import update_settings
+        with pytest.raises(ValueError, match="ui_language"):
+            await update_settings(db, ui_language="zh")
+
+    @pytest.mark.asyncio
+    async def test_patch_settings_updates_both_language_and_color(self, db):
+        from applire.routers.settings import update_settings, get_settings
+        await update_settings(db, accent_hex="#aabbcc", ui_language="en")
+        result = await get_settings(db)
+        assert result["default_accent_hex"] == "#aabbcc"
+        assert result["ui_language"] == "en"

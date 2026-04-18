@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 type CLTone = "formal" | "professional" | "conversational";
 
@@ -37,6 +38,8 @@ export function GenerateCoverLetterModal({
   onClose,
   onGenerated,
 }: GenerateCoverLetterModalProps) {
+  const t = useTranslations("coverLetter");
+  const tc = useTranslations("common");
   const isRegenerate = existingInputs != null;
   const [recipientName, setRecipientName] = useState(
     existingInputs?.recipient_name ?? prefillRecipientName ?? ""
@@ -89,7 +92,7 @@ export function GenerateCoverLetterModal({
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 flex flex-col gap-4">
         <div>
           <h2 className="text-lg font-bold">
-            {isRegenerate ? "Anschreiben neu generieren" : "Anschreiben generieren"}
+            {isRegenerate ? t("regenerate") : t("generate")}
           </h2>
           <p className="text-xs text-neutral-500 mt-1">
             Wir erstellen ein Bewerbungsschreiben passend zu Ihrem Lebenslauf.
@@ -203,7 +206,7 @@ export function GenerateCoverLetterModal({
             className="flex-1 border border-neutral-300 rounded py-2.5 text-sm hover:border-neutral-500 transition-colors disabled:opacity-50"
             data-testid="cl-modal-cancel"
           >
-            Abbrechen
+            {tc("cancel")}
           </button>
           <button
             type="button"
@@ -212,7 +215,7 @@ export function GenerateCoverLetterModal({
             className="flex-[2] bg-blue-600 text-white rounded py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
             data-testid="cl-modal-generate"
           >
-            {loading ? "Wird generiert…" : "Anschreiben generieren →"}
+            {loading ? t("generating") : `${t("generate")} →`}
           </button>
         </div>
       </div>

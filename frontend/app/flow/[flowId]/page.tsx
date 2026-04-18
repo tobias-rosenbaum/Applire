@@ -2,6 +2,7 @@
 
 import { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -30,6 +31,7 @@ export default function FlowIndexPage({
 }) {
   const { flowId } = use(params);
   const router = useRouter();
+  const t = useTranslations("flow");
 
   useEffect(() => {
     async function advanceAndRedirect() {
@@ -101,7 +103,7 @@ export default function FlowIndexPage({
         fontSize: 14,
       }}
     >
-      Starte Analyse …
+      {t("starting")}
     </div>
   );
 }
