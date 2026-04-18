@@ -933,7 +933,8 @@ class TestNewProfileServiceDB:
             result = await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
 
         assert result is not None
-        provider.aparse_json.assert_called_once()
+        # 1 extraction call + 1 skill-estimation call (enrich_skills)
+        assert provider.aparse_json.call_count == 2
 
     @pytest.mark.asyncio
     async def test_import_from_linkedin_merges_with_existing(self, sqlite_session):
@@ -948,7 +949,8 @@ class TestNewProfileServiceDB:
             result = await import_from_linkedin({"firstName": "Alice"}, sqlite_session, provider)
 
         assert result is not None
-        assert provider.aparse_json.call_count == 2
+        # 2 imports × (1 extraction + 1 skill-estimation) = 4 calls
+        assert provider.aparse_json.call_count == 4
 
     @pytest.mark.asyncio
     async def test_import_from_pdf_raises_on_empty_text(self, sqlite_session):

@@ -101,6 +101,13 @@ async def analyze_jd(
     if embedding is not None and all(v == 0.0 for v in embedding):
         embedding = None
 
+    role_title = (data.get("role_title") or "").strip()
+    if not role_title:
+        raise ValueError(
+            "The provided text does not appear to be a valid job description "
+            "(role_title was not detected by the LLM)."
+        )
+
     berufsbild_code, berufsbild_label = _validate_berufsbild(
         data.get("berufsbild_code"),
         data.get("berufsbild_label"),
@@ -111,11 +118,11 @@ async def analyze_jd(
         raw_text=text,
         source_url=source_url,
         company_name=data.get("company_name") or None,
-        role_title=data.get("role_title", ""),
+        role_title=role_title,
         required_skills=data.get("required_skills", []),
         nice_to_have_skills=data.get("nice_to_have_skills", []),
         keywords=data.get("keywords", []),
-        seniority_level=data.get("seniority_level", ""),
+        seniority_level=data.get("seniority_level") or "",
         company_culture_signals=data.get("company_culture_signals", []),
         language_requirement=data.get("language_requirement") or "",
         berufsbild_code=berufsbild_code,
