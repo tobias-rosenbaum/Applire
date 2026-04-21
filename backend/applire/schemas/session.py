@@ -13,7 +13,7 @@ from pydantic import BaseModel
 class SessionCreateRequest(BaseModel):
     job_id: uuid.UUID
     # None = auto-detect based on profile completeness_score vs MODE_B_COMPLETENESS_THRESHOLD
-    mode: Literal["targeted", "guided"] | None = None
+    mode: Literal["targeted", "guided", "profile_enrich"] | None = None
     # When set with mode="targeted": scopes to a 1-question micro-session for Gap-Click mode
     target_gap: str | None = None
 
@@ -86,8 +86,8 @@ class SessionStateResponse(BaseModel):
 
 
 class InterviewState(TypedDict):
-    mode: str  # "targeted" | "guided"
-    job_id: str
+    mode: str  # "targeted" | "guided" | "profile_enrich"
+    job_id: str | None
     gap_analysis_id: str | None  # None for MODE B until lazy analysis
     profile_id: str
     # MODE A: ordered gap strings (C-first, then B)
@@ -104,3 +104,4 @@ class InterviewState(TypedDict):
     questions_per_gap: dict   # gap_str → questions asked so far for this gap
     skipped_gaps: list[str]   # gaps resolved transitively via cross-gap answer
     full_gaps: list[str]      # full gap list from analysis; set for micro-sessions only
+    na_gaps: list[str]        # gaps dismissed as N/A by the user (Mode C)
