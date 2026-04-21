@@ -122,7 +122,6 @@ async def _next_question_or_done(
     if idx >= len(all_gaps):
         session.status = "complete"
         session.state = state
-        await db.commit()
         return None, True
 
     state["current_gap_index"] = idx
@@ -130,7 +129,6 @@ async def _next_question_or_done(
     state["current_question"] = question
     state["messages"].append({"role": "assistant", "content": question})
     session.state = state
-    await db.commit()
     return question, False
 
 
@@ -291,6 +289,8 @@ async def respond_to_enrich(
     next_question, done = await _next_question_or_done(
         session, updated_profile_data, provider, db
     )
+    # Re-read state after helper has updated session.state
+    state = dict(session.state)
     await db.commit()
 
     all_gaps = state["critical_gaps"]
@@ -329,6 +329,8 @@ async def skip_gap(
     next_question, done = await _next_question_or_done(
         session, profile_record.profile_json or {}, provider, db
     )
+    # Re-read state after helper has updated session.state
+    state = dict(session.state)
     await db.commit()
 
     all_gaps = state["critical_gaps"]
@@ -379,6 +381,8 @@ async def mark_gap_na(
     next_question, done = await _next_question_or_done(
         session, profile_data, provider, db
     )
+    # Re-read state after helper has updated session.state
+    state = dict(session.state)
     await db.commit()
 
     all_gaps = state["critical_gaps"]
