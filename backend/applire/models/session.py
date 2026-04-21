@@ -14,8 +14,8 @@ class InterviewSession(Base):
     __tablename__ = "interview_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    job_analysis_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("job_analyses.id"), nullable=False, index=True
+    job_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("job_analyses.id"), nullable=True, index=True
     )
     gap_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("gap_analyses.id"), nullable=True
