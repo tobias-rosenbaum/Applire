@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { PhotoManager } from "@/components/profile/PhotoManager";
+import { EnrichmentDrawer } from "@/components/profile/EnrichmentDrawer";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -90,6 +91,30 @@ const SECTION_LABEL_KEYS: Record<SectionKey, SectionLabelKey> = {
   certifications: "sectionCertifications",
 };
 
+function countWorkEntryGaps(entry: {
+  description?: string | null;
+  title?: string | null;
+  company?: string | null;
+}): number {
+  let count = 0;
+  if (!entry.description) count++;
+  return count;
+}
+
+function hasProfileGaps(profile: {
+  work_experience?: Array<{
+    description?: string | null;
+    title?: string | null;
+    company?: string | null;
+  }> | null;
+  professional_summary?: string | null;
+}): boolean {
+  const work = profile.work_experience ?? [];
+  if (work.some((e) => countWorkEntryGaps(e) > 0)) return true;
+  if (!profile.professional_summary) return true;
+  return false;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const t = useTranslations("profile");
@@ -103,38 +128,51 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [enrichDrawerOpen, setEnrichDrawerOpen] = useState(false);
+  const [enrichScope, setEnrichScope] = useState<string | undefined>(undefined);
+
+  const openEnrichForAll = () => {
+    setEnrichScope(undefined);
+    setEnrichDrawerOpen(true);
+  };
+
+  const openEnrichForEntry = (company: string, role: string) => {
+    setEnrichScope(`work_experience:${company}:${role}`);
+    setEnrichDrawerOpen(true);
+  };
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const [profileRes, enrichmentRes] = await Promise.all([
+        fetch(`${API_BASE}/api/profile`),
+        fetch(`${API_BASE}/api/profile/enrichment-history`),
+      ]);
+
+      if (profileRes.ok) {
+        const data: ProfileResponse = await profileRes.json();
+        setProfile(data);
+        setProfilePhotoUrl(
+          data.profile.personal_info?.photo_url ?? null
+        );
+      } else {
+        setError(t("noProfile"));
+      }
+
+      if (enrichmentRes.ok) {
+        const data: EnrichmentRecord[] = await enrichmentRes.json();
+        setEnrichmentHistory(data.slice(-10).reverse());
+      }
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      setError(t("loadFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
-    async function loadProfile() {
-      try {
-        const [profileRes, enrichmentRes] = await Promise.all([
-          fetch(`${API_BASE}/api/profile`),
-          fetch(`${API_BASE}/api/profile/enrichment-history`),
-        ]);
-
-        if (profileRes.ok) {
-          const data: ProfileResponse = await profileRes.json();
-          setProfile(data);
-          setProfilePhotoUrl(
-            data.profile.personal_info?.photo_url ?? null
-          );
-        } else {
-          setError(t("noProfile"));
-        }
-
-        if (enrichmentRes.ok) {
-          const data: EnrichmentRecord[] = await enrichmentRes.json();
-          setEnrichmentHistory(data.slice(-10).reverse());
-        }
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-        setError(t("loadFailed"));
-      } finally {
-        setLoading(false);
-      }
-    }
     loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   const handleEdit = (section: SectionKey) => {
     if (!profile) return;
@@ -241,6 +279,32 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Completeness banner */}
+          {profile && (
+            <div className={`rounded-lg border p-4 mb-6 ${
+              hasProfileGaps(profile.profile)
+                ? "border-amber-500/30 bg-amber-500/5"
+                : "border-green-500/30 bg-green-500/5"
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">
+                  {t("completeness")}: {Math.round((profile.completeness ?? 0) * 100)}%
+                </span>
+                {hasProfileGaps(profile.profile) && (
+                  <Button size="sm" variant="outline" onClick={openEnrichForAll}>
+                    {t("enrichProfile")}
+                  </Button>
+                )}
+              </div>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div
+                  className="bg-primary h-1.5 rounded-full transition-all"
+                  style={{ width: `${Math.round((profile.completeness ?? 0) * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Photo Section */}
           <Card className="p-4">
             <PhotoManager
@@ -291,7 +355,33 @@ export default function ProfilePage() {
                 ) : (
                   <div className="text-sm text-gray-700">
                     {hasValue ? (
-                      typeof value === "string" ? (
+                      section === "work_experience" && Array.isArray(value) ? (
+                        <div className="space-y-3">
+                          {(value as Array<{ title?: string; company?: string; start_date?: string; end_date?: string; description?: string }>).map((entry, idx) => (
+                            <div key={idx} className="p-3 bg-gray-50 rounded border border-gray-200">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-medium text-neutral-dark">{entry.title ?? ""}</p>
+                                  <p className="text-gray-500 text-xs">{entry.company ?? ""}{entry.start_date ? ` · ${entry.start_date}` : ""}{entry.end_date ? ` – ${entry.end_date}` : ""}</p>
+                                  {entry.description && (
+                                    <p className="mt-1 text-gray-600 text-xs">{entry.description}</p>
+                                  )}
+                                </div>
+                                {countWorkEntryGaps(entry) > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-amber-500 hover:text-amber-600 text-xs h-7 px-2 shrink-0"
+                                    onClick={() => openEnrichForEntry(entry.company ?? "", entry.title ?? "")}
+                                  >
+                                    ⚠ {t("enrichEntry")} ({countWorkEntryGaps(entry)})
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : typeof value === "string" ? (
                         <p>{value}</p>
                       ) : (
                         <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-3 rounded">
@@ -350,6 +440,15 @@ export default function ProfilePage() {
           </a>
         </div>
       </footer>
+
+      <EnrichmentDrawer
+        open={enrichDrawerOpen}
+        scope={enrichScope}
+        onClose={() => {
+          setEnrichDrawerOpen(false);
+          loadProfile();
+        }}
+      />
     </div>
   );
 }

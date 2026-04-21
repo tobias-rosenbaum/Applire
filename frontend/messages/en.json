@@ -318,7 +318,10 @@
     "saving": "Saving...",
     "saveFailed": "Failed to save section.",
     "notProvided": "Not provided",
-    "enrichmentHistory": "Enrichment History"
+    "enrichmentHistory": "Enrichment History",
+    "completeness": "Profile Completeness",
+    "enrichProfile": "Enrich Profile",
+    "enrichEntry": "Enrich"
   },
   "applications": {
     "loadingDetails": "Loading application details...",

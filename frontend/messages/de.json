@@ -318,7 +318,10 @@
     "saving": "Wird gespeichert...",
     "saveFailed": "Abschnitt konnte nicht gespeichert werden.",
     "notProvided": "Nicht angegeben",
-    "enrichmentHistory": "Anreicherungshistorie"
+    "enrichmentHistory": "Anreicherungshistorie",
+    "completeness": "Profilvollständigkeit",
+    "enrichProfile": "Profil ergänzen",
+    "enrichEntry": "Ergänzen"
   },
   "applications": {
     "loadingDetails": "Bewerbungsdetails werden geladen...",
