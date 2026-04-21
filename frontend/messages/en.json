@@ -370,5 +370,17 @@
     "http503": "Service temporarily busy. Please wait and retry.",
     "http502": "Processing error. Please try a different format.",
     "generic": "An error occurred ({status}). Please try again."
+  },
+  "enrich": {
+    "title": "Profile Enrichment",
+    "loading": "Starting session…",
+    "gaps": "Gaps to fill",
+    "placeholder": "Type your answer… (Ctrl+Enter to send)",
+    "skip": "Skip",
+    "markNA": "Mark N/A",
+    "send": "Send",
+    "sending": "Sending…",
+    "done": "Profile enriched — great work!",
+    "close": "Close"
   }
 }

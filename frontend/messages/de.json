@@ -370,5 +370,17 @@
     "http503": "Dienst vorübergehend ausgelastet. Bitte warte und versuche es erneut.",
     "http502": "Verarbeitungsfehler. Bitte versuche ein anderes Format.",
     "generic": "Ein Fehler ist aufgetreten ({status}). Bitte versuche es erneut."
+  },
+  "enrich": {
+    "title": "Profil ergänzen",
+    "loading": "Sitzung wird gestartet…",
+    "gaps": "Fehlende Angaben",
+    "placeholder": "Antwort eingeben… (Strg+Enter zum Senden)",
+    "skip": "Überspringen",
+    "markNA": "Nicht zutreffend",
+    "send": "Senden",
+    "sending": "Wird gesendet…",
+    "done": "Profil ergänzt — gut gemacht!",
+    "close": "Schließen"
   }
 }
