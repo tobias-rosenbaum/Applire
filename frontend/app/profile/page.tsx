@@ -357,29 +357,27 @@ export default function ProfilePage() {
                     {hasValue ? (
                       section === "work_experience" && Array.isArray(value) ? (
                         <div className="space-y-3">
-                          {(value as Array<{ title?: string; company?: string; start_date?: string; end_date?: string; description?: string }>).map((entry, idx) => (
-                            <div key={idx} className="p-3 bg-gray-50 rounded border border-gray-200">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="font-medium text-neutral-dark">{entry.title ?? ""}</p>
-                                  <p className="text-gray-500 text-xs">{entry.company ?? ""}{entry.start_date ? ` · ${entry.start_date}` : ""}{entry.end_date ? ` – ${entry.end_date}` : ""}</p>
-                                  {entry.description && (
-                                    <p className="mt-1 text-gray-600 text-xs">{entry.description}</p>
-                                  )}
-                                </div>
-                                {countWorkEntryGaps(entry) > 0 && (
+                          {(value as Array<Record<string, unknown>>).map((entry, idx) => {
+                            const company = (entry["company"] as string) ?? "";
+                            const role = ((entry["role"] as string) ?? (entry["title"] as string) ?? "");
+                            return (
+                              <div key={idx} className="bg-gray-50 rounded border border-gray-200">
+                                <pre className="whitespace-pre-wrap text-xs p-3">
+                                  {JSON.stringify(entry, null, 2)}
+                                </pre>
+                                <div className="px-3 pb-2">
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="text-amber-500 hover:text-amber-600 text-xs h-7 px-2 shrink-0"
-                                    onClick={() => openEnrichForEntry(entry.company ?? "", entry.title ?? "")}
+                                    className="text-amber-500 hover:text-amber-600 text-xs h-7 px-2"
+                                    onClick={() => openEnrichForEntry(company, role)}
                                   >
-                                    ⚠ {t("enrichEntry")} ({countWorkEntryGaps(entry)})
+                                    ⚠ {t("enrichEntry")}
                                   </Button>
-                                )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : typeof value === "string" ? (
                         <p>{value}</p>

@@ -2,12 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -135,39 +129,54 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
     skipped: "text-muted-foreground",
   };
 
+  if (!open) return null;
+
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent
-        side="right"
-        className="w-[90vw] sm:w-[600px] md:w-[700px] p-0 flex flex-col"
-      >
-        <SheetHeader className="px-4 py-3 border-b shrink-0">
-          <SheetTitle className="text-sm">
-            {t("title")}
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/50"
+        onClick={onClose}
+      />
+
+      {/* Drawer panel */}
+      <div className="fixed inset-y-0 right-0 z-50 w-[90vw] sm:w-[600px] md:w-[700px] bg-white border-l border-gray-200 flex flex-col shadow-lg">
+
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
+          <div>
+            <span className="text-sm font-semibold text-neutral-dark">{t("title")}</span>
             {scope && (
-              <span className="ml-2 text-xs text-muted-foreground font-normal">
+              <span className="ml-2 text-xs text-gray-500 font-normal">
                 {scope.split(":").slice(1).join(" @ ")}
               </span>
             )}
-          </SheetTitle>
-        </SheetHeader>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
 
         {loading && !session && (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+          <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
             {t("loading")}
           </div>
         )}
 
         {error && (
-          <div className="flex-1 flex items-center justify-center text-destructive text-sm px-4">
+          <div className="flex-1 flex items-center justify-center text-red-600 text-sm px-4 text-center">
             {error}
           </div>
         )}
 
         {done && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-8">
-            <div className="text-2xl">&#10003;</div>
-            <p className="text-sm font-medium">{t("done")}</p>
+            <div className="text-3xl text-success">✓</div>
+            <p className="text-sm font-medium text-neutral-dark">{t("done")}</p>
             <Button variant="outline" onClick={onClose}>{t("close")}</Button>
           </div>
         )}
@@ -175,8 +184,8 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
         {session && !done && !error && (
           <div className="flex flex-1 min-h-0">
             {/* Gap list */}
-            <div className="w-44 shrink-0 border-r overflow-y-auto p-3 flex flex-col gap-1">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+            <div className="w-44 shrink-0 border-r border-gray-200 overflow-y-auto p-3 flex flex-col gap-1">
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-2">
                 {t("gaps")}
               </p>
               {gaps.map((g) => (
@@ -184,8 +193,10 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
                   key={g.id}
                   className={cn(
                     "text-xs rounded px-2 py-1.5 leading-tight",
-                    g.status === "active" && "bg-primary/10",
-                    statusColor[g.status]
+                    g.status === "active" && "bg-teal-container font-medium text-teal",
+                    g.status === "pending" && "text-gray-500",
+                    g.status === "done" && "text-success",
+                    (g.status === "na" || g.status === "skipped") && "text-gray-400 line-through",
                   )}
                 >
                   {g.label}
@@ -202,8 +213,8 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
                     className={cn(
                       "max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed",
                       m.role === "assistant"
-                        ? "self-start bg-muted border-l-2 border-primary"
-                        : "self-end bg-primary/10 text-right"
+                        ? "self-start bg-surface-container border-l-2 border-teal text-neutral-dark"
+                        : "self-end bg-teal-container text-neutral-dark text-right"
                     )}
                   >
                     {m.content}
@@ -213,9 +224,9 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
               </div>
 
               {/* Input area */}
-              <div className="shrink-0 border-t p-3 flex flex-col gap-2">
+              <div className="shrink-0 border-t border-gray-200 p-3 flex flex-col gap-2">
                 <textarea
-                  className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring min-h-[72px]"
+                  className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-neutral-dark placeholder:text-gray-400 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 min-h-[72px]"
                   placeholder={t("placeholder")}
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
@@ -229,7 +240,7 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-xs h-7"
+                      className="text-xs h-7 text-gray-500 hover:text-gray-700"
                       onClick={handleSkip}
                       disabled={loading}
                     >
@@ -238,7 +249,7 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-xs h-7 text-muted-foreground"
+                      className="text-xs h-7 text-gray-400 hover:text-gray-600"
                       onClick={handleNA}
                       disabled={loading}
                     >
@@ -257,7 +268,7 @@ export function EnrichmentDrawer({ open, scope, onClose }: EnrichmentDrawerProps
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </div>
+    </>
   );
 }
