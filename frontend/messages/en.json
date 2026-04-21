@@ -318,6 +318,7 @@
     "saving": "Saving...",
     "saveFailed": "Failed to save section.",
     "notProvided": "Not provided",
+    "invalidJson": "Invalid JSON format. Please check your input.",
     "enrichmentHistory": "Enrichment History",
     "completeness": "Profile Completeness",
     "enrichProfile": "Enrich Profile",

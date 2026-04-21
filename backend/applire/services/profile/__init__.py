@@ -342,6 +342,12 @@ async def patch_profile_section(
     old_value = profile_data.model_dump(mode="json").get(section)
 
     # Apply section update
+    # Decode JSON strings — guards against frontend sending double-encoded data
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            pass
     updated_dict = profile_data.model_dump(mode="json")
     updated_dict[section] = value
     validated = MasterProfileData.model_validate(updated_dict)

@@ -185,11 +185,19 @@ export default function ProfilePage() {
     if (!profile || !editingSection) return;
     setSaving(true);
     try {
+      const originalValue = profile.profile[editingSection];
+      const isStringSection = typeof originalValue === "string";
       let parsed: unknown;
-      try {
-        parsed = JSON.parse(editValue);
-      } catch {
+      if (isStringSection) {
         parsed = editValue;
+      } else {
+        try {
+          parsed = JSON.parse(editValue);
+        } catch {
+          setError(t("invalidJson"));
+          setSaving(false);
+          return;
+        }
       }
 
       const res = await fetch(`${API_BASE}/api/profile/${editingSection}`, {

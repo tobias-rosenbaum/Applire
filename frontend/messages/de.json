@@ -318,6 +318,7 @@
     "saving": "Wird gespeichert...",
     "saveFailed": "Abschnitt konnte nicht gespeichert werden.",
     "notProvided": "Nicht angegeben",
+    "invalidJson": "Ungültiges JSON-Format. Bitte überprüfen Sie Ihre Eingabe.",
     "enrichmentHistory": "Anreicherungshistorie",
     "completeness": "Profilvollständigkeit",
     "enrichProfile": "Profil ergänzen",
