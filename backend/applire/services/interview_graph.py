@@ -55,40 +55,30 @@ _MODE_B_EXTENDED_SECTIONS = ["publications", "volunteer_activities"]
 # ---------------------------------------------------------------------------
 
 
-def gap_detector(gap_analysis: GapAnalysis) -> tuple[list[str], dict[str, str]]:
-    """Return (ordered_gaps, gap_categories) from a GapAnalysis.
+def gap_detector(
+    gap_analysis: GapAnalysis,
+) -> tuple[list[str], dict[str, str], dict]:
+    """Return (ordered_cluster_ids, cluster_categories, clusters_by_id).
 
     Priority order:
-      1. Category C (UNKNOWN) — highest value; interview must ask about these
-      2. Category B (LIKELY BUT UNSTATED) — confirm inferred experience
-      Category A items are excluded — already matched, no interview action needed.
-
-    Falls back to critical_gaps (legacy records without A/B/C columns).
+      1. Category C clusters — highest value; interview must ask about these
+      2. Category B clusters — confirm inferred experience
+    Reads from gap_analysis.gap_clusters (set by cluster_gaps() in services/gap.py).
 
     Returns:
-        ordered_gaps: list[str] ordered C-first then B
-        gap_categories: dict mapping each gap string to "B" or "C"
+        cluster_ids: list[str] ordered C-first then B
+        cluster_categories: dict mapping cluster_id to "B" or "C"
+        clusters_by_id: dict mapping cluster_id to the full GapCluster dict
     """
-    targets: list[str] = []
-    categories: dict[str, str] = {}
+    clusters: list[dict] = list(gap_analysis.gap_clusters or [])
+    c_clusters = [c for c in clusters if c.get("category") == "C"]
+    b_clusters = [c for c in clusters if c.get("category") == "B"]
+    ordered = c_clusters + b_clusters
 
-    if gap_analysis.category_c or gap_analysis.category_b:
-        for gap in (gap_analysis.category_c or []):
-            if gap:
-                targets.append(gap)
-                categories[gap] = "C"
-        for gap in (gap_analysis.category_b or []):
-            if gap:
-                targets.append(gap)
-                categories[gap] = "B"
-    else:
-        # Legacy fallback: records created before A/B/C columns existed
-        for gap in (gap_analysis.critical_gaps or []):
-            if gap:
-                targets.append(gap)
-                categories[gap] = "C"
-
-    return targets, categories
+    cluster_ids = [c["id"] for c in ordered]
+    categories = {c["id"]: c["category"] for c in ordered}
+    by_id = {c["id"]: c for c in ordered}
+    return cluster_ids, categories, by_id
 
 
 # ---------------------------------------------------------------------------
@@ -144,24 +134,26 @@ async def question_generator_with_profile(
     gap_category: str | None = None,
     job_context: dict | None = None,
     follow_up_hint: str | None = None,
-) -> str:
+) -> dict:
     """Generate the next question based on mode and context.
 
-    MODE A: gap-targeted question (exploratory C or confirmation B)
-    MODE B: section-building question
-    Follow-up: lateral-probe question when follow_up_hint is provided
+    Returns:
+        {"question": str, "choices": list[str] | None}
 
-    gap_category: "B" | "C" | None (MODE A only)
-    job_context: {"role_title": str, "seniority_level": str} (MODE B, optional)
-    follow_up_hint: adjacent domain to probe (Sprint 15, overrides standard question)
+    MODE A: cluster-aware question with potential choices (uses aparse_json)
+    MODE B: section-building question (uses acomplete, choices always None)
+    Follow-up: lateral-probe question (uses acomplete, choices always None)
     """
     mode = state.get("mode", "targeted")
 
     if follow_up_hint:
-        gap = state["critical_gaps"][state["current_gap_index"]]
-        question = await provider.acomplete(
+        cluster_id = state["critical_gaps"][state["current_gap_index"]]
+        clusters_by_id = state.get("gap_clusters_by_id") or {}
+        cluster = clusters_by_id.get(cluster_id, {"label": cluster_id, "gaps": []})
+        gap_label = cluster.get("label", cluster_id)
+        text = await provider.acomplete(
             build_follow_up_question_prompt(
-                gap,
+                gap_label,
                 follow_up_hint,
                 profile,
                 state["messages"],
@@ -171,9 +163,11 @@ async def question_generator_with_profile(
             temperature=0.4,
             max_tokens=256,
         )
-    elif mode == "guided":
+        return {"question": text.strip(), "choices": None}
+
+    if mode == "guided":
         section = state["critical_gaps"][state["current_gap_index"]]
-        question = await provider.acomplete(
+        text = await provider.acomplete(
             build_guided_question_prompt(
                 section,
                 job_context or {},
@@ -183,34 +177,48 @@ async def question_generator_with_profile(
             temperature=0.4,
             max_tokens=256,
         )
-    else:
-        gap = state["critical_gaps"][state["current_gap_index"]]
-        question = await provider.acomplete(
-            build_question_prompt(gap, profile, state["messages"], gap_category=gap_category),
-            system=QUESTION_SYSTEM_PROMPT,
-            temperature=0.4,
-            max_tokens=256,
-        )
+        return {"question": text.strip(), "choices": None}
 
-    return question.strip()
+    # MODE A: cluster-aware question with potential choices
+    cluster_id = state["critical_gaps"][state["current_gap_index"]]
+    clusters_by_id = state.get("gap_clusters_by_id") or {}
+    cluster = clusters_by_id.get(
+        cluster_id,
+        {"id": cluster_id, "label": cluster_id, "gaps": [], "jd_skills": [], "jd_context": ""},
+    )
+
+    data: dict = await provider.aparse_json(
+        build_question_prompt(cluster, profile, state["messages"], gap_category=gap_category),
+        system=QUESTION_SYSTEM_PROMPT,
+        temperature=0.4,
+    )
+    question = str(data.get("question", "")).strip()
+    raw_choices = data.get("choices")
+    choices = raw_choices if isinstance(raw_choices, list) and raw_choices else None
+    return {"question": question, "choices": choices}
 
 
 async def question_generator(
     state: InterviewState,
     provider: LLMProvider,
-) -> str:
+) -> dict:
     """Generate a targeted question for the current gap (no profile context).
 
     Kept for backwards compatibility — prefer question_generator_with_profile.
+    Returns: {"question": str, "choices": None}
     """
-    gap = state["critical_gaps"][state["current_gap_index"]]
-    question = await provider.acomplete(
-        build_question_prompt(gap, {}, state["messages"]),
+    cluster_id = state["critical_gaps"][state["current_gap_index"]]
+    clusters_by_id = state.get("gap_clusters_by_id") or {}
+    cluster = clusters_by_id.get(
+        cluster_id,
+        {"id": cluster_id, "label": cluster_id, "gaps": [], "jd_skills": [], "jd_context": ""},
+    )
+    data: dict = await provider.aparse_json(
+        build_question_prompt(cluster, {}, state["messages"]),
         system=QUESTION_SYSTEM_PROMPT,
         temperature=0.4,
-        max_tokens=256,
     )
-    return question.strip()
+    return {"question": str(data.get("question", "")).strip(), "choices": None}
 
 
 # ---------------------------------------------------------------------------
@@ -219,27 +227,20 @@ async def question_generator(
 
 
 async def response_parser(
-    gap: str,
+    cluster_label: str,
     question: str,
     answer: str,
     provider: LLMProvider,
-    remaining_gaps: list[str] | None = None,
 ) -> dict:
     """Extract structured profile data from the user's free-text answer.
 
     Returns a dict with keys:
-        skills_to_add: list[str]
-        work_history_to_add: list[dict]
-        certifications_to_add: list[dict]
-        languages_to_add: list[dict]
-        education_to_add: list[dict]
-        gap_resolution: "full" | "partial" | "none"
-        follow_up_hint: str | None
-        gaps_also_addressed: list[str]
-        gap_addressed: bool  (backward compat — derived from gap_resolution != "none")
+        skills_to_add, work_history_to_add, certifications_to_add,
+        languages_to_add, education_to_add, gap_resolution, follow_up_hint,
+        gap_addressed  (backward compat — derived from gap_resolution != "none")
     """
     data = await provider.aparse_json(
-        build_response_parser_prompt(gap, question, answer, remaining_gaps),
+        build_response_parser_prompt(cluster_label, question, answer),
         system=RESPONSE_PARSER_SYSTEM_PROMPT,
         temperature=0.1,
     )
@@ -254,8 +255,7 @@ async def response_parser(
         "education_to_add": data.get("education_to_add", []),
         "gap_resolution": gap_resolution,
         "follow_up_hint": data.get("follow_up_hint") if isinstance(data.get("follow_up_hint"), str) else None,
-        "gaps_also_addressed": data.get("gaps_also_addressed", []),
-        "gap_addressed": gap_resolution != "none",  # backward compat
+        "gap_addressed": gap_resolution != "none",
     }
 
 
