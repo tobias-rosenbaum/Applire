@@ -19,8 +19,10 @@ from applire.models.job import JobAnalysis
 from applire.models.profile import MasterProfile
 from applire.models.session import InterviewSession
 from applire.prompts.gap_analysis import SYSTEM_PROMPT, build_user_prompt
+from applire.prompts.gap_clustering import CLUSTERING_SYSTEM_PROMPT, build_clustering_prompt
 from applire.providers.llm.base import LLMProvider
 from applire.schemas.gap import GapAnalysisResponse
+from applire.schemas.gap_cluster import GapClusterSchema
 from applire.services.gap_inference import pre_classify
 
 
@@ -81,6 +83,33 @@ async def analyze_gaps_for_session(
 # ---------------------------------------------------------------------------
 # Internal
 # ---------------------------------------------------------------------------
+
+
+async def cluster_gaps(
+    gap_analysis: GapAnalysis,
+    job: JobAnalysis,
+    provider: LLMProvider,
+    db: AsyncSession,
+) -> None:
+    """Run clustering LLM call and persist result to gap_analysis.gap_clusters."""
+    raw_clusters: list = await provider.aparse_json(
+        build_clustering_prompt(
+            category_b=list(gap_analysis.category_b or []),
+            category_c=list(gap_analysis.category_c or []),
+            required_skills=list(job.required_skills or []),
+            nice_to_have_skills=list(job.nice_to_have_skills or []),
+        ),
+        system=CLUSTERING_SYSTEM_PROMPT,
+        temperature=0.1,
+    )
+    validated = []
+    for item in (raw_clusters if isinstance(raw_clusters, list) else []):
+        try:
+            validated.append(GapClusterSchema.model_validate(item).model_dump())
+        except Exception:
+            pass
+    gap_analysis.gap_clusters = validated
+    await db.commit()
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -153,6 +182,11 @@ async def _run_analysis(
     db.add(record)
     await db.commit()
     await db.refresh(record)
+
+    # Phase 2: semantic clustering
+    await cluster_gaps(record, job, provider, db)
+    await db.refresh(record)
+
     return GapAnalysisResponse.model_validate(record)
 
 

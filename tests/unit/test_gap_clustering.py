@@ -35,3 +35,54 @@ def test_clustering_system_prompt_exists():
     from applire.prompts.gap_clustering import CLUSTERING_SYSTEM_PROMPT
     assert "cluster" in CLUSTERING_SYSTEM_PROMPT.lower()
     assert "JSON" in CLUSTERING_SYSTEM_PROMPT
+
+
+import uuid
+from unittest.mock import AsyncMock, MagicMock
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_cluster_gaps_persists_clusters():
+    """cluster_gaps() calls LLM and saves result to gap_analysis.gap_clusters."""
+    from applire.services.gap import cluster_gaps
+    from applire.models.gap import GapAnalysis
+    from applire.models.job import JobAnalysis
+
+    gap_analysis = MagicMock(spec=GapAnalysis)
+    gap_analysis.category_b = ["Python basics"]
+    gap_analysis.category_c = ["LLMs", "Agentic Systems"]
+
+    job = MagicMock(spec=JobAnalysis)
+    job.required_skills = ["LLM-based Agent Design"]
+    job.nice_to_have_skills = ["Multi-Agent Orchestration"]
+
+    clusters_raw = [
+        {
+            "id": "cluster-agentic",
+            "label": "Agentic AI Systems",
+            "category": "C",
+            "gaps": ["LLMs", "Agentic Systems"],
+            "jd_skills": ["LLM-based Agent Design"],
+            "jd_context": "The role requires designing autonomous AI agents.",
+        },
+        {
+            "id": "cluster-python",
+            "label": "Python Fundamentals",
+            "category": "B",
+            "gaps": ["Python basics"],
+            "jd_skills": [],
+            "jd_context": "Python is used throughout the stack.",
+        },
+    ]
+
+    provider = MagicMock()
+    provider.aparse_json = AsyncMock(return_value=clusters_raw)
+
+    db = MagicMock()
+    db.commit = AsyncMock()
+
+    await cluster_gaps(gap_analysis, job, provider, db)
+
+    assert gap_analysis.gap_clusters == clusters_raw
+    db.commit.assert_awaited_once()
