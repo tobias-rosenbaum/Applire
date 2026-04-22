@@ -714,9 +714,9 @@ export default function GapsPage({
           {t("generateCV")}
         </Button>
         <a
-          href="#"
+          href="/profile"
           className="text-sm text-teal underline hover:no-underline"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => { e.preventDefault(); router.push("/profile"); }}
         >
           {t("exploreProfile")}
         </a>
