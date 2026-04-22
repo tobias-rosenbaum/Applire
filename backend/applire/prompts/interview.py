@@ -26,19 +26,32 @@ import json
 QUESTION_SYSTEM_PROMPT = """\
 You are an expert career coach specialised in the DACH (Germany, Austria, Switzerland) job market.
 Your task is to generate ONE targeted, open-ended question to help a job seeker articulate concrete \
-experience that addresses a specific gap in their profile.
+experience that addresses a specific skill cluster gap in their profile.
+
+For CONFIRMATION questions (gap_type=B): acknowledge the likely experience and ask for specifics.
+For EXPLORATORY questions (gap_type=C): ask openly about experience with the requirement.
+
+Generate 2-3 short answer choices when:
+- The cluster has 2 or more constituent gaps, OR
+- The cluster category is B (confirmation question)
+Choices are starting-point options the candidate can select and expand; they are not exhaustive.
+Otherwise set choices to null.
 
 Requirements:
-- Ask about exactly ONE aspect related to the gap
+- Ask about exactly ONE aspect related to the cluster
 - Be encouraging and conversational in tone
 - Invite specific examples: projects, companies, dates, measurable outcomes
-- For CONFIRMATION questions (gap_type=B): acknowledge the likely experience and ask for specifics
-- For EXPLORATORY questions (gap_type=C): ask openly about experience with the requirement
-- Output ONLY the question text — no preamble, no numbering, no explanation"""
+- Output ONLY a valid JSON object - no markdown, no explanations
+
+Schema:
+{
+  "question": "The question text",
+  "choices": ["Option A", "Option B"] or null
+}"""
 
 
 def build_question_prompt(
-    gap: str,
+    cluster: dict,
     profile: dict,
     recent_messages: list[dict],
     gap_category: str | None = None,
@@ -59,26 +72,46 @@ def build_question_prompt(
         ensure_ascii=False,
     )
 
+    cluster_label = cluster.get("label", cluster.get("id", "unknown"))
+    constituent_gaps = cluster.get("gaps", [])
+    jd_skills = cluster.get("jd_skills", [])
+    jd_context = cluster.get("jd_context", "")
+    num_gaps = len(constituent_gaps)
+
     if gap_category == "B":
         gap_type_hint = (
             f"Gap type: CONFIRMATION (Category B) — "
-            f"the system inferred the candidate likely has experience with '{gap}' "
-            f"based on their profile context. Generate a confirmation question that "
-            f"acknowledges this likelihood and asks for concrete specifics."
+            f"the system inferred the candidate likely has experience with '{cluster_label}'. "
+            f"Generate a confirmation question that acknowledges this likelihood and asks for concrete specifics."
         )
     else:
         gap_type_hint = (
             f"Gap type: EXPLORATORY (Category C) — "
-            f"no signal for '{gap}' was found in the profile. "
+            f"no signal for '{cluster_label}' was found in the profile. "
             f"Generate an open question to uncover any relevant experience."
         )
 
+    choices_hint = (
+        f"Generate 2-3 choices (num_gaps={num_gaps}, category={gap_category or 'C'})."
+        if (num_gaps >= 2 or gap_category == "B")
+        else "Set choices to null."
+    )
+
+    cluster_context = f"Cluster: {cluster_label}"
+    if constituent_gaps:
+        cluster_context += f"\nConstituent gaps: {', '.join(constituent_gaps)}"
+    if jd_skills:
+        cluster_context += f"\nRelevant JD skills: {', '.join(jd_skills)}"
+    if jd_context:
+        cluster_context += f"\nJD context: {jd_context}"
+
     return (
-        f"Gap to address: {gap}\n"
-        f"{gap_type_hint}\n\n"
+        f"{cluster_context}\n"
+        f"{gap_type_hint}\n"
+        f"{choices_hint}\n\n"
         f"Candidate profile summary:\n{profile_summary}"
         f"{history}\n\n"
-        "Generate the question."
+        "Generate the JSON response."
     )
 
 
@@ -285,8 +318,7 @@ Schema:
     }
   ],
   "gap_resolution": "full or partial or none",
-  "follow_up_hint": "Short suggestion for adjacent domain to probe, or null",
-  "gaps_also_addressed": ["list of other open gaps this answer also resolves"]
+  "follow_up_hint": "Short suggestion for adjacent domain to probe, or null"
 }
 
 Rules:
@@ -294,29 +326,18 @@ Rules:
 - gap_resolution: "full" if the answer provides concrete, specific information about the gap;
   "partial" if relevant but incomplete or vague; "none" if off-topic or empty
 - follow_up_hint: when gap_resolution is "partial" or "none", suggest a related domain or context
-  the candidate might have experience in (e.g. "ask about GMP or other regulated environments").
-  Set to null when gap_resolution is "full".
-- gaps_also_addressed: list any other open gaps (from the provided list) that this answer also
-  resolves. Empty list if none or if no list was provided.
+  the candidate might have experience in. Set to null when gap_resolution is "full".
 - Omit work_history_to_add entries where role is null or empty"""
 
 
 def build_response_parser_prompt(
-    gap: str,
+    cluster_label: str,
     question: str,
     answer: str,
-    remaining_gaps: list[str] | None = None,
 ) -> str:
-    other_gaps_section = ""
-    if remaining_gaps:
-        gaps_list = "\n".join(f"- {g}" for g in remaining_gaps)
-        other_gaps_section = (
-            f"\n\nOther open gaps (check if this answer also resolves any):\n{gaps_list}"
-        )
     return (
-        f"Gap being addressed: {gap}\n\n"
+        f"Gap cluster being addressed: {cluster_label}\n\n"
         f"Question asked: {question}\n\n"
-        f"Candidate's answer: {answer}"
-        f"{other_gaps_section}\n\n"
+        f"Candidate's answer: {answer}\n\n"
         "Extract the structured profile data."
     )
