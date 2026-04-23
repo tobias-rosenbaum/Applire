@@ -99,7 +99,12 @@
     "loadingQuestion": "Loading question…",
     "answerPlaceholder": "Your answer…",
     "savingAnswer": "Saving…",
-    "submitAnswer": "Submit"
+    "submitAnswer": "Submit",
+    "clustersToAddress": "{count, plural, one {# topic to address} other {# topics to address}}",
+    "clusterCardAnswerButton": "Answer",
+    "clusterCardConstituentLabel": "Covers:",
+    "clusterStatusResolved": "Answered",
+    "choiceCardHint": "Pick a starting point (editable):"
   },
   "interview": {
     "loading": "Starting interview…",

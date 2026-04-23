@@ -99,7 +99,12 @@
     "loadingQuestion": "Frage wird geladen…",
     "answerPlaceholder": "Deine Antwort…",
     "savingAnswer": "Wird gespeichert…",
-    "submitAnswer": "Absenden"
+    "submitAnswer": "Absenden",
+    "clustersToAddress": "{count, plural, one {# Thema zu adressieren} other {# Themen zu adressieren}}",
+    "clusterCardAnswerButton": "Beantworten",
+    "clusterCardConstituentLabel": "Umfasst:",
+    "clusterStatusResolved": "Beantwortet",
+    "choiceCardHint": "Wähle einen Startpunkt (editierbar):"
   },
   "interview": {
     "loading": "Interview wird gestartet…",
