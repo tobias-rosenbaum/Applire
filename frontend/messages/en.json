@@ -196,7 +196,7 @@
     "stepQueued": "In queue…",
     "stepRendering": "Rendering CV…",
     "stepDone": "Done!",
-    "generationStale": "Taking longer than expected — you can come back later.",
+    "generationStale": "Still running in the background — you'll be redirected automatically.",
     "generationFailed": "Generation failed.",
     "retryGeneration": "Try again →",
     "photoStepTitle": "Add a profile photo?",

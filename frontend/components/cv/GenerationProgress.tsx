@@ -42,8 +42,7 @@ export function GenerationProgress({ cvId, flowId, onReady, onRetry }: Generatio
     async function poll() {
       if (Date.now() - startedAt.current > STALENESS_MS) {
         setStale(true);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        return;
+        // Keep polling — backend may still finish; don't stop the interval
       }
 
       try {

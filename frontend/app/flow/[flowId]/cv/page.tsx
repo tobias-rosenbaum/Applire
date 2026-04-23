@@ -48,6 +48,24 @@ export default function CVPage({
 
   // Restore state from server on mount — determine correct phase before rendering
   useEffect(() => {
+    async function advanceFlow(cvId: string) {
+      // Advance through cv_generation → complete, ignoring errors if already past that step
+      try {
+        await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "cv_generation", artifact_id: cvId }),
+        });
+      } catch {}
+      try {
+        await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "complete", artifact_id: cvId }),
+        });
+      } catch {}
+    }
+
     async function init() {
       try {
         const res = await fetch(`${API_BASE}/api/flow/${flowId}/state`);
@@ -62,6 +80,30 @@ export default function CVPage({
           setPhase("preview");
           return;
         }
+
+        // No CV in flow state — check if there's a ready or in-progress CV for this job
+        // (happens when the user navigates away before the flow advance completes)
+        try {
+          const cvListRes = await fetch(`${API_BASE}/api/cv?job_id=${fs.job_id}`);
+          if (cvListRes.ok) {
+            const cvList: Array<{ cv_id: string; status: string }> = await cvListRes.json();
+            const mostRecent = cvList[0];
+            if (mostRecent?.status === "ready") {
+              await advanceFlow(mostRecent.cv_id);
+              setCvId(mostRecent.cv_id);
+              setPhase("preview");
+              return;
+            }
+            if (mostRecent?.status === "pending" || mostRecent?.status === "generating") {
+              setCvId(mostRecent.cv_id);
+              setPhase("generating");
+              return;
+            }
+          }
+        } catch {
+          // Non-fatal — fall through
+        }
+
         // No existing CV — check if user has a profile photo
         try {
           const profileRes = await fetch(`${API_BASE}/api/profile`);

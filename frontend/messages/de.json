@@ -196,7 +196,7 @@
     "stepQueued": "In der Warteschlange…",
     "stepRendering": "Lebenslauf wird gerendert…",
     "stepDone": "Fertig!",
-    "generationStale": "Dauert länger als erwartet — du kannst später zurückkommen.",
+    "generationStale": "Läuft noch im Hintergrund — du wirst automatisch weitergeleitet.",
     "generationFailed": "Generierung fehlgeschlagen.",
     "retryGeneration": "Erneut versuchen →",
     "photoStepTitle": "Profilfoto hinzufügen?",
