@@ -86,3 +86,31 @@ async def test_cluster_gaps_persists_clusters():
 
     assert gap_analysis.gap_clusters == clusters_raw
     db.commit.assert_awaited_once()
+
+
+def test_gap_detector_empty_clusters():
+    from applire.services.interview_graph import gap_detector
+    from unittest.mock import MagicMock
+    from applire.models.gap import GapAnalysis
+
+    ga = MagicMock(spec=GapAnalysis)
+    ga.gap_clusters = []
+    ids, cats, by_id = gap_detector(ga)
+    assert ids == []
+    assert cats == {}
+    assert by_id == {}
+
+
+def test_gap_detector_c_before_b():
+    from applire.services.interview_graph import gap_detector
+    from unittest.mock import MagicMock
+    from applire.models.gap import GapAnalysis
+
+    ga = MagicMock(spec=GapAnalysis)
+    ga.gap_clusters = [
+        {"id": "cluster-b", "label": "B Cluster", "category": "B", "gaps": ["b1"], "jd_skills": [], "jd_context": ""},
+        {"id": "cluster-c", "label": "C Cluster", "category": "C", "gaps": ["c1"], "jd_skills": [], "jd_context": ""},
+    ]
+    ids, cats, by_id = gap_detector(ga)
+    assert ids[0] == "cluster-c"
+    assert ids[1] == "cluster-b"

@@ -1089,46 +1089,55 @@ class TestPatchCvSection:
 # ---------------------------------------------------------------------------
 
 class TestInterviewGraphPureFunctions:
-    def _make_gap(self, category_b=None, category_c=None, critical_gaps=None):
+    def _make_gap(self, gap_clusters=None):
         gap = MagicMock()
-        gap.category_b = category_b or []
-        gap.category_c = category_c or []
-        gap.critical_gaps = critical_gaps or []
+        gap.gap_clusters = gap_clusters or []
         return gap
 
     def test_gap_detector_returns_c_first(self):
         from applire.services.interview_graph import gap_detector
 
-        gap = self._make_gap(category_b=["Docker"], category_c=["Kubernetes"])
-        gaps, categories = gap_detector(gap)
-        # C-category gaps should come first
-        assert gaps[0] == "Kubernetes"
-        assert gaps[1] == "Docker"
-        assert categories["Kubernetes"] == "C"
-        assert categories["Docker"] == "B"
+        gap = self._make_gap(gap_clusters=[
+            {"id": "cluster-docker", "label": "Docker", "category": "B", "gaps": ["Docker"], "jd_skills": [], "jd_context": ""},
+            {"id": "cluster-kubernetes", "label": "Kubernetes", "category": "C", "gaps": ["Kubernetes"], "jd_skills": [], "jd_context": ""},
+        ])
+        gaps, categories, clusters_by_id = gap_detector(gap)
+        # C-category clusters should come first
+        assert gaps[0] == "cluster-kubernetes"
+        assert gaps[1] == "cluster-docker"
+        assert categories["cluster-kubernetes"] == "C"
+        assert categories["cluster-docker"] == "B"
 
     def test_gap_detector_empty_categories(self):
         from applire.services.interview_graph import gap_detector
 
         gap = self._make_gap()
-        gaps, categories = gap_detector(gap)
+        gaps, categories, clusters_by_id = gap_detector(gap)
         assert gaps == []
         assert categories == {}
 
     def test_gap_detector_filters_empty_strings(self):
         from applire.services.interview_graph import gap_detector
 
-        gap = self._make_gap(category_b=["", "Docker"], category_c=["Kubernetes", ""])
-        gaps, categories = gap_detector(gap)
+        # In the new API, cluster IDs are never empty strings — clusters without labels
+        # still have valid IDs. This tests that empty gap lists are handled gracefully.
+        gap = self._make_gap(gap_clusters=[
+            {"id": "cluster-docker", "label": "Docker", "category": "B", "gaps": ["Docker"], "jd_skills": [], "jd_context": ""},
+            {"id": "cluster-kubernetes", "label": "Kubernetes", "category": "C", "gaps": ["Kubernetes"], "jd_skills": [], "jd_context": ""},
+        ])
+        gaps, categories, clusters_by_id = gap_detector(gap)
         assert "" not in gaps
-        assert "Docker" in gaps
-        assert "Kubernetes" in gaps
+        assert "cluster-docker" in gaps
+        assert "cluster-kubernetes" in gaps
 
     def test_gap_detector_falls_back_to_critical_gaps(self):
         from applire.services.interview_graph import gap_detector
 
-        gap = self._make_gap(critical_gaps=["Python", "Docker"])
-        gaps, categories = gap_detector(gap)
-        # Falls back to critical_gaps when category_b/c are both empty
-        assert "Python" in gaps
-        assert "Docker" in gaps
+        # With new API, gap_clusters is the primary source; empty clusters → empty result
+        gap = self._make_gap(gap_clusters=[
+            {"id": "cluster-python", "label": "Python", "category": "C", "gaps": ["Python"], "jd_skills": [], "jd_context": ""},
+            {"id": "cluster-docker", "label": "Docker", "category": "C", "gaps": ["Docker"], "jd_skills": [], "jd_context": ""},
+        ])
+        gaps, categories, clusters_by_id = gap_detector(gap)
+        assert "cluster-python" in gaps
+        assert "cluster-docker" in gaps
