@@ -132,6 +132,7 @@
     "completionGapsResolved": "Gut gemacht! Dein Profil wurde angereichert.",
     "completionOther": "Deine Antworten wurden in deinem Master-Profil gespeichert.",
     "roleRequirements": "Rollenanforderungen",
+    "choiceCardHint": "Wähle einen Startpunkt (editierbar):",
     "advancingToCV": "Wird vorbereitet…",
     "viewHistory": "Gesprächsverlauf anzeigen ({count} {count, plural, one {Austausch} other {Austausche}})"
   },

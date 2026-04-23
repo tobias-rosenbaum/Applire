@@ -132,6 +132,7 @@
     "completionGapsResolved": "Great work! Your profile has been enriched.",
     "completionOther": "Your answers have been saved to your Master Profile.",
     "roleRequirements": "Role Requirements",
+    "choiceCardHint": "Pick a starting point (editable):",
     "advancingToCV": "Preparing…",
     "viewHistory": "View conversation history ({count} {count, plural, one {exchange} other {exchanges}})"
   },

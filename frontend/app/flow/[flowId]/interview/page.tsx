@@ -22,6 +22,21 @@ interface FlowState {
   interview_summary?: { session_id: string; mode: string } | null;
 }
 
+interface GapCluster {
+  id: string;
+  label: string;
+  category: "B" | "C";
+  gaps: string[];
+  jd_skills: string[];
+  jd_context: string;
+}
+
+interface GapAnalysisData {
+  id: string;
+  match_score: number;
+  gap_clusters: GapCluster[];
+}
+
 interface SessionCreateResponse {
   session_id: string;
   mode: "targeted" | "guided";
@@ -30,6 +45,7 @@ interface SessionCreateResponse {
   estimated_questions: number;
   gaps_total: number;
   gaps_remaining: number;
+  choices: string[] | null;
   resumed: boolean;
 }
 
@@ -44,6 +60,7 @@ interface MessageResponse {
   complete: boolean;
   question?: string;
   gaps_remaining?: number;
+  choices?: string[] | null;
   reason?: "gaps_resolved" | "user_ended" | "max_questions_reached";
   questions_asked?: number;
   gaps_resolved?: number;
@@ -246,6 +263,13 @@ export default function InterviewPage({
   const [pendingConflicts, setPendingConflicts] = useState<ConflictSummary[]>([]);
   const [showDoneConfirm, setShowDoneConfirm] = useState(false);
 
+  // Split-screen state
+  const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisData | null>(null);
+  const [resolvedClusterIds, setResolvedClusterIds] = useState<Set<string>>(new Set());
+  const [currentClusterId, setCurrentClusterId] = useState<string | null>(null);
+  const [choices, setChoices] = useState<string[] | null>(null);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+
   useEffect(() => {
     async function init() {
       try {
@@ -254,6 +278,17 @@ export default function InterviewPage({
         if (!fsRes.ok) throw new Error(tErrors("flowNotFound"));
         const fs: FlowState = await fsRes.json();
         setFlowState(fs);
+
+        // Fetch gap analysis for cluster tracker
+        fetch(`${API_BASE}/api/job/${fs.job_id}/gaps`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data: GapAnalysisData | null) => {
+            if (data) {
+              setGapAnalysis(data);
+              setMatchScore(data.match_score);
+            }
+          })
+          .catch(() => {});
 
         // Create or resume interview session
         const sessionRes = await fetch(`${API_BASE}/api/session`, {
@@ -269,6 +304,7 @@ export default function InterviewPage({
         setGapsTotal(sessionData.gaps_total ?? 0);
         setGapsRemaining(sessionData.gaps_remaining ?? 0);
         setMessages([{ role: "assistant", content: sessionData.question ?? sessionData.first_question }]);
+        setChoices(sessionData.choices ?? null);
 
         if (sessionData.resumed) {
           setResumed(true);
@@ -293,6 +329,13 @@ export default function InterviewPage({
     }
     void init();
   }, [flowId]);
+
+  // Set first cluster as current once gap analysis is loaded
+  useEffect(() => {
+    if (gapAnalysis && gapAnalysis.gap_clusters.length > 0 && !currentClusterId) {
+      setCurrentClusterId(gapAnalysis.gap_clusters[0].id);
+    }
+  }, [gapAnalysis, currentClusterId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -341,6 +384,26 @@ export default function InterviewPage({
         if (data.pending_conflicts?.length) {
           setPendingConflicts(data.pending_conflicts);
         }
+
+        // Update choices
+        setChoices(data.choices ?? null);
+
+        // Advance cluster tracker
+        if (gapAnalysis && data.gaps_remaining !== undefined) {
+          const totalClusters = gapAnalysis.gap_clusters.length;
+          const resolvedCount = totalClusters - (data.gaps_remaining ?? 0);
+          const nextCluster = gapAnalysis.gap_clusters[resolvedCount];
+          if (currentClusterId) {
+            setResolvedClusterIds((prev) => new Set([...prev, currentClusterId]));
+          }
+          if (nextCluster) {
+            setCurrentClusterId(nextCluster.id);
+          }
+        }
+
+        if (data.completeness_score !== undefined) {
+          setMatchScore(data.completeness_score);
+        }
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : tErrors("failedToStart"));
@@ -369,7 +432,6 @@ export default function InterviewPage({
   );
 
   const roleTitle = flowState?.job_summary?.role_title ?? "the target role";
-  const requiredSkills = flowState?.job_summary?.required_skills ?? [];
 
   // -------------------------------------------------------------------------
   // Loading
@@ -458,36 +520,48 @@ export default function InterviewPage({
   }
 
   // -------------------------------------------------------------------------
-  // Interview screen (19.1)
+  // Interview screen (19.1) — split-screen layout
   // -------------------------------------------------------------------------
 
   const currentQuestion = messages.filter((m) => m.role === "assistant").at(-1)?.content ?? "";
   const exchangeCount = messages.length - 1;
 
   return (
-    <div data-testid="interview-page" className="max-w-4xl mx-auto">
-      {/* Resume banner (19.5) */}
-      {showResumeBanner && (
-        <div data-testid="resume-banner" className="mb-4 flex items-center justify-between px-4 py-3 rounded-lg bg-teal/10 border border-teal/30">
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-            </svg>
-            <p className="text-sm text-teal font-medium">{t("resumeBanner")}</p>
-          </div>
-          <button
-            onClick={() => setShowResumeBanner(false)}
-            className="text-teal hover:text-teal/70 text-lg leading-none"
-            aria-label={tCommon("close")}
-          >
-            ×
-          </button>
-        </div>
-      )}
+    <div data-testid="interview-page" className="min-h-screen bg-gray-50">
+      {/* Mobile sticky header pill */}
+      <div className="md:hidden sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-neutral-dark truncate max-w-[60%]">
+          {currentClusterId
+            ? (gapAnalysis?.gap_clusters.find((c) => c.id === currentClusterId)?.label ?? t("loading"))
+            : t("loading")}
+        </span>
+        {matchScore !== null && (
+          <span className="text-xs font-semibold text-teal">{Math.round(matchScore * 100)}%</span>
+        )}
+      </div>
 
-      <div className="flex gap-6 items-start">
-        {/* Main interview area */}
-        <div className="flex-1 min-w-0">
+      <div className="flex flex-col md:flex-row min-h-screen md:h-screen">
+        {/* LEFT PANEL — 65% */}
+        <div className="flex-1 md:w-[65%] overflow-y-auto p-4 md:p-8">
+          {/* Resume banner (19.5) */}
+          {showResumeBanner && (
+            <div data-testid="resume-banner" className="mb-4 flex items-center justify-between px-4 py-3 rounded-lg bg-teal/10 border border-teal/30">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+                </svg>
+                <p className="text-sm text-teal font-medium">{t("resumeBanner")}</p>
+              </div>
+              <button
+                onClick={() => setShowResumeBanner(false)}
+                className="text-teal hover:text-teal/70 text-lg leading-none"
+                aria-label={tCommon("close")}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
@@ -580,8 +654,30 @@ export default function InterviewPage({
             </div>
           )}
 
+          {/* Choice cards — shown when backend provides choices and session is active */}
+          {choices && choices.length > 0 && !completion && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-gray-400">{t("choiceCardHint")}</p>
+              {choices.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className={cn(
+                    "w-full text-left rounded-lg border px-4 py-3 text-sm transition-colors",
+                    answer === choice
+                      ? "border-teal bg-teal/5 font-medium text-neutral-dark"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-teal/50 hover:bg-gray-50",
+                  )}
+                  onClick={() => setAnswer(choice)}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Input area */}
-          <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm mt-4">
             <textarea
               data-testid="answer-textarea"
               ref={textareaRef}
@@ -633,23 +729,56 @@ export default function InterviewPage({
           </div>
         </div>
 
-        {/* JD context sidebar */}
-        {requiredSkills.length > 0 && (
-          <div className="w-52 shrink-0">
-            <Card className="p-4">
-              <p className="font-heading text-xs font-bold text-neutral-dark mb-3 uppercase tracking-wide">
+        {/* RIGHT PANEL — 35%, hidden on mobile */}
+        <aside className="hidden md:flex md:w-[35%] flex-col border-l border-gray-200 bg-white overflow-y-auto p-6">
+          {/* Match score gauge */}
+          {matchScore !== null && (
+            <CompletenessGauge score={matchScore} />
+          )}
+
+          {/* Cluster tracker */}
+          {gapAnalysis && gapAnalysis.gap_clusters.length > 0 && (
+            <div className="mt-6 space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
                 {t("roleRequirements")}
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {requiredSkills.slice(0, 12).map((skill) => (
-                  <Badge key={skill} variant="secondary" className="text-xs bg-teal/10 text-teal border-teal/20">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
+              {gapAnalysis.gap_clusters.map((cluster) => {
+                const isResolved = resolvedClusterIds.has(cluster.id);
+                const isCurrent = cluster.id === currentClusterId;
+                return (
+                  <div
+                    key={cluster.id}
+                    className={cn(
+                      "rounded-md px-3 py-2 text-xs border-l-2 transition-colors",
+                      isResolved
+                        ? "border-l-green-500 bg-green-50 text-gray-500"
+                        : isCurrent
+                          ? "border-l-teal bg-teal/5 text-neutral-dark font-medium"
+                          : "border-l-gray-200 text-gray-400",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{isResolved ? "✓" : isCurrent ? "►" : "○"}</span>
+                      <span className="truncate">{cluster.label}</span>
+                    </div>
+                    {cluster.jd_skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 ml-5">
+                        {cluster.jd_skills.slice(0, 3).map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </aside>
       </div>
 
       <div ref={chatEndRef} />
