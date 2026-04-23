@@ -417,6 +417,44 @@ class TestMergeWorkExperience:
         result, _, _ = self._merge(existing, incoming)
         assert len(result) == 2
 
+    def test_adjacent_roles_same_employer_not_merged(self):
+        # System Engineer ends 2021-05, AD starts 2021-05 — boundary month is a
+        # job transition, not concurrent employment; must remain two entries.
+        existing = [
+            _work_entry(company="BioNTech SE", role="System Engineer",
+                        start_date="2018-10", end_date="2021-05"),
+        ]
+        incoming = [
+            _work_entry(company="BioNTech SE", role="Associate Director",
+                        start_date="2021-05", end_date="2024-11"),
+        ]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 2
+        roles = {r.role for r in result}
+        assert "System Engineer" in roles
+        assert "Associate Director" in roles
+
+    def test_three_sequential_roles_same_employer_stay_separate(self):
+        # Real-world case: three BioNTech SE promotions, each starting when the
+        # previous ended — none should collapse into a single entry.
+        existing = [
+            _work_entry(company="BioNTech SE", role="System Engineer",
+                        start_date="2018-10", end_date="2021-05"),
+            _work_entry(company="BioNTech SE", role="Associate Director System Architecture",
+                        start_date="2021-05", end_date="2024-11"),
+            _work_entry(company="BioNTech SE", role="Associate Director E2E Supply Chain",
+                        start_date="2024-12", end_date=None),
+        ]
+        incoming = [
+            _work_entry(company="BioNTech SE", role="System Engineer",
+                        start_date="2018-10", end_date="2021-05",
+                        responsibilities=["Additional bullet"]),
+        ]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 3
+        se = next(r for r in result if r.role == "System Engineer")
+        assert "Additional bullet" in se.responsibilities
+
     def test_shell_entry_with_empty_company_is_dropped(self):
         existing = [_work_entry(company="Acme", start_date="2020-01")]
         incoming = [_work_entry(company="", role="Phantom Role")]  # no company, no content

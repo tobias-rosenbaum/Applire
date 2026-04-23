@@ -46,6 +46,11 @@ def _dates_overlap(
     """
     Best-effort overlap check on partial date strings like '2020-01' or '2020'.
     Returns True when dates cannot be determined (safe default — treats as overlap).
+
+    Uses strict inequality so that adjacent roles at the same employer (one ends
+    in 2021-05, the next starts in 2021-05) are treated as separate positions,
+    not merged. Two ranges overlap only if one START is strictly before the other
+    END — a shared boundary month is a job transition, not concurrent employment.
     """
     if not a_start or not b_start:
         return True
@@ -53,7 +58,7 @@ def _dates_overlap(
     a_e = (a_end + "-12")[:7] if a_end else "9999-12"
     b_s = (b_start + "-01")[:7]
     b_e = (b_end + "-12")[:7] if b_end else "9999-12"
-    return a_s <= b_e and b_s <= a_e
+    return a_s < b_e and b_s < a_e
 
 
 def _dates_contradict(a: str | None, b: str | None) -> bool:
