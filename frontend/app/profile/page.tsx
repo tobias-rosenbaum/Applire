@@ -179,6 +179,7 @@ export default function ProfilePage() {
     const value = profile.profile[section];
     setEditValue(typeof value === "string" ? value : JSON.stringify(value, null, 2));
     setEditingSection(section);
+    setError("");
   };
 
   const handleSave = async () => {
@@ -226,6 +227,7 @@ export default function ProfilePage() {
   const handleCancel = () => {
     setEditingSection(null);
     setEditValue("");
+    setError("");
   };
 
   const completenessScore = profile?.completeness ?? 0;
@@ -351,6 +353,9 @@ export default function ProfilePage() {
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                     />
+                    {error && (
+                      <p className="text-sm text-critical">{error}</p>
+                    )}
                     <div className="flex gap-2">
                       <Button onClick={handleSave} disabled={saving}>
                         {saving ? t("saving") : tCommon("save")}
