@@ -54,6 +54,7 @@ from applire.providers import get_provider
 from applire.providers.llm.base import LLMProvider
 from applire.schemas.cv import CVGenerateResponse, CVStatusResponse, CVTemplate, TailoredCVData
 from applire.services.reviewer import review_and_refine
+from applire.services.profile.merge import _sort_work_by_date
 from applire.constants import LLM_REVIEW_MAX_RETRIES
 
 logger = logging.getLogger(__name__)
@@ -358,15 +359,25 @@ async def _render_cv_background(
                 "language_requirement": job.language_requirement,
             }
 
+            # Sort work experience reverse-chronologically before passing to LLM.
+            # Handles profiles that pre-date the merge-time sort.
+            profile_json: dict = dict(profile.profile_json or {})
+            if profile_json.get("work_experience"):
+                from applire.schemas.profile import WorkEntry
+                we = [WorkEntry.model_validate(e) for e in profile_json["work_experience"]]
+                profile_json["work_experience"] = [
+                    e.model_dump() for e in _sort_work_by_date(we)
+                ]
+
             provider: LLMProvider = get_provider()
             tailored_raw: dict = await provider.aparse_json(
-                build_user_prompt(job_dict, profile.profile_json, keyword_gaps, critical_gaps),
+                build_user_prompt(job_dict, profile_json, keyword_gaps, critical_gaps),
                 system=SYSTEM_PROMPT,
                 temperature=0.3,
                 max_tokens=8192,
             )
 
-            source_material = _json.dumps(profile.profile_json, ensure_ascii=False, indent=2)
+            source_material = _json.dumps(profile_json, ensure_ascii=False, indent=2)
 
             def _cv_retry_prompt(source: str, draft: dict, feedback: str) -> str:
                 return _build_cv_retry_prompt(job_dict, source, draft, feedback)
