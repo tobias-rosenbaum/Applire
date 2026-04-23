@@ -159,44 +159,16 @@ function JdRecoveryBanner() {
 // ---------------------------------------------------------------------------
 
 function GapClickPanel({
-  clusterId,
-  jobId,
   state,
   onUpdate,
   onResolved,
 }: {
-  clusterId: string;
-  jobId: string;
   state: GapClickState;
   onUpdate: (patch: Partial<GapClickState>) => void;
   onResolved: () => void;
 }) {
   const t = useTranslations("gaps");
   const tc = useTranslations("common");
-
-  async function startMicroSession() {
-    onUpdate({ status: "loading", error: "" });
-    try {
-      const res = await fetch(`${API_BASE}/api/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId, mode: "targeted", target_gap: clusterId }),
-      });
-      if (!res.ok) throw new Error(await apiErrorMessage(res));
-      const data = await res.json();
-      onUpdate({
-        status: "question",
-        sessionId: data.session_id,
-        question: data.question ?? data.first_question,
-        choices: data.choices ?? null,
-      });
-    } catch (e: unknown) {
-      onUpdate({
-        status: "idle",
-        error: e instanceof Error ? e.message : "Failed to start",
-      });
-    }
-  }
 
   async function sendAnswer() {
     if (!state.sessionId || !state.answer.trim() || state.sending) return;
@@ -219,15 +191,7 @@ function GapClickPanel({
   }
 
   if (state.status === "idle") {
-    return (
-      <button
-        data-testid="gap-click-trigger"
-        className="mt-2 text-xs text-teal underline hover:no-underline"
-        onClick={() => void startMicroSession()}
-      >
-        {t("answerGap")}
-      </button>
-    );
+    return null; // card click handles session start
   }
 
   if (state.status === "loading") {
@@ -402,6 +366,30 @@ export default function GapsPage({
       } catch {
         // Non-critical — keep existing score
       }
+    }
+  }
+
+  async function startMicroSession(clusterId: string, jobId: string) {
+    updateGapState(clusterId, { status: "loading", error: "" });
+    try {
+      const res = await fetch(`${API_BASE}/api/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: jobId, mode: "targeted", target_gap: clusterId }),
+      });
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
+      const data = await res.json();
+      updateGapState(clusterId, {
+        status: "question",
+        sessionId: data.session_id,
+        question: data.question ?? data.first_question,
+        choices: data.choices ?? null,
+      });
+    } catch (e: unknown) {
+      updateGapState(clusterId, {
+        status: "idle",
+        error: e instanceof Error ? e.message : "Failed to start",
+      });
     }
   }
 
@@ -584,12 +572,15 @@ export default function GapsPage({
                       key={cluster.id}
                       cluster={cluster}
                       resolved={isResolved}
+                      onClick={
+                        !isResolved && clusterState.status === "idle"
+                          ? () => void startMicroSession(cluster.id, flowState?.job_id ?? "")
+                          : undefined
+                      }
                     >
                       {!isResolved && (
-                        <div className="mt-3">
+                        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
                           <GapClickPanel
-                            clusterId={cluster.id}
-                            jobId={flowState?.job_id ?? ""}
                             state={clusterState}
                             onUpdate={(patch) => updateGapState(cluster.id, patch)}
                             onResolved={() => {

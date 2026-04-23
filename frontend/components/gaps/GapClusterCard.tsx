@@ -15,12 +15,14 @@ export interface GapCluster {
 interface GapClusterCardProps {
   cluster: GapCluster;
   resolved: boolean;
+  onClick?: () => void;
   children?: React.ReactNode;
 }
 
 export function GapClusterCard({
   cluster,
   resolved,
+  onClick,
   children,
 }: GapClusterCardProps) {
   const t = useTranslations("gaps");
@@ -37,12 +39,21 @@ export function GapClusterCard({
       ? "bg-red-500"
       : "bg-yellow-400";
 
+  const hoverRing = resolved
+    ? "hover:ring-2 hover:ring-green-500"
+    : cluster.category === "C"
+      ? "hover:ring-2 hover:ring-red-500"
+      : "hover:ring-2 hover:ring-yellow-400";
+
   return (
     <div
+      data-testid="gap-cluster-card"
       className={cn(
-        "rounded-lg border border-gray-200 bg-white shadow-sm border-l-4 p-4",
+        "rounded-lg border border-gray-200 bg-white shadow-sm border-l-4 p-4 transition-all",
         borderColor,
+        onClick && cn("cursor-pointer", hoverRing),
       )}
+      onClick={onClick}
     >
       <div className="flex items-start gap-2 min-w-0">
         <span

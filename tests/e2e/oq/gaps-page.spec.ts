@@ -26,6 +26,8 @@ const MOCK_FLOW_STATE = {
   job_summary: { role_title: "Senior Software Engineer" },
 };
 
+const CLUSTER_ID = "cluster-test-0000-0000-0000-000000000005";
+
 const MOCK_GAP_ANALYSIS = {
   id: GAP_ID,
   match_score: 0.72,
@@ -33,6 +35,16 @@ const MOCK_GAP_ANALYSIS = {
   category_b: ["Docker", "PostgreSQL"],
   category_c: ["Kubernetes", "Terraform"],
   strengths: ["Python", "FastAPI"],
+  gap_clusters: [
+    {
+      id: CLUSTER_ID,
+      label: "Container Orchestration",
+      category: "C",
+      gaps: ["Kubernetes", "Terraform"],
+      jd_skills: ["Kubernetes"],
+      jd_context: "Required for production deployments",
+    },
+  ],
 };
 
 const MOCK_PROFILE = {
@@ -131,6 +143,44 @@ test.describe("Gaps page", () => {
     await interviewButton.click();
 
     await expect(page).toHaveURL(`/flow/${FLOW_ID}/interview`, { timeout: 10000 });
+  });
+
+  test("clicking a gap cluster card starts the micro-session inline", async ({ page }) => {
+    await setupGapsPageMocks(page);
+
+    const QUESTION = "Beschreibe deine Erfahrung mit Kubernetes.";
+    await page.route(`**/api/session`, (route) => {
+      const body = route.request().postDataJSON();
+      if (body?.mode === "targeted") {
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            session_id: "micro-session-001",
+            first_question: QUESTION,
+            choices: null,
+          }),
+        });
+      } else {
+        route.continue();
+      }
+    });
+
+    await page.goto(`/flow/${FLOW_ID}/gaps`);
+    await expect(page.getByTestId("gap-analysis-page")).toBeVisible({ timeout: 10000 });
+
+    // Card should be clickable (cursor-pointer) in idle state
+    const card = page.getByTestId("gap-cluster-card").first();
+    await expect(card).toBeVisible();
+    await card.click();
+
+    // Question panel should appear inline
+    await expect(page.getByTestId("gap-question")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId("gap-question")).toContainText(QUESTION);
+
+    // Card is no longer clickable once session is open
+    const classAttr = await card.getAttribute("class");
+    expect(classAttr).not.toContain("cursor-pointer");
   });
 
   test("shows error message when advance API fails", async ({ page }) => {
