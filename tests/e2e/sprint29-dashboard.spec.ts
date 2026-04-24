@@ -10,10 +10,11 @@ test.describe("Sprint 29 — Power User Dashboard", () => {
 
   test("sidebar renders with all four nav items", async ({ page }) => {
     await page.goto("/dashboard");
-    await expect(page.getByRole("button", { name: /Dashboard/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Profile|Masterprofil/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Documents|Dokumente/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Settings|Einstellungen/i })).toBeVisible();
+    const sidebar = page.locator("aside");
+    await expect(sidebar.getByRole("button", { name: /Dashboard/i })).toBeVisible();
+    await expect(sidebar.getByRole("button", { name: /Profile|Profil|Masterprofil/i })).toBeVisible();
+    await expect(sidebar.getByRole("button", { name: /Documents|Dokumente/i })).toBeVisible();
+    await expect(sidebar.getByRole("button", { name: /Settings|Einstellungen/i })).toBeVisible();
   });
 
   test("Quick Tailor widget has URL and Text tabs", async ({ page }) => {
@@ -34,7 +35,8 @@ test.describe("Sprint 29 — Power User Dashboard", () => {
     await page.click("text=/Documents|Meine Dokumente/");
     await page.waitForURL("**/documents");
     const docsBtn = page.getByRole("button", { name: /Documents|Meine Dokumente/i });
-    await expect(docsBtn).toHaveClass(/bg-\[#eef1ff\]|font-bold/);
+    // Active nav item has a distinct inline border-right (visual rail indicator)
+    await expect(docsBtn).toHaveClass(/border-\[#003399\]/);
   });
 
   test("My Documents page loads with stats strip and table", async ({ page }) => {
