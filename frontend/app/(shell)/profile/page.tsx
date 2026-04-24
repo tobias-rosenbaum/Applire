@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -373,21 +374,24 @@ export default function ProfilePage() {
                           {(value as Array<Record<string, unknown>>).map((entry, idx) => {
                             const company = (entry["company"] as string) ?? "";
                             const role = ((entry["role"] as string) ?? (entry["title"] as string) ?? "");
+                            const entryHasGaps = countWorkEntryGaps(entry as { description?: string | null }) > 0;
                             return (
                               <div key={idx} className="bg-gray-50 rounded border border-gray-200">
                                 <pre className="whitespace-pre-wrap text-xs p-3">
                                   {JSON.stringify(entry, null, 2)}
                                 </pre>
-                                <div className="px-3 pb-2">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-amber-500 hover:text-amber-600 text-xs h-7 px-2"
-                                    onClick={() => openEnrichForEntry(company, role)}
-                                  >
-                                    ⚠ {t("enrichEntry")}
-                                  </Button>
-                                </div>
+                                {entryHasGaps && (
+                                  <div className="px-3 pb-2">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-amber-500 hover:text-amber-600 text-xs h-7 px-2"
+                                      onClick={() => openEnrichForEntry(company, role)}
+                                    >
+                                      ⚠ {t("enrichEntry")}
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -440,15 +444,15 @@ export default function ProfilePage() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
-          <a href="/" className="text-sm text-teal hover:underline">
+          <Link href="/" className="text-sm text-teal hover:underline">
             {tNav("dashboard")}
-          </a>
-          <a href="/settings" className="text-sm text-teal hover:underline">
+          </Link>
+          <Link href="/settings" className="text-sm text-teal hover:underline">
             {tNav("settings")}
-          </a>
-          <a href="/help" className="text-sm text-gray-500 hover:underline">
+          </Link>
+          <Link href="/help" className="text-sm text-gray-500 hover:underline">
             {tNav("help")}
-          </a>
+          </Link>
         </div>
       </footer>
 

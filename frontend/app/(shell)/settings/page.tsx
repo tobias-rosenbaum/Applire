@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocale } from "@/lib/providers/locale-provider";
@@ -267,10 +268,10 @@ export default function SettingsPage() {
 
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
-          <a href="/" className="text-sm text-teal hover:underline">{tNav("dashboard")}</a>
-          <a href="/profile" className="text-sm text-teal hover:underline">{tNav("profile")}</a>
-          <a href="/admin/appearance" className="text-sm text-teal hover:underline">{tNav("admin")}</a>
-          <a href="/help" className="text-sm text-gray-500 hover:underline">{tNav("help")}</a>
+          <Link href="/" className="text-sm text-teal hover:underline">{tNav("dashboard")}</Link>
+          <Link href="/profile" className="text-sm text-teal hover:underline">{tNav("profile")}</Link>
+          <Link href="/admin/appearance" className="text-sm text-teal hover:underline">{tNav("admin")}</Link>
+          <Link href="/help" className="text-sm text-gray-500 hover:underline">{tNav("help")}</Link>
         </div>
       </footer>
     </div>

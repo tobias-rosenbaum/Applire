@@ -77,29 +77,12 @@ const MOCK_PROFILE_WITHOUT_GAPS = {
 
 const MOCK_ENRICHMENT_SESSION = {
   session_id: "session-001",
-  flow_id: null,
-  gaps_to_fill: [
-    {
-      gap_id: "gap-001",
-      entry_id: "entry-001",
-      entry_type: "work_experience",
-      category: "context",
-      question: "What was the business context or problem you were solving?",
-    },
-    {
-      gap_id: "gap-002",
-      entry_id: "entry-001",
-      entry_type: "work_experience",
-      category: "impact",
-      question: "What was your key achievement or impact in this role?",
-    },
+  first_question: "What was the business context or problem you were solving?",
+  gaps: [
+    { id: "gap-001", label: "Work Experience Context", status: "active" },
+    { id: "gap-002", label: "Work Experience Impact", status: "pending" },
   ],
-  current_gap_index: 0,
-  skipped_gaps: [],
-  marked_na_gaps: [],
-  responses: [],
-  state: "in_progress",
-  created_at: new Date().toISOString(),
+  estimated_questions: 2,
 };
 
 test.describe("Profile Enrichment", () => {
@@ -155,8 +138,8 @@ test.describe("Profile Enrichment", () => {
   });
 
   test("Enrich Profile button opens enrichment drawer", async ({ page }) => {
-    // Mock enrichment session endpoint
-    await page.route("**/api/profile/enrichment-session", async (route) => {
+    // Mock enrichment session start endpoint (actual URL: /api/profile/enrich/start)
+    await page.route("**/api/profile/enrich/start", async (route) => {
       if (route.request().method() === "POST") {
         await route.fulfill({
           status: 200,

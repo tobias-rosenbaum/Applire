@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -362,15 +363,15 @@ export default function ApplicationDetailPage() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
-          <a href="/" className="text-sm text-teal hover:underline">
+          <Link href="/" className="text-sm text-teal hover:underline">
             {tNav("dashboard")}
-          </a>
-          <a href="/profile" className="text-sm text-teal hover:underline">
+          </Link>
+          <Link href="/profile" className="text-sm text-teal hover:underline">
             {tNav("profile")}
-          </a>
-          <a href="/settings" className="text-sm text-teal hover:underline">
+          </Link>
+          <Link href="/settings" className="text-sm text-teal hover:underline">
             {tNav("settings")}
-          </a>
+          </Link>
         </div>
       </footer>
     </div>
