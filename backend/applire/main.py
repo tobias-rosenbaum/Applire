@@ -26,7 +26,7 @@ if not _applire_logger.handlers:
     )
     _applire_logger.addHandler(_applire_handler)
 from applire.db.session import AsyncSessionLocal
-from applire.routers import application, cover_letter, cv, cv_color, flow, health, job, jobs, profile, profile_enrich, session
+from applire.routers import application, cover_letter, cv, cv_color, documents as documents_router, flow, health, job, jobs, profile, profile_enrich, session
 from applire.routers import settings as settings_router
 from applire.routers.admin import color_schemes as admin_color_schemes
 from applire.services.thumbnails import ensure_thumbnails
@@ -82,4 +82,5 @@ app.include_router(cover_letter.router)
 app.include_router(cv_color.router)
 app.include_router(settings_router.router)
 app.include_router(application.router)
+app.include_router(documents_router.router)
 app.include_router(admin_color_schemes.router)
