@@ -389,5 +389,52 @@
     "sending": "Wird gesendet…",
     "done": "Profil ergänzt — gut gemacht!",
     "close": "Schließen"
+  },
+  "shell": {
+    "dashboard": "Dashboard",
+    "profile": "Masterprofil",
+    "documents": "Meine Dokumente",
+    "settings": "Einstellungen",
+    "help": "Hilfe & Support",
+    "userFreePlan": "Free Plan"
+  },
+  "quickTailor": {
+    "title": "Quick Tailor",
+    "subtitle": "Job-Link oder Beschreibung einfügen — Applire analysiert und startet deinen Lebenslauf-Flow.",
+    "tabUrl": "Job-URL",
+    "tabText": "Text einfügen",
+    "urlPlaceholder": "https://www.stepstone.de/stellenangebote/…",
+    "textPlaceholder": "Vollständige Stellenbeschreibung hier einfügen…",
+    "analyseButton": "Analysieren →",
+    "analysing": "Analysiert…"
+  },
+  "documents": {
+    "title": "Meine Dokumente",
+    "subtitle": "Alle generierten Lebensläufe deiner Bewerbungen",
+    "totalDocs": "Dokumente gesamt",
+    "expiringCount": "Ablaufend in 7 Tagen",
+    "filterAll": "Alle",
+    "filterReady": "Bereit",
+    "filterGenerating": "Wird erstellt",
+    "filterExpiring": "Bald ablaufend",
+    "sortNewest": "Neueste zuerst",
+    "sortOldest": "Älteste zuerst",
+    "sortCompany": "Nach Unternehmen",
+    "searchPlaceholder": "Nach Stelle oder Unternehmen filtern…",
+    "colDocument": "Dokument",
+    "colTemplate": "Vorlage",
+    "colStatus": "Status",
+    "colExpires": "Ablauf",
+    "statusReady": "Bereit",
+    "statusGenerating": "Wird erstellt…",
+    "statusExpired": "Abgelaufen",
+    "expiresIn": "Läuft in {days} Tagen ab",
+    "expiresToday": "Läuft heute ab",
+    "openButton": "Öffnen",
+    "generatingButton": "Wird erstellt…",
+    "noDocuments": "Noch keine Dokumente. Starte eine neue Bewerbung.",
+    "generatedOn": "Erstellt am {date}",
+    "page": "Seite {page} von {total}",
+    "showing": "{from}–{to} von {total} Dokumenten"
   }
 }
