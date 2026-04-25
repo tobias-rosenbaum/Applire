@@ -234,7 +234,10 @@ class MockLLMProvider(LLMProvider):
         if "cv analyst" in system_lower:
             return dict(_PROFILE_PARSE_RESPONSE)
 
-        if "three-category gap analysis" in system_lower or "gap analysis" in system_lower:
+        if "expert career analyst" in system_lower:
+            return list(_CLUSTERING_RESPONSE)
+
+        if "three-category gap analysis" in system_lower:
             return dict(_GAP_ANALYSIS_RESPONSE)
 
         if "extracting structured profile" in system_lower:
@@ -242,9 +245,6 @@ class MockLLMProvider(LLMProvider):
 
         if "dach career consultant" in system_lower:
             return dict(_CV_TAILORING_RESPONSE)
-
-        if "expert career analyst" in system_lower:
-            return list(_CLUSTERING_RESPONSE)
 
         if "expert career coach" in system_lower:
             return dict(_QUESTION_RESPONSE)
