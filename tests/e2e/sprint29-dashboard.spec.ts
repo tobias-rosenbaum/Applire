@@ -35,8 +35,8 @@ test.describe("Sprint 29 — Power User Dashboard", () => {
     await page.click("text=/Documents|Meine Dokumente/");
     await page.waitForURL("**/documents");
     const docsBtn = page.getByRole("button", { name: /Documents|Meine Dokumente/i });
-    // Active nav item has a distinct inline border-right (visual rail indicator)
-    await expect(docsBtn).toHaveClass(/border-\[#003399\]/);
+    // Active nav item has a distinct right-border rail indicator using the theme primary token
+    await expect(docsBtn).toHaveClass(/border-primary/);
   });
 
   test("My Documents page loads with stats strip and table", async ({ page }) => {
