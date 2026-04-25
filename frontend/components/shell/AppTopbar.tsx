@@ -43,7 +43,7 @@ export function AppTopbar({
 
       {/* Search — only shown when parent opts in */}
       {showSearch && (
-        <div className="flex items-center gap-2 bg-[#f1f3ff] border border-gray-200 rounded-full px-3.5 py-1.5 w-52">
+        <div className="flex items-center gap-2 bg-surface-container border border-gray-200 rounded-full px-3.5 py-1.5 w-52">
           <span className="material-symbols-outlined text-gray-400" style={{ fontSize: 16 }}>search</span>
           <input
             type="text"
@@ -57,12 +57,12 @@ export function AppTopbar({
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        <button className="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-[#f1f3ff] hover:text-[#003399] transition-colors">
+        <button className="w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-surface-container hover:text-primary transition-colors">
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>notifications</span>
         </button>
         <button
           onClick={() => router.push("/settings")}
-          className="w-[30px] h-[30px] rounded-full bg-gradient-to-br from-[#b5c4ff] to-[#dce1ff] flex items-center justify-center text-[12px] font-bold text-[#003399] cursor-pointer"
+          className="w-[30px] h-[30px] rounded-full bg-gradient-to-br from-primary-container to-surface-container-highest flex items-center justify-center text-[12px] font-bold text-primary cursor-pointer"
         >
           A
         </button>

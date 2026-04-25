@@ -52,15 +52,15 @@ export default function DocumentsPage() {
 
       <main className="flex-1 overflow-y-auto px-8 py-7">
         <div className="mb-5">
-          <h1 className="text-[22px] font-extrabold text-[#141b2b] font-manrope">{t("title")}</h1>
+          <h1 className="text-[22px] font-extrabold text-neutral-dark font-manrope">{t("title")}</h1>
           <p className="text-[13px] text-gray-500 mt-0.5">{t("subtitle")}</p>
         </div>
 
         {/* Stats strip */}
         <div className="grid grid-cols-2 gap-3.5 mb-5">
           {[
-            { icon: "description", label: t("totalDocs"),     value: total,         bg: "bg-[#e9edff]", iconColor: "#003399" },
-            { icon: "schedule",    label: t("expiringCount"),  value: expiringCount, bg: "bg-amber-50",  iconColor: "#8b5000" },
+            { icon: "description", label: t("totalDocs"),     value: total,         bg: "bg-teal-container",  iconColor: "var(--color-primary)" },
+            { icon: "schedule",    label: t("expiringCount"),  value: expiringCount, bg: "bg-amber-50",        iconColor: "#8b5000" },
           ].map(({ icon, label, value, bg, iconColor }) => (
             <div key={label} className="bg-white rounded-xl border-[1.5px] border-gray-200 px-4 py-3.5 flex items-center gap-3.5">
               <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center flex-shrink-0`}>

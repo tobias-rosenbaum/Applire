@@ -54,7 +54,7 @@ export function ProfileStrengthCard() {
   const barWidth = score !== null ? `${score}%` : "0%";
 
   return (
-    <div className="rounded-[14px] p-5 text-white flex flex-col bg-gradient-to-br from-[#002068] to-[#003399] shadow-lg shadow-[#002068]/20">
+    <div className="rounded-[14px] p-5 text-white flex flex-col bg-gradient-to-br from-teal-dim to-primary shadow-lg shadow-teal-dim/20">
       <p className="text-[11px] font-bold uppercase tracking-widest text-white/60 mb-1.5">
         Profile Strength
       </p>
@@ -68,7 +68,7 @@ export function ProfileStrengthCard() {
       {/* Progress bar */}
       <div className="h-[5px] bg-white/20 rounded-full mb-2">
         <div
-          className="h-[5px] bg-[#fecb00] rounded-full transition-all duration-700"
+          className="h-[5px] bg-gold rounded-full transition-all duration-700"
           style={{ width: barWidth }}
         />
       </div>
@@ -96,7 +96,7 @@ export function ProfileStrengthCard() {
 
       <button
         onClick={() => router.push("/profile")}
-        className="mt-auto text-[12px] font-bold text-[#fecb00] flex items-center gap-1 hover:opacity-80 transition-opacity"
+        className="mt-auto text-[12px] font-bold text-gold flex items-center gap-1 hover:opacity-80 transition-opacity"
       >
         <span className="material-symbols-outlined" style={{ fontSize: 15 }}>arrow_forward</span>
         Complete Profile

@@ -59,10 +59,10 @@ export function QuickTailorWidget() {
   return (
     <div className="bg-white rounded-[14px] border border-gray-200 shadow-sm px-[22px] py-5 relative overflow-hidden">
       {/* gradient top-border */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#fecb00] via-[#003399] to-[#fecb00]" />
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-gold via-primary to-gold" />
 
-      <p className="font-extrabold text-[15px] text-[#141b2b] mb-1 font-manrope flex items-center gap-1.5">
-        <span className="material-symbols-outlined text-[#fecb00]" style={{ fontSize: 18 }}>auto_awesome</span>
+      <p className="font-extrabold text-[15px] text-neutral-dark mb-1 font-manrope flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-gold" style={{ fontSize: 18 }}>auto_awesome</span>
         {t("title")}
       </p>
       <p className="text-[12px] text-gray-500 mb-3.5">{t("subtitle")}</p>
@@ -81,12 +81,12 @@ export function QuickTailorWidget() {
             onClick={() => setMode(m)}
             className={cn(
               "px-4 pb-2 text-[13px] font-semibold relative font-manrope transition-colors",
-              mode === m ? "text-[#003399]" : "text-gray-500 hover:text-gray-800"
+              mode === m ? "text-primary" : "text-gray-500 hover:text-gray-800"
             )}
           >
             {m === "url" ? t("tabUrl") : t("tabText")}
             {mode === m && (
-              <span className="absolute bottom-[-2px] left-0 right-0 h-[2px] bg-[#003399] rounded-t" />
+              <span className="absolute bottom-[-2px] left-0 right-0 h-[2px] bg-primary rounded-t" />
             )}
           </button>
         ))}
@@ -102,7 +102,7 @@ export function QuickTailorWidget() {
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             placeholder={t("urlPlaceholder")}
             disabled={loading}
-            className="flex-1 h-10 border-[1.5px] border-gray-300 rounded-lg px-3.5 text-[13px] outline-none focus:border-[#003399] focus:ring-2 focus:ring-[#003399]/10 disabled:opacity-50"
+            className="flex-1 h-10 border-[1.5px] border-gray-300 rounded-lg px-3.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:opacity-50"
           />
         ) : (
           <textarea
@@ -110,13 +110,13 @@ export function QuickTailorWidget() {
             onChange={(e) => setText(e.target.value)}
             placeholder={t("textPlaceholder")}
             disabled={loading}
-            className="flex-1 min-h-[88px] resize-y border-[1.5px] border-gray-300 rounded-lg px-3.5 py-2.5 text-[13px] outline-none focus:border-[#003399] focus:ring-2 focus:ring-[#003399]/10 disabled:opacity-50"
+            className="flex-1 min-h-[88px] resize-y border-[1.5px] border-gray-300 rounded-lg px-3.5 py-2.5 text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:opacity-50"
           />
         )}
         <button
           onClick={handleSubmit}
           disabled={!canSubmit || loading}
-          className="h-10 px-5 bg-[#003399] text-white rounded-lg text-[13px] font-bold font-manrope self-end whitespace-nowrap hover:bg-[#002068] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="h-10 px-5 bg-primary text-white rounded-lg text-[13px] font-bold font-manrope self-end whitespace-nowrap hover:bg-teal-dim disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? t("analysing") : t("analyseButton")}
         </button>

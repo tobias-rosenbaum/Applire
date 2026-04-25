@@ -37,21 +37,21 @@ describe("AppSidebar", () => {
     mockPathname = "/dashboard";
     render(<AppSidebar />);
     const btn = screen.getByRole("button", { name: /dashboard/i });
-    expect(btn.className).toContain("bg-[#eef1ff]");
+    expect(btn.className).toContain("bg-primary-container");
   });
 
   it("highlights Documents when pathname is /documents", () => {
     mockPathname = "/documents";
     render(<AppSidebar />);
     const btn = screen.getByRole("button", { name: /documents/i });
-    expect(btn.className).toContain("bg-[#eef1ff]");
+    expect(btn.className).toContain("bg-primary-container");
   });
 
   it("does not highlight Dashboard when on documents path", () => {
     mockPathname = "/documents";
     render(<AppSidebar />);
     const btn = screen.getByRole("button", { name: /dashboard/i });
-    expect(btn.className).not.toContain("bg-[#eef1ff]");
+    expect(btn.className).not.toContain("bg-primary-container");
   });
 
   it("clicking Documents navigates to /documents", () => {

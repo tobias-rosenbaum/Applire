@@ -33,14 +33,14 @@ const PROGRESS: Record<CardStatus, number> = {
 };
 
 const CHIP: Record<CardStatus, { label: string; className: string }> = {
-  in_progress:  { label: "In Progress",  className: "bg-[#e9edff] text-[#003399]" },
+  in_progress:  { label: "In Progress",  className: "bg-teal-container text-primary" },
   cv_ready:     { label: "CV Ready",     className: "bg-[#dcfce7] text-[#166534]" },
   interrupted:  { label: "Interrupted",  className: "bg-[#fef9c3] text-[#854d0e]" },
   tracking:     { label: "Tracking",     className: "bg-[#f1f5f9] text-[#64748b]" },
 };
 
 const PROGRESS_COLOR: Record<CardStatus, string> = {
-  in_progress: "bg-[#003399]",
+  in_progress: "bg-primary",
   cv_ready:    "bg-[#22c55e]",
   interrupted: "bg-[#eab308]",
   tracking:    "bg-[#e2e5f0]",
@@ -90,7 +90,7 @@ export function DashboardApplicationCard({
         "bg-white rounded-xl border-[1.5px] p-4 cursor-pointer transition-all",
         status === "interrupted" ? "border-dashed border-gray-300" : "border-gray-200",
         status === "cv_ready" ? "border-green-200 bg-green-50/30" : "",
-        "hover:shadow-md hover:border-[#b5c4ff]"
+        "hover:shadow-md hover:border-primary-container"
       )}
       onClick={() => router.push(`/applications/${applicationId}`)}
     >
@@ -101,7 +101,7 @@ export function DashboardApplicationCard({
             status === "cv_ready"    ? "bg-[#e6f4ea] text-[#1e6b3a]" :
             status === "interrupted" ? "bg-[#fff3cc] text-[#584400]" :
             status === "tracking"    ? "bg-gray-100 text-gray-500" :
-                                       "bg-[#eef1ff] text-[#003399]"
+                                       "bg-primary-container text-primary"
           )}
         >
           {initial}
@@ -132,7 +132,7 @@ export function DashboardApplicationCard({
             "text-[12px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors",
             status === "cv_ready"
               ? "bg-[#dcfce7] text-[#166534] hover:bg-[#bbf7d0]"
-              : "bg-[#002068] text-white hover:bg-[#003399]"
+              : "bg-teal-dim text-white hover:bg-primary"
           )}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 14 }}>

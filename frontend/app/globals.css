@@ -3,20 +3,20 @@
 
 @theme {
   /* Brand Colors */
-  --color-primary: #1B4F72;
-  --color-primary-container: #D4E6F1;
-  
-  /* Teal - Main accent */
-  --color-teal: #2A8F9D;
-  --color-teal-dim: #003a41;
-  --color-teal-container: #e3effe;
-  --color-teal-container-light: #f7f9ff;
-  
+  --color-primary: #003399;
+  --color-primary-container: #eef1ff;
+
+  /* Blue accent (links, interactive highlights) */
+  --color-teal: #3557bc;
+  --color-teal-dim: #002068;
+  --color-teal-container: #e9edff;
+  --color-teal-container-light: #f1f3ff;
+
   /* Gold - Secondary accent */
-  --color-gold: #C9A84C;
-  --color-gold-dim: #755b00;
-  --color-gold-container: #ffeec5;
-  
+  --color-gold: #fecb00;
+  --color-gold-dim: #8b6500;
+  --color-gold-container: #fff8d6;
+
   /* Semantic Colors */
   --color-success: #2D9F6F;
   --color-success-container: #c8f7e0;
@@ -24,17 +24,17 @@
   --color-warning-container: #fef3c7;
   --color-critical: #D94F4F;
   --color-critical-container: #fde8e8;
-  
+
   /* Neutral */
   --color-neutral-light: #F5F7FA;
-  --color-neutral-dark: #2C3E50;
-  
+  --color-neutral-dark: #141b2b;
+
   /* Surface System (Material 3 style) */
-  --color-surface-dim: #f7f9ff;
+  --color-surface-dim: #f9f9ff;
   --color-surface-bright: #ffffff;
-  --color-surface-container: #f0f4f9;
-  --color-surface-container-high: #e3effe;
-  --color-surface-container-highest: #d9e4f4;
+  --color-surface-container: #f1f3ff;
+  --color-surface-container-high: #e9edff;
+  --color-surface-container-highest: #dce1ff;
   
   /* Fonts */
   --font-heading: "Poppins", sans-serif;

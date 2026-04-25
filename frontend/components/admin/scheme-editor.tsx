@@ -6,6 +6,16 @@ import { useTheme } from "@/components/theme-provider";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
+function extractError(body: unknown, fallback: string): string {
+  if (typeof body !== "object" || body === null) return fallback;
+  const d = (body as Record<string, unknown>).detail;
+  if (typeof d === "string") return d;
+  if (Array.isArray(d) && d.length > 0) {
+    return (d as Array<{ msg?: string }>).map((e) => e.msg ?? "").filter(Boolean).join("; ") || fallback;
+  }
+  return fallback;
+}
+
 interface SavedScheme {
   id: string;
   name: string;
@@ -24,7 +34,7 @@ const NEUTRAL_DEFAULTS: SeedColors = {
   secondary: "#4a4a4a",
 };
 
-const SURFACE_LIGHTNESS_DEFAULT = 0.80;
+const SURFACE_LIGHTNESS_DEFAULT = 0.95;
 
 export function SchemeEditor() {
   const { refreshTheme } = useTheme();
@@ -83,8 +93,7 @@ export function SchemeEditor() {
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        setError(err.detail ?? "Save failed.");
+        setError(extractError(await res.json(), "Save failed."));
       } else {
         await fetchSchemes();
       }
@@ -205,8 +214,8 @@ export function SchemeEditor() {
         </div>
         <input
           type="range"
-          min={0}
-          max={100}
+          min={88}
+          max={99}
           step={1}
           value={Math.round(surfaceLightness * 100)}
           onChange={(e) => setSurfaceLightness(parseInt(e.target.value) / 100)}
@@ -264,8 +273,7 @@ export function SchemeEditor() {
                   }),
                 });
                 if (!res.ok) {
-                  const err = await res.json();
-                  setError(err.detail ?? "Save failed.");
+                  setError(extractError(await res.json(), "Save failed."));
                 } else {
                   const saved: SavedScheme = await res.json();
                   await activateScheme(saved);

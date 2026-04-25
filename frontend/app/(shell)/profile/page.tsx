@@ -235,7 +235,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+      <div className="flex flex-col flex-1 items-center justify-center bg-surface-dim">
         <p className="text-gray-500">{t("loading")}</p>
       </div>
     );
@@ -243,7 +243,7 @@ export default function ProfilePage() {
 
   if (error && !profile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-surface-dim">
+      <div className="flex flex-col flex-1 items-center justify-center bg-surface-dim">
         <p className="text-critical mb-4">{error}</p>
         <Button onClick={() => router.push("/")}>{t("backToHome")}</Button>
       </div>
@@ -251,7 +251,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-dim">
+    <div className="flex flex-col flex-1 overflow-hidden bg-surface-dim">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -282,7 +282,7 @@ export default function ProfilePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 py-8">
+      <main className="flex-1 overflow-y-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-4">
           {error && (
             <div className="p-4 rounded-lg bg-critical/10 border border-critical/20">

@@ -89,8 +89,8 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
             className={cn(
               "px-3.5 py-1 rounded-full text-[12px] font-bold border-[1.5px] transition-colors",
               statusFilter === f
-                ? "bg-[#003399] text-white border-[#003399]"
-                : "bg-white text-gray-500 border-gray-200 hover:border-[#b5c4ff] hover:text-[#003399]"
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-gray-500 border-gray-200 hover:border-primary-container hover:text-primary"
             )}
           >
             {t(f === "all" ? "filterAll" : f === "ready" ? "filterReady" : f === "generating" ? "filterGenerating" : "filterExpiring")}
@@ -98,7 +98,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
         ))}
 
         {/* Text search */}
-        <div className="flex items-center gap-1.5 bg-white border-[1.5px] border-gray-200 rounded-full px-3.5 py-1 focus-within:border-[#003399] transition-all">
+        <div className="flex items-center gap-1.5 bg-white border-[1.5px] border-gray-200 rounded-full px-3.5 py-1 focus-within:border-primary transition-all">
           <span className="material-symbols-outlined text-gray-400" style={{ fontSize: 15 }}>search</span>
           <input
             type="text"
@@ -126,7 +126,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
       <div className="bg-white rounded-[14px] border-[1.5px] border-gray-200 overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-[#f9f9ff] border-b-[1.5px] border-gray-100">
+            <tr className="bg-surface-dim border-b-[1.5px] border-gray-100">
               <th className="text-left px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">{t("colDocument")}</th>
               <th className="text-left px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">{t("colTemplate")}</th>
               <th className="text-left px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">{t("colStatus")}</th>
@@ -149,17 +149,17 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
                 return (
                   <tr
                     key={item.cv_id}
-                    className="border-b border-gray-50 last:border-none hover:bg-[#f5f7ff] transition-colors cursor-pointer"
+                    className="border-b border-gray-50 last:border-none hover:bg-surface-container transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
-                          isGenerating ? "bg-amber-50" : "bg-[#e9edff]"
+                          isGenerating ? "bg-amber-50" : "bg-teal-container"
                         )}>
                           <span
                             className="material-symbols-outlined"
-                            style={{ fontSize: 20, color: isGenerating ? "#8b5000" : "#003399" }}
+                            style={{ fontSize: 20, color: isGenerating ? "#8b5000" : "var(--color-primary)" }}
                           >
                             description
                           </span>
@@ -175,7 +175,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-[#f1f3ff] text-gray-600">
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-surface-container text-gray-600">
                         {TEMPLATE_LABELS[item.template] ?? item.template}
                       </span>
                     </td>
@@ -217,7 +217,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
                             e.stopPropagation();
                             router.push(`/flow/${item.flow_id}/cv`);
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border-[1.5px] border-gray-200 rounded-lg text-[12px] font-semibold text-gray-600 hover:border-[#003399] hover:text-[#003399] hover:bg-[#f1f3ff] transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border-[1.5px] border-gray-200 rounded-lg text-[12px] font-semibold text-gray-600 hover:border-primary hover:text-primary hover:bg-surface-container transition-all"
                         >
                           <span className="material-symbols-outlined" style={{ fontSize: 15 }}>open_in_new</span>
                           {t("openButton")}
@@ -247,7 +247,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
               <button
                 onClick={() => onPageChange(page - 1)}
                 disabled={page === 1}
-                className="w-[30px] h-[30px] rounded-md border-[1.5px] border-gray-200 flex items-center justify-center disabled:opacity-40 hover:border-[#003399] hover:text-[#003399] transition-colors"
+                className="w-[30px] h-[30px] rounded-md border-[1.5px] border-gray-200 flex items-center justify-center disabled:opacity-40 hover:border-primary hover:text-primary transition-colors"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
               </button>
@@ -258,8 +258,8 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
                   className={cn(
                     "w-[30px] h-[30px] rounded-md border-[1.5px] text-[12px] font-semibold transition-colors",
                     page === i + 1
-                      ? "bg-[#003399] text-white border-[#003399]"
-                      : "border-gray-200 text-gray-500 hover:border-[#003399] hover:text-[#003399]"
+                      ? "bg-primary text-white border-primary"
+                      : "border-gray-200 text-gray-500 hover:border-primary hover:text-primary"
                   )}
                 >
                   {i + 1}
@@ -268,7 +268,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
               <button
                 onClick={() => onPageChange(page + 1)}
                 disabled={page === totalPages}
-                className="w-[30px] h-[30px] rounded-md border-[1.5px] border-gray-200 flex items-center justify-center disabled:opacity-40 hover:border-[#003399] hover:text-[#003399] transition-colors"
+                className="w-[30px] h-[30px] rounded-md border-[1.5px] border-gray-200 flex items-center justify-center disabled:opacity-40 hover:border-primary hover:text-primary transition-colors"
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
               </button>

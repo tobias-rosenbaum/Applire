@@ -73,7 +73,7 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-y-auto px-8 py-7">
         {/* Page header */}
         <div className="mb-5">
-          <h1 className="text-[22px] font-extrabold text-[#141b2b] font-manrope tracking-tight">
+          <h1 className="text-[22px] font-extrabold text-neutral-dark font-manrope tracking-tight">
             {firstName ? `Welcome back, ${firstName} 👋` : t("welcomeBack")}
           </h1>
           <p className="text-[13px] text-gray-500 mt-0.5">
@@ -89,13 +89,13 @@ export default function DashboardPage() {
 
         {/* Active applications */}
         <div className="flex items-center justify-between mb-3.5">
-          <h2 className="text-[15px] font-extrabold text-[#141b2b] font-manrope">
+          <h2 className="text-[15px] font-extrabold text-neutral-dark font-manrope">
             {t("activeApplications", { count: applications.length })}
           </h2>
           {applications.length > MAX_CARDS && (
             <button
               onClick={() => router.push("/documents")}
-              className="text-[12px] font-bold text-[#3557bc] hover:underline"
+              className="text-[12px] font-bold text-teal hover:underline"
             >
               View all in My Documents →
             </button>

@@ -34,24 +34,23 @@ export function AppSidebar({ userName }: AppSidebarProps) {
     <aside className="w-60 min-w-[240px] bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-[18px] border-b border-gray-100">
-        <div className="w-[34px] h-[34px] rounded-[9px] bg-gradient-to-br from-[#003399] to-[#002068] flex items-center justify-center flex-shrink-0">
+        <div className="w-[34px] h-[34px] rounded-[9px] bg-gradient-to-br from-primary to-teal-dim flex items-center justify-center flex-shrink-0">
           <span className="material-symbols-outlined text-white" style={{ fontSize: 18 }}>view_cozy</span>
         </div>
-        <span className="text-[16px] font-extrabold text-[#003399] tracking-tight font-manrope">
+        <span className="text-[16px] font-extrabold text-primary tracking-tight font-manrope">
           Applire
         </span>
       </div>
 
       {/* User strip */}
       <div className="flex items-center gap-2.5 px-5 py-3 border-b border-gray-100">
-        <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#b5c4ff] to-[#dce1ff] flex items-center justify-center text-[13px] font-bold text-[#003399] flex-shrink-0">
+        <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-primary-container to-surface-container-highest flex items-center justify-center text-[13px] font-bold text-primary flex-shrink-0">
           {initials}
         </div>
         <div className="min-w-0">
           <p className="text-[13px] font-bold text-gray-900 truncate">
             {userName ?? "—"}
           </p>
-          <p className="text-[11px] text-gray-400 mt-0.5">{t("userFreePlan")}</p>
         </div>
       </div>
 
@@ -66,8 +65,8 @@ export function AppSidebar({ userName }: AppSidebarProps) {
               className={cn(
                 "flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-left",
                 active
-                  ? "bg-[#eef1ff] text-[#003399] font-bold border-r-[3px] border-[#003399] rounded-r-none"
-                  : "text-gray-600 hover:bg-[#f1f3ff] hover:text-[#003399]"
+                  ? "bg-primary-container text-primary font-bold border-r-[3px] border-primary rounded-r-none"
+                  : "text-gray-600 hover:bg-surface-container hover:text-primary"
               )}
             >
               <span
@@ -86,7 +85,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
       <div className="px-5 py-3 border-t border-gray-100">
         <button
           onClick={() => router.push("/help")}
-          className="flex items-center gap-2 text-[12.5px] text-gray-400 hover:text-[#003399] transition-colors w-full"
+          className="flex items-center gap-2 text-[12.5px] text-gray-400 hover:text-primary transition-colors w-full"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>help</span>
           {t("help")}
