@@ -78,7 +78,7 @@ const s = {
   main: {
     flex: 1,
     width: "100%",
-    overflow: "hidden",
+    overflow: "auto",
   },
   mainConstrained: {
     flex: 1,
