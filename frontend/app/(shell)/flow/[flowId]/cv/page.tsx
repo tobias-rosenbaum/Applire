@@ -21,8 +21,14 @@ type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_develo
 interface FlowState {
   job_id: string;
   job_summary?: { role_title: string } | null;
-  gap_summary?: { match_score: number; gaps?: Array<{ id: string; label: string }>; sections?: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }> } | null;
-  cv_summary?: { cv_id: string; pdf_url: string; expires_at: string } | null;
+  gap_summary?: {
+    match_score: number;
+    gaps?: Array<{ id: string; label: string }>;
+    sections?: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }>;
+    detected_company?: { name: string; hex: string } | null;
+    current_accent_hex?: string | null;
+  } | null;
+  cv_summary?: { cv_id: string; pdf_url: string; expires_at: string; sections?: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }> } | null;
   cover_letter_summary?: { cover_letter_id: string } | null;
 }
 
@@ -48,6 +54,24 @@ export default function CVPage({
 
   // Restore state from server on mount — determine correct phase before rendering
   useEffect(() => {
+    async function advanceFlow(cvId: string) {
+      // Advance through cv_generation → complete, ignoring errors if already past that step
+      try {
+        await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "cv_generation", artifact_id: cvId }),
+        });
+      } catch {}
+      try {
+        await fetch(`${API_BASE}/api/flow/${flowId}/advance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "complete", artifact_id: cvId }),
+        });
+      } catch {}
+    }
+
     async function init() {
       try {
         const res = await fetch(`${API_BASE}/api/flow/${flowId}/state`);
@@ -62,6 +86,30 @@ export default function CVPage({
           setPhase("preview");
           return;
         }
+
+        // No CV in flow state — check if there's a ready or in-progress CV for this job
+        // (happens when the user navigates away before the flow advance completes)
+        try {
+          const cvListRes = await fetch(`${API_BASE}/api/cv?job_id=${fs.job_id}`);
+          if (cvListRes.ok) {
+            const cvList: Array<{ cv_id: string; status: string }> = await cvListRes.json();
+            const mostRecent = cvList[0];
+            if (mostRecent?.status === "ready") {
+              await advanceFlow(mostRecent.cv_id);
+              setCvId(mostRecent.cv_id);
+              setPhase("preview");
+              return;
+            }
+            if (mostRecent?.status === "pending" || mostRecent?.status === "generating") {
+              setCvId(mostRecent.cv_id);
+              setPhase("generating");
+              return;
+            }
+          }
+        } catch {
+          // Non-fatal — fall through
+        }
+
         // No existing CV — check if user has a profile photo
         try {
           const profileRes = await fetch(`${API_BASE}/api/profile`);
@@ -169,18 +217,18 @@ export default function CVPage({
             flowId={flowId}
             jobSummary={flowState?.job_summary?.role_title ?? null}
             gapSummary={{
-              gaps: (flowState?.gap_summary as any)?.gaps ?? [],
-              sections: (flowState?.gap_summary as any)?.sections ?? [],
+              gaps: flowState?.gap_summary?.gaps ?? [],
+              sections: flowState?.gap_summary?.sections ?? [],
             }}
             cvSummary={{
-              sections: (flowState?.cv_summary as any)?.sections ?? [],
+              sections: flowState?.cv_summary?.sections ?? [],
             }}
             template={{ label: template === "classic_german" ? t("templateClassic") : t("templateModern") }}
             matchScore={flowState?.gap_summary?.match_score ?? null}
             expiryWarning={expiryWarning}
             coverLetterId={flowState?.cover_letter_summary?.cover_letter_id ?? null}
-            detectedCompany={(flowState?.gap_summary as any)?.detected_company ?? null}
-            currentAccentHex={(flowState?.gap_summary as any)?.current_accent_hex ?? "#2b5fa8"}
+            detectedCompany={flowState?.gap_summary?.detected_company ?? null}
+            currentAccentHex={flowState?.gap_summary?.current_accent_hex ?? "#2b5fa8"}
             onHtmlRefresh={() => cvDocRef.current?.refresh()}
             onRegenerateSame={() => void handleGenerate(template)}
             onRegenerateDifferent={() => setPhase("template_select")}

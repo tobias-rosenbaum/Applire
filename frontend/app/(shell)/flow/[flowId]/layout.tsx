@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { use } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -155,9 +156,9 @@ export default function FlowLayout({
   return (
     <div style={s.shell}>
       <div style={s.topBar}>
-        <a href="/" style={s.logo}>
+        <Link href="/" style={s.logo}>
           Applire
-        </a>
+        </Link>
 
         <div style={s.stepper}>
           {STEP_KEYS.map(({ step, labelKey }, idx) => {

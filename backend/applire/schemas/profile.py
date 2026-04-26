@@ -28,6 +28,19 @@ class PersonalInfo(BaseModel):
     xing_url: str | None = None
     website_url: str | None = None
 
+    @field_validator("date_of_birth", mode="before")
+    @classmethod
+    def _normalise_date(cls, v: object) -> object:
+        """Accept DD.MM.YYYY (German) and DD/MM/YYYY in addition to ISO 8601."""
+        if not isinstance(v, str):
+            return v
+        import re
+        m = re.match(r"^(\d{1,2})[./](\d{1,2})[./](\d{4})$", v)
+        if m:
+            day, month, year = m.groups()
+            return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        return v
+
 
 # Backwards-compat alias — existing JSONB records and LLM output use 'contact'.
 Contact = PersonalInfo

@@ -15,8 +15,9 @@ Your task is to rewrite a candidate's profile to maximise fit for a specific job
    Use strong action verbs. Do NOT add new achievements, technologies, projects, or metrics that are
    not explicitly present in CANDIDATE PROFILE. Quantify only where CANDIDATE PROFILE explicitly
    provides numbers or metrics — never infer or invent figures.
-2. Reorder work history to surface the most relevant experience first
-   (reverse-chronological within relevance tier).
+2. Preserve the reverse-chronological order of work_history entries exactly as provided in
+   CANDIDATE PROFILE — do NOT reorder entries. Relevance is expressed through bullet selection
+   and phrasing, not by changing the sequence.
 3. Filter and reorder the skills list to lead with skills explicitly required in the job description.
    Keyword gaps may ONLY be incorporated if they are explicitly demonstrated in the candidate's
    work history or skills list. If a keyword gap has no explicit basis in CANDIDATE PROFILE, omit it.

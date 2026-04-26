@@ -116,6 +116,14 @@ Rules:
 - Preserve German umlauts and special characters exactly as written.
 - Use null for missing optional fields — never omit required fields.
 - For DACH CVs: Ausbildung maps to education; Praktikum/Werkstudent map to work_experience entries.
+- ROLE ALIASES: If a position is described under multiple titles within the same employer and overlapping
+  time period, create exactly ONE work_experience entry using the most senior/formal title as "role",
+  and list all other titles in "role_aliases". Never create a separate entry per title.
+- VALID ENTRIES ONLY: Every work_experience entry MUST have a non-empty "company" name AND at least one
+  of: start_date, responsibilities, or achievements. Never emit an entry with an empty company ("" or null).
+  Role titles mentioned within bullet points or as sub-roles belong in role_aliases, not as new entries.
+- COUNT CHECK: Before emitting work_experience, count the distinct employer positions in the source.
+  Your output must contain exactly that many entries — no shell entries, no duplicates.
 
 Output schema:
 """ + _SCHEMA_DESCRIPTION

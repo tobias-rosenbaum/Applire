@@ -99,7 +99,12 @@
     "loadingQuestion": "Loading question…",
     "answerPlaceholder": "Your answer…",
     "savingAnswer": "Saving…",
-    "submitAnswer": "Submit"
+    "submitAnswer": "Submit",
+    "clustersToAddress": "{count, plural, one {# topic to address} other {# topics to address}}",
+    "clusterCardAnswerButton": "Answer",
+    "clusterCardConstituentLabel": "Covers:",
+    "clusterStatusResolved": "Answered",
+    "choiceCardHint": "Pick a starting point (editable):"
   },
   "interview": {
     "loading": "Starting interview…",
@@ -127,6 +132,7 @@
     "completionGapsResolved": "Great work! Your profile has been enriched.",
     "completionOther": "Your answers have been saved to your Master Profile.",
     "roleRequirements": "Role Requirements",
+    "choiceCardHint": "Pick a starting point (editable):",
     "advancingToCV": "Preparing…",
     "viewHistory": "View conversation history ({count} {count, plural, one {exchange} other {exchanges}})"
   },
@@ -190,7 +196,7 @@
     "stepQueued": "In queue…",
     "stepRendering": "Rendering CV…",
     "stepDone": "Done!",
-    "generationStale": "Taking longer than expected — you can come back later.",
+    "generationStale": "Still running in the background — you'll be redirected automatically.",
     "generationFailed": "Generation failed.",
     "retryGeneration": "Try again →",
     "photoStepTitle": "Add a profile photo?",
@@ -383,5 +389,52 @@
     "sending": "Sending…",
     "done": "Profile enriched — great work!",
     "close": "Close"
+  },
+  "shell": {
+    "dashboard": "Dashboard",
+    "profile": "Master Profile",
+    "documents": "My Documents",
+    "settings": "Settings",
+    "help": "Help & Support",
+    "userFreePlan": "Free Plan"
+  },
+  "quickTailor": {
+    "title": "Quick Tailor",
+    "subtitle": "Paste a job link or full description — Applire analyses it and starts your CV flow.",
+    "tabUrl": "Job URL",
+    "tabText": "Paste Text",
+    "urlPlaceholder": "https://www.stepstone.de/stellenangebote/…",
+    "textPlaceholder": "Paste the full job description here…",
+    "analyseButton": "Analyse →",
+    "analysing": "Analysing…"
+  },
+  "documents": {
+    "title": "My Documents",
+    "subtitle": "All generated CVs across your applications",
+    "totalDocs": "Total documents",
+    "expiringCount": "Expiring within 7 days",
+    "filterAll": "All",
+    "filterReady": "Ready",
+    "filterGenerating": "Generating",
+    "filterExpiring": "Expiring soon",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
+    "sortCompany": "By company",
+    "searchPlaceholder": "Filter by role or company…",
+    "colDocument": "Document",
+    "colTemplate": "Template",
+    "colStatus": "Status",
+    "colExpires": "Expires",
+    "statusReady": "Ready",
+    "statusGenerating": "Generating…",
+    "statusExpired": "Expired",
+    "expiresIn": "Expires in {days} days",
+    "expiresToday": "Expires today",
+    "openButton": "Open",
+    "generatingButton": "Generating…",
+    "noDocuments": "No documents yet. Start a new application.",
+    "generatedOn": "Generated {date}",
+    "page": "Page {page} of {total}",
+    "showing": "{from}–{to} of {total} documents"
   }
 }

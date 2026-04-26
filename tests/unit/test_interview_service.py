@@ -63,7 +63,6 @@ async def test_response_parser_full_resolution():
         "education_to_add": [],
         "gap_resolution": "full",
         "follow_up_hint": None,
-        "gaps_also_addressed": [],
     })
 
     result = await response_parser("Python", "Do you know Python?", "Yes, 5 years.", provider)
@@ -71,7 +70,6 @@ async def test_response_parser_full_resolution():
     assert result["gap_resolution"] == "full"
     assert result["gap_addressed"] is True  # backward compat
     assert result["follow_up_hint"] is None
-    assert result["gaps_also_addressed"] == []
     assert result["skills_to_add"] == ["Python"]
 
 
@@ -124,27 +122,27 @@ async def test_response_parser_none_resolution():
 
 @pytest.mark.asyncio
 async def test_response_parser_cross_gap_populated():
-    """gaps_also_addressed is forwarded from LLM response."""
+    """response_parser returns gap_addressed=True for full resolution."""
     from applire.services.interview_graph import response_parser
 
     provider = MagicMock()
     provider.aparse_json = AsyncMock(return_value={
-        "skills_to_add": [],
+        "skills_to_add": ["GCP", "GMP"],
         "work_history_to_add": [],
         "certifications_to_add": [],
         "languages_to_add": [],
         "education_to_add": [],
         "gap_resolution": "full",
         "follow_up_hint": None,
-        "gaps_also_addressed": ["GMP certification", "regulated environment experience"],
     })
 
     result = await response_parser(
-        "GCP experience", "Question?", "I worked in pharma with GMP.", provider,
-        remaining_gaps=["GMP certification", "regulated environment experience"]
+        "GCP experience", "Question?", "I worked in pharma with GMP.", provider
     )
 
-    assert result["gaps_also_addressed"] == ["GMP certification", "regulated environment experience"]
+    assert result["gap_resolution"] == "full"
+    assert result["gap_addressed"] is True
+    assert "GCP" in result["skills_to_add"]
 
 
 @pytest.mark.asyncio
@@ -169,31 +167,29 @@ async def test_response_parser_invalid_gap_resolution_defaults_to_none():
     assert result["gap_addressed"] is False
 
 
-def test_build_response_parser_prompt_includes_remaining_gaps():
-    """remaining_gaps appear in the prompt when provided."""
+def test_build_response_parser_prompt_basic():
+    """build_response_parser_prompt uses 3-arg signature and includes all three inputs."""
     from applire.prompts.interview import build_response_parser_prompt
 
     prompt = build_response_parser_prompt(
-        "GCP experience",
-        "Tell me about GCP?",
-        "I've done some pharma work.",
-        remaining_gaps=["GMP certification", "ISO 9001"],
+        "Python skills",
+        "What is your Python level?",
+        "5 years experience.",
     )
 
-    assert "GMP certification" in prompt
-    assert "ISO 9001" in prompt
-    assert "Other open gaps" in prompt
+    assert "Python skills" in prompt
+    assert "5 years experience" in prompt
+    assert "What is your Python level?" in prompt
 
 
-def test_build_response_parser_prompt_no_remaining_gaps():
-    """No remaining_gaps section when list is empty or None."""
+def test_build_response_parser_prompt_includes_cluster_label():
+    """The cluster_label appears in the prompt."""
     from applire.prompts.interview import build_response_parser_prompt
 
-    prompt_none = build_response_parser_prompt("gap", "q", "a", remaining_gaps=None)
-    prompt_empty = build_response_parser_prompt("gap", "q", "a", remaining_gaps=[])
+    prompt = build_response_parser_prompt("GCP certification", "Tell me about GCP?", "I have GCP experience.")
 
-    assert "Other open gaps" not in prompt_none
-    assert "Other open gaps" not in prompt_empty
+    assert "GCP certification" in prompt
+    assert "Tell me about GCP?" in prompt
 
 
 @pytest.mark.asyncio
@@ -268,9 +264,12 @@ async def test_question_generator_routes_to_followup_when_hint_present():
 
     state = {
         "mode": "targeted",
-        "critical_gaps": ["GCP certification"],
+        "critical_gaps": ["cluster-gcp"],
         "current_gap_index": 0,
         "messages": [],
+        "gap_clusters_by_id": {
+            "cluster-gcp": {"id": "cluster-gcp", "label": "GCP certification", "category": "C", "gaps": ["GCP certification"], "jd_skills": [], "jd_context": ""}
+        },
     }
 
     result = await question_generator_with_profile(
@@ -280,7 +279,8 @@ async def test_question_generator_routes_to_followup_when_hint_present():
         follow_up_hint="ask about GMP or other regulated environments",
     )
 
-    assert result == "Have you worked in GMP-regulated environments?"
+    assert isinstance(result, dict)
+    assert result["question"] == "Have you worked in GMP-regulated environments?"
     # Confirm it was called with the follow-up system prompt
     call_kwargs = provider.acomplete.call_args.kwargs
     assert "follow" in call_kwargs.get("system", "").lower() or "adjacent" in call_kwargs.get("system", "").lower()
@@ -288,17 +288,20 @@ async def test_question_generator_routes_to_followup_when_hint_present():
 
 @pytest.mark.asyncio
 async def test_question_generator_routes_to_standard_when_no_hint():
-    """question_generator_with_profile uses standard prompt when follow_up_hint is None."""
+    """question_generator_with_profile uses standard prompt (aparse_json) when follow_up_hint is None."""
     from applire.services.interview_graph import question_generator_with_profile
 
     provider = MagicMock()
-    provider.acomplete = AsyncMock(return_value="Tell me about your GCP experience.")
+    provider.aparse_json = AsyncMock(return_value={"question": "Tell me about your GCP experience.", "choices": None})
 
     state = {
         "mode": "targeted",
-        "critical_gaps": ["GCP certification"],
+        "critical_gaps": ["cluster-gcp"],
         "current_gap_index": 0,
         "messages": [],
+        "gap_clusters_by_id": {
+            "cluster-gcp": {"id": "cluster-gcp", "label": "GCP certification", "category": "C", "gaps": ["GCP certification"], "jd_skills": [], "jd_context": ""}
+        },
     }
 
     result = await question_generator_with_profile(
@@ -308,7 +311,8 @@ async def test_question_generator_routes_to_standard_when_no_hint():
         follow_up_hint=None,
     )
 
-    assert result == "Tell me about your GCP experience."
+    assert isinstance(result, dict)
+    assert result["question"] == "Tell me about your GCP experience."
 
 
 # ---------------------------------------------------------------------------
@@ -562,7 +566,7 @@ def _make_state(
 
 
 def test_build_state_includes_new_fields():
-    """_build_state initialises questions_per_gap, skipped_gaps, full_gaps."""
+    """_build_state initialises questions_per_gap, skipped_gaps, full_gaps, gap_clusters_by_id."""
     from applire.services.session import _build_state
 
     state = _build_state(
@@ -570,8 +574,9 @@ def test_build_state_includes_new_fields():
         job_id=uuid.uuid4(),
         gap_analysis_id=None,
         profile_id=uuid.uuid4(),
-        critical_gaps=["gap_a"],
-        gap_categories={},
+        critical_gaps=["cluster-a"],
+        gap_categories={"cluster-a": "C"},
+        gap_clusters_by_id={"cluster-a": {"id": "cluster-a", "label": "gap_a", "category": "C", "gaps": ["gap_a"], "jd_skills": [], "jd_context": ""}},
         current_question="",
         hard_ceiling=12,
     )
@@ -579,6 +584,7 @@ def test_build_state_includes_new_fields():
     assert state["questions_per_gap"] == {}
     assert state["skipped_gaps"] == []
     assert state["full_gaps"] == []
+    assert "gap_clusters_by_id" in state
 
 
 def test_send_message_resilient_to_pre_sprint15_state():

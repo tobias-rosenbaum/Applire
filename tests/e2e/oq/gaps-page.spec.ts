@@ -26,6 +26,9 @@ const MOCK_FLOW_STATE = {
   job_summary: { role_title: "Senior Software Engineer" },
 };
 
+const CLUSTER_ID_C = "cluster-test-c-0000-0000-0000-000000000005";
+const CLUSTER_ID_B = "cluster-test-b-0000-0000-0000-000000000006";
+
 const MOCK_GAP_ANALYSIS = {
   id: GAP_ID,
   match_score: 0.72,
@@ -33,6 +36,24 @@ const MOCK_GAP_ANALYSIS = {
   category_b: ["Docker", "PostgreSQL"],
   category_c: ["Kubernetes", "Terraform"],
   strengths: ["Python", "FastAPI"],
+  gap_clusters: [
+    {
+      id: CLUSTER_ID_C,
+      label: "Container Orchestration",
+      category: "C",
+      gaps: ["Kubernetes", "Terraform"],
+      jd_skills: ["Kubernetes"],
+      jd_context: "Required for production deployments",
+    },
+    {
+      id: CLUSTER_ID_B,
+      label: "Database Operations",
+      category: "B",
+      gaps: ["Docker", "PostgreSQL"],
+      jd_skills: ["Docker"],
+      jd_context: "Nice to have for containerised deployments",
+    },
+  ],
 };
 
 const MOCK_PROFILE = {
@@ -62,19 +83,25 @@ test.describe("Gaps page", () => {
     await page.goto(`/flow/${FLOW_ID}/gaps`);
     await expect(page.getByTestId("gap-analysis-page")).toBeVisible({ timeout: 10000 });
 
-    // Category C dots must be red (bg-critical), not yellow
-    const catCDots = page.getByTestId("gap-c-severity-dot");
-    await expect(catCDots.first()).toBeVisible();
-    const catCClass = await catCDots.first().getAttribute("class");
-    expect(catCClass).toContain("bg-critical");
-    expect(catCClass).not.toContain("bg-warning");
+    // Cluster cards must be visible
+    const cards = page.getByTestId("gap-cluster-card");
+    await expect(cards.first()).toBeVisible();
 
-    // Category B dots must be yellow (bg-warning), not teal
-    const catBDots = page.getByTestId("gap-b-severity-dot");
-    await expect(catBDots.first()).toBeVisible();
-    const catBClass = await catBDots.first().getAttribute("class");
-    expect(catBClass).toContain("bg-warning");
-    expect(catBClass).not.toContain("bg-teal");
+    // Category C cluster card — dot must use bg-red-500 (not yellow)
+    const catCCard = page.getByTestId("gap-cluster-card").filter({ hasText: "Container Orchestration" });
+    await expect(catCCard).toBeVisible();
+    const catCDot = catCCard.locator("span.rounded-full").first();
+    const catCClass = await catCDot.getAttribute("class");
+    expect(catCClass).toContain("bg-red-500");
+    expect(catCClass).not.toContain("bg-yellow");
+
+    // Category B cluster card — dot must use bg-yellow-400 (not red)
+    const catBCard = page.getByTestId("gap-cluster-card").filter({ hasText: "Database Operations" });
+    await expect(catBCard).toBeVisible();
+    const catBDot = catBCard.locator("span.rounded-full").first();
+    const catBClass = await catBDot.getAttribute("class");
+    expect(catBClass).toContain("bg-yellow-400");
+    expect(catBClass).not.toContain("bg-red");
   });
 
   test("shows correct gap counts in badges", async ({ page }) => {
@@ -131,6 +158,44 @@ test.describe("Gaps page", () => {
     await interviewButton.click();
 
     await expect(page).toHaveURL(`/flow/${FLOW_ID}/interview`, { timeout: 10000 });
+  });
+
+  test("clicking a gap cluster card starts the micro-session inline", async ({ page }) => {
+    await setupGapsPageMocks(page);
+
+    const QUESTION = "Beschreibe deine Erfahrung mit Kubernetes.";
+    await page.route(`**/api/session`, (route) => {
+      const body = route.request().postDataJSON();
+      if (body?.mode === "targeted") {
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            session_id: "micro-session-001",
+            first_question: QUESTION,
+            choices: null,
+          }),
+        });
+      } else {
+        route.continue();
+      }
+    });
+
+    await page.goto(`/flow/${FLOW_ID}/gaps`);
+    await expect(page.getByTestId("gap-analysis-page")).toBeVisible({ timeout: 10000 });
+
+    // Card should be clickable (cursor-pointer) in idle state
+    const card = page.getByTestId("gap-cluster-card").first();
+    await expect(card).toBeVisible();
+    await card.click();
+
+    // Question panel should appear inline
+    await expect(page.getByTestId("gap-question")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId("gap-question")).toContainText(QUESTION);
+
+    // Card is no longer clickable once session is open
+    const classAttr = await card.getAttribute("class");
+    expect(classAttr).not.toContain("cursor-pointer");
   });
 
   test("shows error message when advance API fails", async ({ page }) => {

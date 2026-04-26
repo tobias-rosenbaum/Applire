@@ -6,12 +6,14 @@ Detection strategy: inspects the `system` prompt to identify which service
 is calling, then returns a canned schema-valid response instantly.
 
 System prompt fingerprints:
-  "HR analyst"                     → job analysis      (aparse_json)
-  "CV analyst"                     → profile parsing   (aparse_json)
-  "three-category gap analysis"    → gap analysis      (aparse_json)
-  "extracting structured profile"  → response parser   (aparse_json)
-  "dach career consultant"         → CV tailoring      (aparse_json)
-  "career coach" (acomplete)       → interview question
+  "HR analyst"                     → job analysis          (aparse_json → dict)
+  "CV analyst"                     → profile parsing       (aparse_json → dict)
+  "three-category gap analysis"    → gap analysis          (aparse_json → dict)
+  "extracting structured profile"  → response parser       (aparse_json → dict)
+  "dach career consultant"         → CV tailoring          (aparse_json → dict)
+  "expert career analyst"          → gap clustering        (aparse_json → list)
+  "expert career coach"            → targeted question     (aparse_json → dict)
+  (acomplete, any)                 → interview question    (acomplete → str)
 """
 
 import json
@@ -162,6 +164,37 @@ _RESPONSE_PARSER_RESPONSE: dict[str, Any] = {
     "gaps_also_addressed": [],
 }
 
+_CLUSTERING_RESPONSE: list[dict] = [
+    {
+        "id": "cluster-python-experience",
+        "label": "Python Experience Depth",
+        "category": "C",
+        "gaps": ["5+ years Python experience"],
+        "jd_skills": ["Python", "FastAPI"],
+        "jd_context": "Senior role requiring deep Python expertise",
+    },
+    {
+        "id": "cluster-cloud-infra",
+        "label": "Cloud & Infrastructure",
+        "category": "B",
+        "gaps": ["Kubernetes", "microservices architecture"],
+        "jd_skills": ["Kubernetes", "Docker"],
+        "jd_context": "Containerised microservices with Kubernetes orchestration",
+    },
+]
+
+_QUESTION_RESPONSE: dict[str, Any] = {
+    "question": (
+        "Can you describe your experience with Python in a professional context, "
+        "including projects where you used it extensively?"
+    ),
+    "choices": [
+        "5+ years hands-on Python in production systems",
+        "Used Python primarily for scripting or smaller projects",
+        "Mostly self-taught or academic Python experience",
+    ],
+}
+
 _INTERVIEW_QUESTION = (
     "Can you describe a specific project where you implemented CI/CD pipelines "
     "and explain the tools and processes you used?"
@@ -185,14 +218,14 @@ class MockLLMProvider(LLMProvider):
     ) -> str:
         return _INTERVIEW_QUESTION
 
-    async def aparse_json(
+    async def aparse_json(  # type: ignore[override]
         self,
         prompt: str,
         *,
         system: str | None = None,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-    ) -> dict[str, Any]:
+    ) -> Any:
         system_lower = (system or "").lower()
 
         if "hr analyst" in system_lower:
@@ -201,7 +234,10 @@ class MockLLMProvider(LLMProvider):
         if "cv analyst" in system_lower:
             return dict(_PROFILE_PARSE_RESPONSE)
 
-        if "three-category gap analysis" in system_lower or "gap analysis" in system_lower:
+        if "expert career analyst" in system_lower:
+            return list(_CLUSTERING_RESPONSE)
+
+        if "three-category gap analysis" in system_lower:
             return dict(_GAP_ANALYSIS_RESPONSE)
 
         if "extracting structured profile" in system_lower:
@@ -209,6 +245,9 @@ class MockLLMProvider(LLMProvider):
 
         if "dach career consultant" in system_lower:
             return dict(_CV_TAILORING_RESPONSE)
+
+        if "expert career coach" in system_lower:
+            return dict(_QUESTION_RESPONSE)
 
         # Fallback: return a minimal valid dict for any unrecognised prompt
         return {"mock": True, "raw_prompt_length": len(prompt)}

@@ -1,0 +1,54 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QuickTailorWidget } from "../QuickTailorWidget";
+
+// next-intl mock
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+describe("QuickTailorWidget", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders URL tab by default", () => {
+    render(<QuickTailorWidget />);
+    expect(screen.getByPlaceholderText("urlPlaceholder")).toBeInTheDocument();
+  });
+
+  it("switches to text textarea when Paste Text tab is clicked", () => {
+    render(<QuickTailorWidget />);
+    fireEvent.click(screen.getByText("tabText"));
+    expect(screen.getByPlaceholderText("textPlaceholder")).toBeInTheDocument();
+  });
+
+  it("Analyse button is disabled when input is empty", () => {
+    render(<QuickTailorWidget />);
+    expect(screen.getByText("analyseButton")).toBeDisabled();
+  });
+
+  it("Analyse button enables when URL is typed", () => {
+    render(<QuickTailorWidget />);
+    fireEvent.change(screen.getByPlaceholderText("urlPlaceholder"), {
+      target: { value: "https://example.de/job/123" },
+    });
+    expect(screen.getByText("analyseButton")).not.toBeDisabled();
+  });
+
+  it("shows error message on API failure", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ detail: "Bad URL" }),
+    });
+    render(<QuickTailorWidget />);
+    fireEvent.change(screen.getByPlaceholderText("urlPlaceholder"), {
+      target: { value: "https://example.de/job" },
+    });
+    fireEvent.click(screen.getByText("analyseButton"));
+    await waitFor(() => expect(screen.getByText("Bad URL")).toBeInTheDocument());
+  });
+});

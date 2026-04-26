@@ -522,35 +522,39 @@ class TestGetStorage:
 
 
 class TestGapDetector:
-    def _make_gap_analysis(self, category_c=None, category_b=None, critical_gaps=None):
+    def _make_gap_analysis(self, gap_clusters=None):
         from applire.models.gap import GapAnalysis
 
         ga = MagicMock(spec=GapAnalysis)
-        ga.category_c = category_c
-        ga.category_b = category_b
-        ga.critical_gaps = critical_gaps
+        ga.gap_clusters = gap_clusters or []
         return ga
 
     def test_gap_detector_returns_c_gaps_first(self):
         from applire.services.interview_graph import gap_detector
 
         ga = self._make_gap_analysis(
-            category_c=["Python experience", "FastAPI knowledge"],
-            category_b=["Docker usage"],
+            gap_clusters=[
+                {"id": "cluster-python", "label": "Python experience", "category": "C", "gaps": ["Python experience"], "jd_skills": [], "jd_context": ""},
+                {"id": "cluster-fastapi", "label": "FastAPI knowledge", "category": "C", "gaps": ["FastAPI knowledge"], "jd_skills": [], "jd_context": ""},
+                {"id": "cluster-docker", "label": "Docker usage", "category": "B", "gaps": ["Docker usage"], "jd_skills": [], "jd_context": ""},
+            ]
         )
-        ordered, categories = gap_detector(ga)
+        ordered, categories, clusters_by_id = gap_detector(ga)
 
-        assert ordered[0] == "Python experience"
-        assert ordered[1] == "FastAPI knowledge"
-        assert ordered[2] == "Docker usage"
-        assert categories["Python experience"] == "C"
-        assert categories["Docker usage"] == "B"
+        assert ordered[0] == "cluster-python"
+        assert ordered[1] == "cluster-fastapi"
+        assert ordered[2] == "cluster-docker"
+        assert categories["cluster-python"] == "C"
+        assert categories["cluster-docker"] == "B"
 
     def test_gap_detector_only_c_gaps(self):
         from applire.services.interview_graph import gap_detector
 
-        ga = self._make_gap_analysis(category_c=["Gap1", "Gap2"], category_b=None)
-        ordered, categories = gap_detector(ga)
+        ga = self._make_gap_analysis(gap_clusters=[
+            {"id": "cluster-gap1", "label": "Gap1", "category": "C", "gaps": ["Gap1"], "jd_skills": [], "jd_context": ""},
+            {"id": "cluster-gap2", "label": "Gap2", "category": "C", "gaps": ["Gap2"], "jd_skills": [], "jd_context": ""},
+        ])
+        ordered, categories, clusters_by_id = gap_detector(ga)
 
         assert len(ordered) == 2
         assert all(v == "C" for v in categories.values())
@@ -558,36 +562,40 @@ class TestGapDetector:
     def test_gap_detector_only_b_gaps(self):
         from applire.services.interview_graph import gap_detector
 
-        ga = self._make_gap_analysis(category_c=None, category_b=["Likely skill"])
-        ordered, categories = gap_detector(ga)
+        ga = self._make_gap_analysis(gap_clusters=[
+            {"id": "cluster-likely", "label": "Likely skill", "category": "B", "gaps": ["Likely skill"], "jd_skills": [], "jd_context": ""},
+        ])
+        ordered, categories, clusters_by_id = gap_detector(ga)
 
-        assert ordered == ["Likely skill"]
-        assert categories["Likely skill"] == "B"
+        assert ordered == ["cluster-likely"]
+        assert categories["cluster-likely"] == "B"
 
     def test_gap_detector_falls_back_to_critical_gaps_legacy(self):
+        """When gap_clusters is empty, gap_detector returns empty lists (no legacy fallback)."""
         from applire.services.interview_graph import gap_detector
 
-        ga = self._make_gap_analysis(
-            category_c=None, category_b=None, critical_gaps=["Old gap"]
-        )
-        ordered, categories = gap_detector(ga)
+        ga = self._make_gap_analysis(gap_clusters=[])
+        ordered, categories, clusters_by_id = gap_detector(ga)
 
-        assert ordered == ["Old gap"]
-        assert categories["Old gap"] == "C"
+        assert ordered == []
+        assert categories == {}
 
     def test_gap_detector_filters_empty_strings(self):
+        """Clusters with valid IDs are returned; empty gap_clusters gives empty result."""
         from applire.services.interview_graph import gap_detector
 
-        ga = self._make_gap_analysis(category_c=["", "Real gap", ""], category_b=[])
-        ordered, categories = gap_detector(ga)
+        ga = self._make_gap_analysis(gap_clusters=[
+            {"id": "cluster-real", "label": "Real gap", "category": "C", "gaps": ["Real gap"], "jd_skills": [], "jd_context": ""},
+        ])
+        ordered, categories, clusters_by_id = gap_detector(ga)
 
-        assert ordered == ["Real gap"]
+        assert ordered == ["cluster-real"]
 
     def test_gap_detector_empty_analysis_returns_empty(self):
         from applire.services.interview_graph import gap_detector
 
-        ga = self._make_gap_analysis(category_c=[], category_b=[])
-        ordered, categories = gap_detector(ga)
+        ga = self._make_gap_analysis(gap_clusters=[])
+        ordered, categories, clusters_by_id = gap_detector(ga)
 
         assert ordered == []
         assert categories == {}
@@ -655,17 +663,20 @@ class TestQuestionGenerator:
 
         state = {
             "mode": "targeted",
-            "critical_gaps": ["Python experience"],
+            "critical_gaps": ["cluster-python"],
             "current_gap_index": 0,
             "messages": [],
+            "gap_clusters_by_id": {
+                "cluster-python": {"id": "cluster-python", "label": "Python experience", "category": "C", "gaps": ["Python experience"], "jd_skills": [], "jd_context": ""}
+            },
         }
-        provider = _make_mock_provider({})
-        provider.acomplete = AsyncMock(return_value="  Tell me about Python?  ")
+        provider = _make_mock_provider({"question": "Tell me about Python?", "choices": None})
 
         result = await question_generator(state, provider)
 
-        assert result == "Tell me about Python?"
-        provider.acomplete.assert_called_once()
+        assert isinstance(result, dict)
+        assert result["question"] == "Tell me about Python?"
+        provider.aparse_json.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_question_generator_with_profile_targeted_mode(self):
@@ -673,19 +684,22 @@ class TestQuestionGenerator:
 
         state = {
             "mode": "targeted",
-            "critical_gaps": ["Docker knowledge"],
+            "critical_gaps": ["cluster-docker"],
             "current_gap_index": 0,
             "messages": [],
+            "gap_clusters_by_id": {
+                "cluster-docker": {"id": "cluster-docker", "label": "Docker knowledge", "category": "C", "gaps": ["Docker knowledge"], "jd_skills": [], "jd_context": ""}
+            },
         }
-        provider = _make_mock_provider({})
-        provider.acomplete = AsyncMock(return_value="Can you describe your Docker experience?")
+        provider = _make_mock_provider({"question": "Can you describe your Docker experience?", "choices": None})
 
         result = await question_generator_with_profile(
             state, {"skills": []}, provider, gap_category="C"
         )
 
-        assert "Docker" in result
-        provider.acomplete.assert_called_once()
+        assert isinstance(result, dict)
+        assert "Docker" in result["question"]
+        provider.aparse_json.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_question_generator_with_profile_guided_mode(self):
@@ -707,7 +721,8 @@ class TestQuestionGenerator:
             job_context={"role_title": "Developer"},
         )
 
-        assert result == "Tell me about your work history."
+        assert isinstance(result, dict)
+        assert result["question"] == "Tell me about your work history."
 
 
 class TestResponseParser:
@@ -723,12 +738,11 @@ class TestResponseParser:
             "education_to_add": [],
             "gap_resolution": "full",
             "follow_up_hint": None,
-            "gaps_also_addressed": [],
         }
         provider = _make_mock_provider(llm_response)
 
         result = await response_parser(
-            gap="Python experience",
+            cluster_label="Python experience",
             question="Tell me about Python",
             answer="I have 5 years of Python experience",
             provider=provider,
@@ -745,7 +759,7 @@ class TestResponseParser:
         provider = _make_mock_provider({})  # empty response
 
         result = await response_parser(
-            gap="some gap",
+            cluster_label="some gap",
             question="some question",
             answer="some answer",
             provider=provider,

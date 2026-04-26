@@ -1,0 +1,135 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { DashboardApplicationCard } from "../DashboardApplicationCard";
+
+const mockPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+const NOW = new Date().toISOString();
+const STALE_48H = new Date(Date.now() - 49 * 36e5).toISOString();
+
+function renderCard(overrides: Partial<React.ComponentProps<typeof DashboardApplicationCard>> = {}) {
+  return render(
+    <DashboardApplicationCard
+      applicationId="app-1"
+      roleTitle="Software Engineer"
+      companyName="Acme GmbH"
+      workflowStatus="analyzing"
+      flowSessionId="flow-1"
+      updatedAt={NOW}
+      {...overrides}
+    />
+  );
+}
+
+describe("DashboardApplicationCard", () => {
+  beforeEach(() => {
+    mockPush.mockReset();
+  });
+
+  // ── Status derivation ────────────────────────────────────────────────────
+
+  it("shows 'CV Ready' chip for completed workflow", () => {
+    renderCard({ workflowStatus: "completed" });
+    expect(screen.getByText("CV Ready")).toBeInTheDocument();
+  });
+
+  it("shows 'Tracking' chip for none workflow", () => {
+    renderCard({ workflowStatus: "none" });
+    expect(screen.getByText("Tracking")).toBeInTheDocument();
+  });
+
+  it("shows 'In Progress' chip for recent analyzing status", () => {
+    renderCard({ workflowStatus: "analyzing", updatedAt: NOW });
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+  });
+
+  it("shows 'Interrupted' chip for stale analyzing status (>48h old)", () => {
+    renderCard({ workflowStatus: "analyzing", updatedAt: STALE_48H });
+    expect(screen.getByText("Interrupted")).toBeInTheDocument();
+  });
+
+  it("shows 'In Progress' chip for recent cv_generating status", () => {
+    renderCard({ workflowStatus: "cv_generating", updatedAt: NOW });
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+  });
+
+  // ── Action button labels ─────────────────────────────────────────────────
+
+  it("action button shows 'Open' for cv_ready", () => {
+    renderCard({ workflowStatus: "completed" });
+    expect(screen.getByRole("button", { name: /open/i })).toBeInTheDocument();
+  });
+
+  it("action button shows 'Start Flow' for tracking", () => {
+    renderCard({ workflowStatus: "none" });
+    expect(screen.getByRole("button", { name: /start flow/i })).toBeInTheDocument();
+  });
+
+  it("action button shows 'Resume' for in_progress", () => {
+    renderCard({ workflowStatus: "analyzing", updatedAt: NOW });
+    expect(screen.getByRole("button", { name: /resume/i })).toBeInTheDocument();
+  });
+
+  it("action button shows 'Continue' for interrupted", () => {
+    renderCard({ workflowStatus: "analyzing", updatedAt: STALE_48H });
+    expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument();
+  });
+
+  // ── Card click routing ───────────────────────────────────────────────────
+
+  it("clicking the card navigates to /applications/{id}", () => {
+    renderCard();
+    // Click the role title text — bubbles up to the card's onClick handler
+    fireEvent.click(screen.getByText("Software Engineer"));
+    expect(mockPush).toHaveBeenCalledWith("/applications/app-1");
+  });
+
+  // ── Action button routing ────────────────────────────────────────────────
+
+  it("Open button navigates to /flow/{flowSessionId}/cv", () => {
+    renderCard({ workflowStatus: "completed", flowSessionId: "flow-99" });
+    fireEvent.click(screen.getByRole("button", { name: /open/i }));
+    expect(mockPush).toHaveBeenCalledWith("/flow/flow-99/cv");
+  });
+
+  it("Resume button navigates to /flow/{flowSessionId}/interview", () => {
+    renderCard({ workflowStatus: "analyzing", updatedAt: NOW, flowSessionId: "flow-42" });
+    fireEvent.click(screen.getByRole("button", { name: /resume/i }));
+    expect(mockPush).toHaveBeenCalledWith("/flow/flow-42/interview");
+  });
+
+  it("Start Flow button calls onStartFlow callback", () => {
+    const onStartFlow = vi.fn();
+    renderCard({ workflowStatus: "none", onStartFlow });
+    fireEvent.click(screen.getByRole("button", { name: /start flow/i }));
+    expect(onStartFlow).toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  // ── Display fields ───────────────────────────────────────────────────────
+
+  it("renders role title and company name", () => {
+    renderCard();
+    expect(screen.getByText("Software Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Acme GmbH")).toBeInTheDocument();
+  });
+
+  it("uses companyName initial for avatar when company provided", () => {
+    renderCard({ companyName: "Zara" });
+    expect(screen.getByText("Z")).toBeInTheDocument();
+  });
+
+  it("falls back to roleTitle initial when companyName is null", () => {
+    renderCard({ companyName: null, roleTitle: "Manager" });
+    expect(screen.getByText("M")).toBeInTheDocument();
+  });
+
+  it("renders fallback text when roleTitle is null", () => {
+    renderCard({ roleTitle: null, companyName: null });
+    expect(screen.getByText("Unknown role")).toBeInTheDocument();
+  });
+});

@@ -158,11 +158,12 @@ async def activate_scheme(db: AsyncSession, scheme_id: uuid.UUID) -> ColorScheme
     scheme = await db.get(ColorScheme, scheme_id)
     if scheme is None:
         return None
-    # Deactivate all, then activate the target — in one transaction
+    # Use two pure-SQL UPDATEs to avoid SQLAlchemy stale-object issues when
+    # re-activating a scheme that is already marked active in the identity map.
+    await db.execute(update(ColorScheme).values(is_active=False))
     await db.execute(
-        update(ColorScheme).values(is_active=False)
+        update(ColorScheme).where(ColorScheme.id == scheme_id).values(is_active=True)
     )
-    scheme.is_active = True
     await db.commit()
     await db.refresh(scheme)
     return scheme

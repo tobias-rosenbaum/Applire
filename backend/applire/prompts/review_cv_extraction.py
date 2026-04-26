@@ -23,6 +23,11 @@ Check for ALL of the following:
    If a date is absent from the source, the field must be null — never inferred or invented.
 4. INVENTED CONTENT: responsibilities, achievements, and technologies must reflect what is
    explicitly stated in the source text. Flag any item that adds content not present in the source.
+5. EMPTY/SHELL ENTRIES: Flag any work_experience entry with an empty or null company name ("").
+   These are invalid — the role should either be removed or placed as a role_alias on an existing entry.
+6. MISPLACED ROLE ALIASES: Flag any work_experience entry that has a company name but is missing
+   BOTH start_date AND responsibilities/achievements. These are almost certainly role titles mentioned
+   within another position and should appear in that position's role_aliases list, not as a separate entry.
 
 Respond ONLY with a valid JSON object — no markdown, no explanations:
 {

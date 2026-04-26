@@ -13,8 +13,8 @@ interface RefinementPanelProps {
   cvId: string;
   flowId: string;
   jobSummary: string | null;
-  gapSummary: { gaps: Array<{ id: string; label: string }>; sections: Array<any> } | null;
-  cvSummary: { sections: Array<any> } | null;
+  gapSummary: { gaps: Array<{ id: string; label: string }>; sections: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }> } | null;
+  cvSummary: { sections: Array<{ section_id: string; label: string; content: string; has_override: boolean; gaps: Array<{ id: string; label: string }> }> } | null;
   template: { label: string | null } | null;
   matchScore: number | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;

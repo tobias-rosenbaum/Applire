@@ -344,59 +344,63 @@ class TestGapDetector:
     """Tests for the GapDetector node using a mock GapAnalysis object."""
 
     class _FakeGapAnalysis:
-        def __init__(self, category_a=None, category_b=None, category_c=None, critical_gaps=None):
-            self.category_a = category_a or []
-            self.category_b = category_b or []
-            self.category_c = category_c or []
-            self.critical_gaps = critical_gaps or []
+        def __init__(self, gap_clusters=None):
+            self.gap_clusters = gap_clusters or []
 
     def test_category_c_comes_before_b(self):
         from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis(
-            category_b=["B-requirement"],
-            category_c=["C-requirement-1", "C-requirement-2"],
+            gap_clusters=[
+                {"id": "cluster-b", "label": "B-requirement", "category": "B", "gaps": ["B-requirement"], "jd_skills": [], "jd_context": ""},
+                {"id": "cluster-c1", "label": "C-requirement-1", "category": "C", "gaps": ["C-requirement-1"], "jd_skills": [], "jd_context": ""},
+                {"id": "cluster-c2", "label": "C-requirement-2", "category": "C", "gaps": ["C-requirement-2"], "jd_skills": [], "jd_context": ""},
+            ]
         )
-        targets, categories = gap_detector(ga)
-        assert targets.index("C-requirement-1") < targets.index("B-requirement")
-        assert targets.index("C-requirement-2") < targets.index("B-requirement")
+        targets, categories, clusters_by_id = gap_detector(ga)
+        assert targets.index("cluster-c1") < targets.index("cluster-b")
+        assert targets.index("cluster-c2") < targets.index("cluster-b")
 
     def test_category_a_excluded(self):
         from applire.services.interview_graph import gap_detector
 
+        # gap_detector reads gap_clusters only; category A is not included in clusters
         ga = self._FakeGapAnalysis(
-            category_a=["A-matched"],
-            category_b=["B-req"],
-            category_c=["C-req"],
+            gap_clusters=[
+                {"id": "cluster-b", "label": "B-req", "category": "B", "gaps": ["B-req"], "jd_skills": [], "jd_context": ""},
+                {"id": "cluster-c", "label": "C-req", "category": "C", "gaps": ["C-req"], "jd_skills": [], "jd_context": ""},
+            ]
         )
-        targets, categories = gap_detector(ga)
+        targets, categories, clusters_by_id = gap_detector(ga)
         assert "A-matched" not in targets
 
     def test_categories_dict_correct(self):
         from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis(
-            category_b=["B-req"],
-            category_c=["C-req"],
+            gap_clusters=[
+                {"id": "cluster-b", "label": "B-req", "category": "B", "gaps": ["B-req"], "jd_skills": [], "jd_context": ""},
+                {"id": "cluster-c", "label": "C-req", "category": "C", "gaps": ["C-req"], "jd_skills": [], "jd_context": ""},
+            ]
         )
-        targets, categories = gap_detector(ga)
-        assert categories["B-req"] == "B"
-        assert categories["C-req"] == "C"
+        targets, categories, clusters_by_id = gap_detector(ga)
+        assert categories["cluster-b"] == "B"
+        assert categories["cluster-c"] == "C"
 
     def test_legacy_fallback_uses_critical_gaps(self):
-        """Records with empty A/B/C columns fall back to critical_gaps treated as C."""
+        """Records with empty gap_clusters fall back to empty lists (no legacy fallback in new API)."""
         from applire.services.interview_graph import gap_detector
 
-        ga = self._FakeGapAnalysis(critical_gaps=["legacy-gap"])
-        targets, categories = gap_detector(ga)
-        assert "legacy-gap" in targets
-        assert categories["legacy-gap"] == "C"
+        ga = self._FakeGapAnalysis(gap_clusters=[])
+        targets, categories, clusters_by_id = gap_detector(ga)
+        assert targets == []
+        assert categories == {}
 
     def test_empty_gaps_returns_empty(self):
         from applire.services.interview_graph import gap_detector
 
         ga = self._FakeGapAnalysis()
-        targets, categories = gap_detector(ga)
+        targets, categories, clusters_by_id = gap_detector(ga)
         assert targets == []
         assert categories == {}
 

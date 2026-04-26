@@ -46,6 +46,11 @@ def _dates_overlap(
     """
     Best-effort overlap check on partial date strings like '2020-01' or '2020'.
     Returns True when dates cannot be determined (safe default — treats as overlap).
+
+    Uses strict inequality so that adjacent roles at the same employer (one ends
+    in 2021-05, the next starts in 2021-05) are treated as separate positions,
+    not merged. Two ranges overlap only if one START is strictly before the other
+    END — a shared boundary month is a job transition, not concurrent employment.
     """
     if not a_start or not b_start:
         return True
@@ -53,7 +58,7 @@ def _dates_overlap(
     a_e = (a_end + "-12")[:7] if a_end else "9999-12"
     b_s = (b_start + "-01")[:7]
     b_e = (b_end + "-12")[:7] if b_end else "9999-12"
-    return a_s <= b_e and b_s <= a_e
+    return a_s < b_e and b_s < a_e
 
 
 def _dates_contradict(a: str | None, b: str | None) -> bool:
@@ -80,6 +85,64 @@ def _merge_str_lists(a: list[str], b: list[str]) -> list[str]:
     return result
 
 
+_LEGAL_SUFFIXES = frozenset({
+    "gmbh", "se", "ag", "ggmbh", "kg", "kgaa", "ohg", "gbr",
+    "inc", "ltd", "llc", "corp", "plc", "bv", "nv", "sa",
+})
+_STOPWORDS = frozenset({
+    "des", "der", "die", "das", "und", "von", "am", "im", "an",
+    "the", "of", "and", "&", "co",
+})
+
+
+def _company_tokens(name: str) -> frozenset[str]:
+    """Return significant tokens from a company name.
+
+    Strips common legal-form suffixes and stopwords, then returns tokens
+    with more than 3 characters so noise like 'Co', 'BRK', 'SE' don't drive
+    false matches.
+    """
+    tokens: list[str] = []
+    for raw in name.lower().split():
+        tok = raw.strip(".,-()")
+        if tok in _LEGAL_SUFFIXES or tok in _STOPWORDS:
+            continue
+        if len(tok) > 3:
+            tokens.append(tok)
+    return frozenset(tokens)
+
+
+def _company_names_match(a: str, b: str) -> bool:
+    """Return True when a and b likely refer to the same employer.
+
+    Exact match (fast path) or subset match: one name's significant-token
+    set is a subset of the other's, indicating one is a shortened form of
+    the same organisation (e.g. 'Roche' ⊆ 'Roche Diagnostics GmbH').
+    """
+    a_l = a.strip().lower()
+    b_l = b.strip().lower()
+    if a_l == b_l:
+        return True
+    ta = _company_tokens(a)
+    tb = _company_tokens(b)
+    if not ta or not tb:
+        return False
+    return ta <= tb or tb <= ta
+
+
+def _sort_work_by_date(entries: list[WorkEntry]) -> list[WorkEntry]:
+    """Sort work entries reverse-chronologically (most recent first).
+
+    Entries with no end_date (ongoing roles) sort first (treated as 9999-12).
+    """
+    def _key(e: WorkEntry) -> str:
+        if not e.end_date:
+            return "9999-12"
+        return (e.end_date + "-12")[:7]
+
+    return sorted(entries, key=_key, reverse=True)
+
+
 def _merge_work_experience(
     existing: list[WorkEntry],
     incoming: list[WorkEntry],
@@ -104,9 +167,31 @@ def _merge_work_experience(
     conflicts: list[Conflict] = []
 
     for inc in incoming:
+        # Drop shell entries: no company, or no dates AND no content — these are
+        # misclassified role aliases that the LLM should have placed in role_aliases.
+        if not inc.company.strip():
+            continue
+        if (
+            not inc.start_date
+            and not inc.end_date
+            and not inc.responsibilities
+            and not inc.achievements
+        ):
+            # Attempt to attach the title as a role_alias on a same-company entry
+            for idx, ex in enumerate(result):
+                if _company_names_match(ex.company, inc.company):
+                    new_aliases = list(result[idx].role_aliases)
+                    for title in [inc.role] + inc.role_aliases:
+                        if title.strip().lower() not in {t.lower() for t in new_aliases + [result[idx].role]}:
+                            new_aliases.append(title)
+                    result[idx] = result[idx].model_copy(update={"role_aliases": new_aliases})
+                    added.append(f"role_alias '{inc.role}' → {inc.company}")
+                    break
+            continue
+
         matched = False
         for idx, ex in enumerate(result):
-            if ex.company.strip().lower() != inc.company.strip().lower():
+            if not _company_names_match(ex.company, inc.company):
                 continue
             if not _dates_overlap(ex.start_date, ex.end_date, inc.start_date, inc.end_date):
                 continue
@@ -167,7 +252,7 @@ def _merge_work_experience(
             result.append(inc)
             added.append(f"work_experience: {inc.role} at {inc.company}")
 
-    return result, added, conflicts
+    return _sort_work_by_date(result), added, conflicts
 
 
 def _merge_skills(

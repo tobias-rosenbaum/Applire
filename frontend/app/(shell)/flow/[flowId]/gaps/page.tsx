@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScoreCircle } from "@/components/ui/score-circle";
 import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
+import { GapClusterCard, type GapCluster } from "@/components/gaps/GapClusterCard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -24,6 +25,7 @@ interface GapAnalysis {
   category_b: string[];
   category_c: string[];
   strengths: string[];
+  gap_clusters: GapCluster[];
 }
 
 interface FlowState {
@@ -48,6 +50,7 @@ interface GapClickState {
   status: GapStatus;
   sessionId: string | null;
   question: string | null;
+  choices: string[] | null;
   answer: string;
   sending: boolean;
   error: string;
@@ -74,6 +77,7 @@ const EMPTY_GAP_STATE: GapClickState = {
   status: "idle",
   sessionId: null,
   question: null,
+  choices: null,
   answer: "",
   sending: false,
   error: "",
@@ -151,47 +155,20 @@ function JdRecoveryBanner() {
 }
 
 // ---------------------------------------------------------------------------
-// GapClickPanel — inline micro-session for a single gap
+// GapClickPanel — inline micro-session for a single cluster
 // ---------------------------------------------------------------------------
 
 function GapClickPanel({
-  gap,
-  jobId,
   state,
   onUpdate,
   onResolved,
 }: {
-  gap: string;
-  jobId: string;
   state: GapClickState;
   onUpdate: (patch: Partial<GapClickState>) => void;
   onResolved: () => void;
 }) {
   const t = useTranslations("gaps");
   const tc = useTranslations("common");
-
-  async function startMicroSession() {
-    onUpdate({ status: "loading", error: "" });
-    try {
-      const res = await fetch(`${API_BASE}/api/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId, mode: "targeted", target_gap: gap }),
-      });
-      if (!res.ok) throw new Error(await apiErrorMessage(res));
-      const data = await res.json();
-      onUpdate({
-        status: "question",
-        sessionId: data.session_id,
-        question: data.question ?? data.first_question,
-      });
-    } catch (e: unknown) {
-      onUpdate({
-        status: "idle",
-        error: e instanceof Error ? e.message : "Failed to start",
-      });
-    }
-  }
 
   async function sendAnswer() {
     if (!state.sessionId || !state.answer.trim() || state.sending) return;
@@ -214,15 +191,7 @@ function GapClickPanel({
   }
 
   if (state.status === "idle") {
-    return (
-      <button
-        data-testid="gap-click-trigger"
-        className="mt-2 text-xs text-teal underline hover:no-underline"
-        onClick={() => void startMicroSession()}
-      >
-        {t("answerGap")}
-      </button>
-    );
+    return null; // card click handles session start
   }
 
   if (state.status === "loading") {
@@ -239,6 +208,27 @@ function GapClickPanel({
       <div className="mt-3 rounded-lg border border-teal/30 bg-teal/5 p-3 space-y-2">
         <p data-testid="gap-question" className="text-sm font-medium text-neutral-dark">{state.question}</p>
         {state.error && <p className="text-xs text-critical">{state.error}</p>}
+        {state.choices && state.choices.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-xs text-gray-400">{t("choiceCardHint")}</p>
+            <div className="flex flex-col gap-1">
+              {state.choices.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className={cn(
+                    "w-full text-left rounded border border-teal/30 px-3 py-2 text-xs text-neutral-dark",
+                    "hover:bg-teal/5 transition-colors",
+                    state.answer === choice ? "bg-teal/10 border-teal/60 font-medium" : "bg-white",
+                  )}
+                  onClick={() => onUpdate({ answer: choice, status: "answering" })}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <textarea
           data-testid="gap-answer-textarea"
           className={cn(
@@ -295,7 +285,7 @@ export default function GapsPage({
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Gap-Click state keyed by gap string
+  // Gap-Click state keyed by cluster ID
   const [gapStates, setGapStates] = useState<Record<string, GapClickState>>({});
   // Resolved gaps — removed from active list and shown as green
   const [resolvedGaps, setResolvedGaps] = useState<Set<string>>(new Set());
@@ -351,10 +341,10 @@ export default function GapsPage({
     void load();
   }, [flowId]);
 
-  function updateGapState(gap: string, patch: Partial<GapClickState>) {
+  function updateGapState(clusterId: string, patch: Partial<GapClickState>) {
     setGapStates((prev) => ({
       ...prev,
-      [gap]: { ...(prev[gap] ?? EMPTY_GAP_STATE), ...patch },
+      [clusterId]: { ...(prev[clusterId] ?? EMPTY_GAP_STATE), ...patch },
     }));
   }
 
@@ -376,6 +366,30 @@ export default function GapsPage({
       } catch {
         // Non-critical — keep existing score
       }
+    }
+  }
+
+  async function startMicroSession(clusterId: string, jobId: string) {
+    updateGapState(clusterId, { status: "loading", error: "" });
+    try {
+      const res = await fetch(`${API_BASE}/api/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: jobId, mode: "targeted", target_gap: clusterId }),
+      });
+      if (!res.ok) throw new Error(await apiErrorMessage(res));
+      const data = await res.json();
+      updateGapState(clusterId, {
+        status: "question",
+        sessionId: data.session_id,
+        question: data.question ?? data.first_question,
+        choices: data.choices ?? null,
+      });
+    } catch (e: unknown) {
+      updateGapState(clusterId, {
+        status: "idle",
+        error: e instanceof Error ? e.message : "Failed to start",
+      });
     }
   }
 
@@ -522,7 +536,7 @@ export default function GapsPage({
         </div>
       </Card>
 
-      {/* Section 3: Gaps (clickable — Gap-Click Mode, 19.3/19.4) */}
+      {/* Section 3: Cluster-based gap display */}
       {totalGaps > 0 && (
         <div data-testid="gaps-section" className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -534,97 +548,57 @@ export default function GapsPage({
             )}
           </div>
 
-          <div className="space-y-2">
-            {/* Category C gaps — exploratory (unknown) */}
-            {activeGapC.map((gap) => {
-              const gs = gapStates[gap] ?? EMPTY_GAP_STATE;
-              return (
-                <div
-                  key={gap}
-                  className={cn(
-                    "rounded-lg border transition-all",
-                    gs.status === "question" || gs.status === "answering"
-                      ? "border-teal/40 bg-teal/5 p-4"
-                      : "border-transparent hover:border-gray-200 p-3 hover:bg-gray-50",
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div data-testid="gap-c-severity-dot" className="w-2 h-2 rounded-full bg-critical mt-2 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-neutral-dark">{gap}</p>
-                      <p className="text-sm text-gray-500 italic mt-0.5">
-                        {t("gapCHint")}
-                      </p>
-                      <GapClickPanel
-                        gap={gap}
-                        jobId={flowState?.job_id ?? ""}
-                        state={gs}
-                        onUpdate={(patch) => updateGapState(gap, patch)}
-                        onResolved={() => void handleGapResolved(gap)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Category B gaps — likely but unstated */}
-            {activeGapB.map((gap) => {
-              const gs = gapStates[gap] ?? EMPTY_GAP_STATE;
-              return (
-                <div
-                  key={gap}
-                  className={cn(
-                    "rounded-lg border transition-all",
-                    gs.status === "question" || gs.status === "answering"
-                      ? "border-teal/40 bg-teal/5 p-4"
-                      : "border-transparent hover:border-gray-200 p-3 hover:bg-gray-50",
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div data-testid="gap-b-severity-dot" className="w-2 h-2 rounded-full bg-warning mt-2 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-neutral-dark">{gap}</p>
-                        <Badge variant="secondary" className="text-xs bg-teal/10 text-teal border-teal/20">
-                          {t("categoryB")}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-500 italic mt-0.5">
-                        {t("gapBHint")}
-                      </p>
-                      <GapClickPanel
-                        gap={gap}
-                        jobId={flowState?.job_id ?? ""}
-                        state={gs}
-                        onUpdate={(patch) => updateGapState(gap, patch)}
-                        onResolved={() => void handleGapResolved(gap)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Resolved gaps */}
-            {Array.from(resolvedGaps).map((gap) => (
-              <div
-                key={gap}
-                data-testid="gap-resolved"
-                className="rounded-lg border border-success/30 bg-success/5 p-3 flex items-start gap-3 transition-all"
-              >
-                <div className="w-5 h-5 rounded-full bg-success flex items-center justify-center shrink-0 mt-0.5">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-semibold text-success">{gap}</p>
-                  <p className="text-xs text-success/70 mt-0.5">{t("resolvedStatus")}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Cluster-based gap display */}
+          {gaps?.gap_clusters && gaps.gap_clusters.length > 0 ? (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500 mb-3">
+                {t("clustersToAddress", {
+                  count: gaps.gap_clusters.filter(
+                    (c) => gapStates[c.id]?.status !== "resolved"
+                  ).length,
+                })}
+              </p>
+              {[...gaps.gap_clusters]
+                .sort((a, b) => {
+                  if (a.category === "C" && b.category !== "C") return -1;
+                  if (a.category !== "C" && b.category === "C") return 1;
+                  return 0;
+                })
+                .map((cluster) => {
+                  const clusterState = gapStates[cluster.id] ?? EMPTY_GAP_STATE;
+                  const isResolved = clusterState.status === "resolved";
+                  return (
+                    <GapClusterCard
+                      key={cluster.id}
+                      cluster={cluster}
+                      resolved={isResolved}
+                      onClick={
+                        !isResolved && clusterState.status === "idle"
+                          ? () => void startMicroSession(cluster.id, flowState?.job_id ?? "")
+                          : undefined
+                      }
+                    >
+                      {!isResolved && (
+                        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                          <GapClickPanel
+                            state={clusterState}
+                            onUpdate={(patch) => updateGapState(cluster.id, patch)}
+                            onResolved={() => {
+                              updateGapState(cluster.id, { status: "resolved" });
+                            }}
+                          />
+                        </div>
+                      )}
+                    </GapClusterCard>
+                  );
+                })}
+            </div>
+          ) : (
+            /* No clusters yet (analysis still running) */
+            ((gaps?.category_c && gaps.category_c.length > 0) || (gaps?.category_b && gaps.category_b.length > 0)) ? (
+              <p className="text-sm text-gray-500">{t("analyzing")}</p>
+            ) : null
+          )}
         </div>
       )}
 

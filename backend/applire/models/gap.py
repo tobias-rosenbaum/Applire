@@ -31,6 +31,7 @@ class GapAnalysis(Base):
     category_a: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     category_b: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     category_c: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
+    gap_clusters: Mapped[list] = mapped_column(_JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

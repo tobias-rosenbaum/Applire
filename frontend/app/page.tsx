@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Dashboard } from "@/components/dashboard/Dashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -72,7 +71,12 @@ export default function Home() {
 
   // Returning user → Dashboard
   if (isReturningUser) {
-    return <Dashboard />;
+    router.replace("/dashboard");
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+        <p className="text-gray-500">{tCommon("loading")}</p>
+      </div>
+    );
   }
 
   // New user → Screen 1 (CV upload + JD input)

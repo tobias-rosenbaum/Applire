@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from applire.schemas.gap_cluster import GapClusterSchema
+
 
 class GapAnalysisResponse(BaseModel):
     id: uuid.UUID
@@ -16,6 +18,7 @@ class GapAnalysisResponse(BaseModel):
     category_a: list[str] = Field(default_factory=list)
     category_b: list[str] = Field(default_factory=list)
     category_c: list[str] = Field(default_factory=list)
+    gap_clusters: list[GapClusterSchema] = Field(default_factory=list)
     created_at: datetime
 
     model_config = {"from_attributes": True}

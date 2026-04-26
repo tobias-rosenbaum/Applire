@@ -105,6 +105,7 @@ async def create_session(
         gaps_remaining = gaps_total - state.get("current_gap_index", 0)
         estimated = _estimated_questions(existing.mode)
         current_q = state.get("current_question", "")
+        current_choices = state.get("current_choices")
         return SessionCreateResponse(
             session_id=existing.id,
             mode=existing.mode,
@@ -113,6 +114,7 @@ async def create_session(
             estimated_questions=estimated,
             gaps_total=gaps_total,
             gaps_remaining=gaps_remaining,
+            choices=current_choices,
             resumed=True,
         )
 
@@ -154,9 +156,9 @@ async def _create_targeted_session(
         )
         gap_analysis = ga_result2.scalar_one()
 
-    critical_gaps, gap_categories = gap_detector(gap_analysis)
+    cluster_ids, cluster_categories, clusters_by_id = gap_detector(gap_analysis)
 
-    if not critical_gaps:
+    if not cluster_ids:
         state: InterviewState = _build_state(
             mode="targeted",
             job_id=job_id,
@@ -164,6 +166,7 @@ async def _create_targeted_session(
             profile_id=profile_record.id,
             critical_gaps=[],
             gap_categories={},
+            gap_clusters_by_id={},
             current_question="",
             hard_ceiling=INTERVIEW_HARD_CEILING_TARGETED,
         )
@@ -190,22 +193,26 @@ async def _create_targeted_session(
             gaps_remaining=0,
         )
 
-    first_gap = critical_gaps[0]
-    first_category = gap_categories.get(first_gap)
+    first_cluster_id = cluster_ids[0]
+    first_category = cluster_categories.get(first_cluster_id)
     state = _build_state(
         mode="targeted",
         job_id=job_id,
         gap_analysis_id=gap_analysis.id,
         profile_id=profile_record.id,
-        critical_gaps=critical_gaps,
-        gap_categories=gap_categories,
+        critical_gaps=cluster_ids,
+        gap_categories=cluster_categories,
+        gap_clusters_by_id=clusters_by_id,
         current_question="",
         hard_ceiling=INTERVIEW_HARD_CEILING_TARGETED,
     )
-    first_question = await question_generator_with_profile(
+    q_data = await question_generator_with_profile(
         state, profile_record.profile_json, provider, gap_category=first_category
     )
+    first_question = q_data["question"]
+    first_choices = q_data["choices"]
     state["current_question"] = first_question
+    state["current_choices"] = first_choices
     state["messages"].append({"role": "assistant", "content": first_question})
     state["questions_asked"] = 1
 
@@ -229,8 +236,9 @@ async def _create_targeted_session(
         first_question=first_question,
         question=first_question,
         estimated_questions=_estimated_questions("targeted"),
-        gaps_total=len(critical_gaps),
-        gaps_remaining=len(critical_gaps),
+        gaps_total=len(cluster_ids),
+        gaps_remaining=len(cluster_ids),
+        choices=first_choices,
     )
 
 
@@ -261,17 +269,20 @@ async def _create_guided_session(
         profile_id=profile_record.id,
         critical_gaps=sections,
         gap_categories={},
+        gap_clusters_by_id={},
         current_question="",
         hard_ceiling=INTERVIEW_HARD_CEILING_GUIDED,
     )
-    first_question = await question_generator_with_profile(
+    q_data = await question_generator_with_profile(
         state,
         profile_record.profile_json,
         provider,
         gap_category=None,
         job_context=job_context,
     )
+    first_question = q_data["question"]
     state["current_question"] = first_question
+    state["current_choices"] = None
     state["messages"].append({"role": "assistant", "content": first_question})
     state["questions_asked"] = 1
 
@@ -304,22 +315,17 @@ async def _create_micro_session(
     job_id: uuid.UUID,
     job: JobAnalysis,
     profile_record: MasterProfile | None,
-    target_gap: str,
+    target_cluster_id: str,
     db: AsyncSession,
     provider: LLMProvider,
 ) -> SessionCreateResponse:
-    """Create a 1-question micro-session scoped to a single gap (Gap-Click mode, 19.9).
-
-    Hard ceiling = 1: completes after a single user answer.
-    Does NOT check for existing active sessions — micro-sessions are independent.
-    """
+    """Create a 1-question micro-session scoped to a single cluster (Gap-Click mode)."""
     if profile_record is None:
         raise LookupError(
             "No profile found — upload a CV first before using Gap-Click mode"
         )
 
-    # Determine gap category from the latest gap analysis (best-effort)
-    gap_category: str | None = None
+    # Load latest gap analysis to find the cluster
     gap_result = await db.execute(
         select(GapAnalysis)
         .where(
@@ -330,17 +336,22 @@ async def _create_micro_session(
         .limit(1)
     )
     gap_analysis = gap_result.scalar_one_or_none()
-    if gap_analysis is not None:
-        if target_gap in (gap_analysis.category_b or []):
-            gap_category = "B"
-        elif target_gap in (gap_analysis.category_c or []):
-            gap_category = "C"
 
-    # Build full gap list for cross-gap context in send_message
-    full_gaps: list[str] = []
+    cluster: dict = {
+        "id": target_cluster_id,
+        "label": target_cluster_id,
+        "gaps": [],
+        "jd_skills": [],
+        "jd_context": "",
+    }
+    gap_category: str | None = None
     if gap_analysis is not None:
-        all_gaps = list(gap_analysis.category_c or []) + list(gap_analysis.category_b or [])
-        full_gaps = [g for g in all_gaps if g and g != target_gap]
+        clusters_raw: list[dict] = list(gap_analysis.gap_clusters or [])
+        for c in clusters_raw:
+            if c.get("id") == target_cluster_id:
+                cluster = c
+                gap_category = c.get("category")
+                break
 
     _MICRO_CEILING = 1
     state: InterviewState = _build_state(
@@ -348,22 +359,22 @@ async def _create_micro_session(
         job_id=job_id,
         gap_analysis_id=gap_analysis.id if gap_analysis else None,
         profile_id=profile_record.id,
-        critical_gaps=[target_gap],
-        gap_categories={target_gap: gap_category or "C"},
+        critical_gaps=[target_cluster_id],
+        gap_categories={target_cluster_id: gap_category or "C"},
+        gap_clusters_by_id={target_cluster_id: cluster},
         current_question="",
         hard_ceiling=_MICRO_CEILING,
     )
-    state["full_gaps"] = full_gaps
-    first_question = await question_generator_with_profile(
+    q_data = await question_generator_with_profile(
         state, profile_record.profile_json, provider, gap_category=gap_category
     )
+    first_question = q_data["question"]
+    first_choices = q_data["choices"]
     state["current_question"] = first_question
+    state["current_choices"] = first_choices
     state["messages"].append({"role": "assistant", "content": first_question})
     state["questions_asked"] = 1
 
-    # Close any existing active session for this job before inserting the new
-    # micro-session — the uq_active_session_per_job partial unique index
-    # (status='active') covers all session types, including micro-sessions.
     existing_active = await _get_active_session(job_id, db)
     if existing_active is not None:
         existing_active.status = "complete"
@@ -392,6 +403,7 @@ async def _create_micro_session(
         estimated_questions=1,
         gaps_total=1,
         gaps_remaining=1,
+        choices=first_choices,
     )
 
 
@@ -430,18 +442,15 @@ async def send_message(
     current_gap = state["critical_gaps"][current_idx]
     current_question = state["current_question"]
 
-    # Compute open gaps for cross-gap context (micro-sessions use full_gaps)
     skipped_set = set(state.get("skipped_gaps", []))
     addressed_set = set(state.get("addressed_gaps", []))
-    full_gaps = state.get("full_gaps") or state["critical_gaps"]
-    remaining_gaps = [
-        g for g in full_gaps
-        if g != current_gap and g not in skipped_set and g not in addressed_set
-    ]
+    clusters_by_id = state.get("gap_clusters_by_id") or {}
+    current_cluster = clusters_by_id.get(current_gap, {"label": current_gap})
+    cluster_label = current_cluster.get("label", current_gap)
 
     # --- ResponseParser ---
     patch = await response_parser(
-        current_gap, current_question, message, provider, remaining_gaps
+        cluster_label, current_question, message, provider
     )
 
     # --- ProfileUpdater ---
@@ -449,19 +458,6 @@ async def send_message(
     updated_profile, merge_conflicts = profile_updater(profile_record.profile_json, patch)
     profile_record.profile_json = updated_profile
     profile_record.updated_at = datetime.now(timezone.utc)
-
-    # --- Cross-gap resolution ---
-    newly_skipped: list[str] = []
-    for also_gap in patch.get("gaps_also_addressed", []):
-        if (
-            also_gap in state["critical_gaps"]
-            and also_gap != current_gap
-            and also_gap not in state.get("addressed_gaps", [])
-            and also_gap not in state.get("skipped_gaps", [])
-        ):
-            state.setdefault("skipped_gaps", []).append(also_gap)
-            state.setdefault("addressed_gaps", []).append(also_gap)
-            newly_skipped.append(also_gap)
 
     # Increment questions_asked
     questions_asked = state.get("questions_asked", 1) + 1
@@ -504,14 +500,17 @@ async def send_message(
         if state.get("mode") == "guided":
             job_context = await _load_job_context(state["job_id"], db)
 
-        next_question = await question_generator_with_profile(
+        next_q_data = await question_generator_with_profile(
             state,
             updated_profile,
             provider,
             gap_category=next_category,
             job_context=job_context,
         )
+        next_question = next_q_data["question"]
+        next_choices = next_q_data["choices"]
         state["current_question"] = next_question
+        state["current_choices"] = next_choices
         state["messages"].append({"role": "assistant", "content": next_question})
         record.state = state
         record.updated_at = datetime.now(timezone.utc)
@@ -522,7 +521,7 @@ async def send_message(
             question=next_question,
             gaps_remaining=gaps_remaining,
             pending_conflicts=merge_conflicts if merge_conflicts else None,
-            gaps_also_addressed=newly_skipped if newly_skipped else None,
+            choices=next_choices,
         )
 
     else:
@@ -537,14 +536,16 @@ async def send_message(
         )
         gap_category = (state.get("gap_categories") or {}).get(current_gap)
 
-        follow_up_question = await question_generator_with_profile(
+        follow_up_data = await question_generator_with_profile(
             state,
             updated_profile,
             provider,
             gap_category=gap_category,
             follow_up_hint=follow_up_hint,
         )
+        follow_up_question = follow_up_data["question"]
         state["current_question"] = follow_up_question
+        state["current_choices"] = None
         state["messages"].append({"role": "assistant", "content": follow_up_question})
         record.state = state
         record.updated_at = datetime.now(timezone.utc)
@@ -561,7 +562,7 @@ async def send_message(
             question=follow_up_question,
             gaps_remaining=gaps_remaining,
             pending_conflicts=merge_conflicts if merge_conflicts else None,
-            gaps_also_addressed=newly_skipped if newly_skipped else None,
+            choices=None,
         )
 
 
@@ -697,6 +698,7 @@ def _build_state(
     profile_id: uuid.UUID,
     critical_gaps: list[str],
     gap_categories: dict,
+    gap_clusters_by_id: dict,
     current_question: str,
     hard_ceiling: int,
 ) -> InterviewState:
@@ -707,15 +709,18 @@ def _build_state(
         "profile_id": str(profile_id),
         "critical_gaps": critical_gaps,
         "gap_categories": gap_categories,
+        "gap_clusters_by_id": gap_clusters_by_id,
         "addressed_gaps": [],
         "current_gap_index": 0,
         "current_question": current_question,
+        "current_choices": None,
         "messages": [],
         "questions_asked": 0,
         "hard_ceiling": hard_ceiling,
         "questions_per_gap": {},
         "skipped_gaps": [],
         "full_gaps": [],
+        "na_gaps": [],
     }
 
 

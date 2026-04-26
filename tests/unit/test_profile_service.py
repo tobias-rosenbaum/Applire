@@ -417,6 +417,134 @@ class TestMergeWorkExperience:
         result, _, _ = self._merge(existing, incoming)
         assert len(result) == 2
 
+    def test_adjacent_roles_same_employer_not_merged(self):
+        # System Engineer ends 2021-05, AD starts 2021-05 — boundary month is a
+        # job transition, not concurrent employment; must remain two entries.
+        existing = [
+            _work_entry(company="BioNTech SE", role="System Engineer",
+                        start_date="2018-10", end_date="2021-05"),
+        ]
+        incoming = [
+            _work_entry(company="BioNTech SE", role="Associate Director",
+                        start_date="2021-05", end_date="2024-11"),
+        ]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 2
+        roles = {r.role for r in result}
+        assert "System Engineer" in roles
+        assert "Associate Director" in roles
+
+    def test_three_sequential_roles_same_employer_stay_separate(self):
+        # Real-world case: three BioNTech SE promotions, each starting when the
+        # previous ended — none should collapse into a single entry.
+        existing = [
+            _work_entry(company="BioNTech SE", role="System Engineer",
+                        start_date="2018-10", end_date="2021-05"),
+            _work_entry(company="BioNTech SE", role="Associate Director System Architecture",
+                        start_date="2021-05", end_date="2024-11"),
+            _work_entry(company="BioNTech SE", role="Associate Director E2E Supply Chain",
+                        start_date="2024-12", end_date=None),
+        ]
+        incoming = [
+            _work_entry(company="BioNTech SE", role="System Engineer",
+                        start_date="2018-10", end_date="2021-05",
+                        responsibilities=["Additional bullet"]),
+        ]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 3
+        se = next(r for r in result if r.role == "System Engineer")
+        assert "Additional bullet" in se.responsibilities
+
+    def test_shell_entry_with_empty_company_is_dropped(self):
+        existing = [_work_entry(company="Acme", start_date="2020-01")]
+        incoming = [_work_entry(company="", role="Phantom Role")]  # no company, no content
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 1  # shell entry discarded
+
+    def test_shell_entry_with_company_but_no_dates_or_content_becomes_alias(self):
+        existing = [_work_entry(company="Acme", role="System Engineer", start_date="2018-10")]
+        incoming = [_work_entry(company="Acme", role="Solution Architect", start_date=None)]
+        result, added, _ = self._merge(existing, incoming)
+        assert len(result) == 1
+        assert "Solution Architect" in result[0].role_aliases
+        assert any("role_alias" in a for a in added)
+
+    def test_shell_entry_with_unknown_company_is_discarded(self):
+        existing = [_work_entry(company="Acme", start_date="2020-01")]
+        incoming = [_work_entry(company="Unknown Corp", role="Ghost", start_date=None)]
+        result, _, _ = self._merge(existing, incoming)
+        # Unknown Corp has no matching existing entry — shell is discarded entirely
+        assert len(result) == 1
+
+    # -- Fuzzy company matching --
+
+    def test_fuzzy_match_short_name_subset_of_long(self):
+        # "Roche" should match "Roche Diagnostics GmbH" (same org, shorter alias)
+        existing = [_work_entry(
+            company="Roche Diagnostics GmbH", start_date="2011-06", end_date="2012-07"
+        )]
+        incoming = [_work_entry(
+            company="Roche", start_date="2011-06", end_date="2012-07",
+            responsibilities=["Validated dashboard"],
+        )]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 1
+        assert "Validated dashboard" in result[0].responsibilities
+
+    def test_fuzzy_match_shared_distinctive_token(self):
+        # "Blutspendedienst des BRK" vs "Bayerischer Blutspendedienst gGmbH"
+        existing = [_work_entry(
+            company="Bayerischer Blutspendedienst gGmbH",
+            start_date="2012-08", end_date="2018-09",
+            responsibilities=["Managed systems"],
+        )]
+        incoming = [_work_entry(
+            company="Blutspendedienst des BRK",
+            start_date="2012-08", end_date="2018-09",
+            responsibilities=["Led QC-LIMS implementation"],
+        )]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 1
+        assert "Managed systems" in result[0].responsibilities
+        assert "Led QC-LIMS implementation" in result[0].responsibilities
+
+    def test_fuzzy_no_false_match_different_companies(self):
+        # "Deutsche Bank" and "Deutsche Post" share a token but are different orgs —
+        # neither token set is a subset of the other, so no merge.
+        existing = [_work_entry(
+            company="Deutsche Bank", start_date="2015-01", end_date="2017-12"
+        )]
+        incoming = [_work_entry(
+            company="Deutsche Post", start_date="2015-01", end_date="2017-12",
+            responsibilities=["Delivered parcels"],
+        )]
+        result, _, _ = self._merge(existing, incoming)
+        assert len(result) == 2
+
+    # -- Chronological ordering --
+
+    def test_merge_result_is_sorted_reverse_chronological(self):
+        existing = [
+            _work_entry(company="OldCo", start_date="2010-01", end_date="2014-12"),
+            _work_entry(company="NewCo", start_date="2018-01", end_date="2022-06"),
+        ]
+        incoming = [_work_entry(company="MidCo", start_date="2015-01", end_date="2017-12")]
+        result, _, _ = self._merge(existing, incoming)
+        dates = [r.end_date for r in result]
+        assert dates == ["2022-06", "2017-12", "2014-12"]
+
+    def test_ongoing_role_sorts_first(self):
+        existing = [
+            _work_entry(company="OldCo", start_date="2010-01", end_date="2014-12"),
+        ]
+        incoming = [_work_entry(
+            company="CurrentCo", start_date="2020-01", end_date=None,
+            responsibilities=["Ongoing work"],
+        )]
+        result, _, _ = self._merge(existing, incoming)
+        assert result[0].company == "CurrentCo"
+        assert result[0].end_date is None
+
 
 # ---------------------------------------------------------------------------
 # TestMergeSkills

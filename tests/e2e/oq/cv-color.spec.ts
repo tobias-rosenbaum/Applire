@@ -39,6 +39,13 @@ const MOCK_CV_HTML_RECOLORED = `<html><body style="--cv-accent:#c0392b"><h1>Max 
 
 test.describe("CV Design tab", () => {
   test.beforeEach(async ({ page }) => {
+    await page.route("**/api/settings", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ default_color_profile_id: null, default_accent_hex: null, ui_language: "de" }),
+      });
+    });
     await page.route(`**/api/flow/${TEST_FLOW_ID}/state`, async (route) => {
       await route.fulfill({
         status: 200,

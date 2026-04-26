@@ -36,6 +36,7 @@ class SessionCreateResponse(BaseModel):
     question: str  # same as first_question
     gaps_total: int
     gaps_remaining: int
+    choices: list[str] | None = None
     resumed: bool = False  # True if an existing active session was returned
 
 
@@ -51,6 +52,7 @@ class SessionMessageResponse(BaseModel):
     complete: bool
     question: str | None = None
     gaps_remaining: int | None = None
+    choices: list[str] | None = None
     # Populated when complete=True
     reason: Literal["gaps_resolved", "user_ended", "max_questions_reached"] | None = None
     questions_asked: int | None = None
@@ -59,8 +61,6 @@ class SessionMessageResponse(BaseModel):
     completeness_score: float | None = None
     # Populated when ProfileUpdater detects a merge conflict (19.10)
     pending_conflicts: list[ConflictSummary] | None = None
-    # Populated when cross-gap resolution fires (Sprint 15)
-    gaps_also_addressed: list[str] | None = None
 
 
 class SessionStateResponse(BaseModel):
@@ -94,9 +94,11 @@ class InterviewState(TypedDict):
     # MODE B: ordered section names to build
     critical_gaps: list[str]
     gap_categories: dict  # {gap_str: "B" | "C"} — empty dict for MODE B
+    gap_clusters_by_id: dict
     addressed_gaps: list[str]
     current_gap_index: int
     current_question: str
+    current_choices: list | None
     messages: list[dict]  # {"role": "assistant"|"user", "content": "..."}
     questions_asked: int
     hard_ceiling: int

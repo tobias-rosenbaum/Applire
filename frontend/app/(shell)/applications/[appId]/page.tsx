@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -142,7 +143,7 @@ export default function ApplicationDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+      <div className="flex flex-col flex-1 items-center justify-center bg-surface-dim">
         <p className="text-gray-500">{t("loadingDetails")}</p>
       </div>
     );
@@ -150,7 +151,7 @@ export default function ApplicationDetailPage() {
 
   if (error && !application) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-surface-dim">
+      <div className="flex flex-col flex-1 items-center justify-center bg-surface-dim">
         <p className="text-critical mb-4">{error}</p>
         <Button onClick={() => router.push("/")}>{t("backToDashboard")}</Button>
       </div>
@@ -165,7 +166,7 @@ export default function ApplicationDetailPage() {
     : null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-dim">
+    <div className="flex flex-col flex-1 overflow-hidden bg-surface-dim">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -195,7 +196,7 @@ export default function ApplicationDetailPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 py-8">
+      <main className="flex-1 overflow-y-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Success/Error Messages */}
           {success && (
@@ -362,15 +363,15 @@ export default function ApplicationDetailPage() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 px-4 py-4">
         <div className="max-w-4xl mx-auto flex justify-center gap-6">
-          <a href="/" className="text-sm text-teal hover:underline">
+          <Link href="/" className="text-sm text-teal hover:underline">
             {tNav("dashboard")}
-          </a>
-          <a href="/profile" className="text-sm text-teal hover:underline">
+          </Link>
+          <Link href="/profile" className="text-sm text-teal hover:underline">
             {tNav("profile")}
-          </a>
-          <a href="/settings" className="text-sm text-teal hover:underline">
+          </Link>
+          <Link href="/settings" className="text-sm text-teal hover:underline">
             {tNav("settings")}
-          </a>
+          </Link>
         </div>
       </footer>
     </div>
