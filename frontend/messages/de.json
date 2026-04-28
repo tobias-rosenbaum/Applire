@@ -243,6 +243,7 @@
     "contentTab": "Inhalt",
     "actionsTab": "Aktionen",
     "designTab": "Design",
+    "progressTitle": "Anschreiben wird erstellt",
     "progressSubtitle": "KI formuliert Ihr Anschreiben",
     "stepPreparing": "Daten werden aufbereitet",
     "stepGenerating": "Anschreiben wird generiert",

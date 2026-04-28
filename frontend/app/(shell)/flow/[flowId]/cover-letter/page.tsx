@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { CoverLetterDocument } from "@/components/cover-letter/CoverLetterDocument";
 import { CoverLetterRefinementPanel } from "@/components/cover-letter/CoverLetterRefinementPanel";
 import { GenerateCoverLetterModal } from "@/components/cover-letter/GenerateCoverLetterModal";
+import { ProgressWidget, ProgressStep } from "@/components/ui/progress-widget";
 
 type CLTemplate =
   | "classic_german"
@@ -30,6 +31,18 @@ interface CLState {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 const POLL_INTERVAL_MS = 2000;
+
+function buildClProgressSteps(
+  status: string,
+  t: (key: string) => string
+): ProgressStep[] {
+  const activeIdx = status === "generating" ? 1 : status === "ready" ? 2 : 0;
+  const labels = [t("stepPreparing"), t("stepGenerating"), t("stepReady")];
+  return labels.map((label, i) => ({
+    label,
+    status: (i < activeIdx ? "done" : i === activeIdx ? "active" : "pending") as ProgressStep["status"],
+  }));
+}
 
 export default function CoverLetterPage({
   params,
@@ -68,13 +81,16 @@ export default function CoverLetterPage({
       const clId = clSummary.cover_letter_id;
       const statusRes = await fetch(`${API_BASE}/api/cover-letter/${clId}/status`);
       if (!statusRes.ok) { setPhase("not_found"); return; }
-      const statusData = await statusRes.json() as { status: string };
+      const statusData = await statusRes.json() as {
+        status: string;
+        letter_data?: Record<string, unknown> | null;
+      };
 
       setClState({
         coverLetterId: clId,
         status: statusData.status,
         template: clSummary.template as CLTemplate,
-        letterData: null,
+        letterData: statusData.letter_data ?? null,
         preGenInputs: null,
         jobId: flowData.job_id ?? null,
         roleTitle: flowData.job_summary?.role_title ?? null,
@@ -105,12 +121,20 @@ export default function CoverLetterPage({
       try {
         const res = await fetch(`${API_BASE}/api/cover-letter/${clId}/status`);
         if (!res.ok) return;
-        const data = await res.json() as { status: string };
+        const data = await res.json() as {
+          status: string;
+          letter_data?: Record<string, unknown> | null;
+        };
         if (data.status === "ready") {
           clearInterval(pollRef.current!);
           setPhase("ready");
-          setClState((prev) => prev ? { ...prev, status: "ready" } : prev);
-        } else if (data.status === "failed") {
+          setClState((prev) =>
+            prev ? { ...prev, status: "ready", letterData: data.letter_data ?? null } : prev
+          );
+        } else {
+          setClState((prev) => prev ? { ...prev, status: data.status } : prev);
+        }
+        if (data.status === "failed") {
           clearInterval(pollRef.current!);
           setPhase("not_found");
         }
@@ -207,8 +231,13 @@ export default function CoverLetterPage({
 
       {/* Body */}
       {phase === "generating" ? (
-        <div className="flex items-center justify-center flex-1 text-neutral-400 text-sm">
-          {t("generating")}
+        <div className="flex items-center justify-center flex-1 p-8">
+          <ProgressWidget
+            steps={buildClProgressSteps(clState?.status ?? "pending", t)}
+            title={t("progressTitle")}
+            subtitle={t("progressSubtitle")}
+            className="max-w-sm w-full"
+          />
         </div>
       ) : (
         <div className="flex flex-1 min-h-0">

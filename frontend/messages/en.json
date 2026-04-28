@@ -243,6 +243,7 @@
     "contentTab": "Content",
     "actionsTab": "Actions",
     "designTab": "Design",
+    "progressTitle": "Creating cover letter",
     "progressSubtitle": "AI is writing your cover letter",
     "stepPreparing": "Preparing data",
     "stepGenerating": "Generating cover letter",
