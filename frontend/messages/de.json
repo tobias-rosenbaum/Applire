@@ -194,6 +194,7 @@
     "generatingCVButton": "Generiere …",
     "generationTitle": "Lebenslauf wird erstellt",
     "generationHint": "Das dauert normalerweise 20–40 Sekunden.",
+    "progressSubtitle": "KI rendert Ihren Lebenslauf",
     "stepQueued": "In der Warteschlange…",
     "stepRendering": "Lebenslauf wird gerendert…",
     "stepDone": "Fertig!",

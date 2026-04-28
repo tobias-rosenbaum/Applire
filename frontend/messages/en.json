@@ -194,6 +194,7 @@
     "generatingCVButton": "Generating…",
     "generationTitle": "Creating Your CV",
     "generationHint": "This usually takes 20–40 seconds.",
+    "progressSubtitle": "AI is rendering your CV",
     "stepQueued": "In queue…",
     "stepRendering": "Rendering CV…",
     "stepDone": "Done!",
