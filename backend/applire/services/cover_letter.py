@@ -168,9 +168,11 @@ async def get_cover_letter_status(
 
     html_url = None
     pdf_url = None
+    letter_data = None
     if cl.status == CoverLetterStatus.ready.value:
         html_url = f"{base_url}/api/cover-letter/{cl_id}/html"
         pdf_url = f"{base_url}/api/cover-letter/{cl_id}/pdf"
+        letter_data = cl.letter_data
 
     return CoverLetterStatusResponse(
         cover_letter_id=cl.id,
@@ -179,6 +181,7 @@ async def get_cover_letter_status(
         pdf_url=pdf_url,
         error_message=cl.error_message,
         expires_at=cl.expires_at,
+        letter_data=letter_data,
     )
 
 

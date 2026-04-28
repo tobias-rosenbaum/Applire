@@ -859,3 +859,48 @@ async def test_get_cover_letter_html_not_ready(db):
 
     with pytest.raises(ValueError):
         await get_cover_letter_html(cl.id, db)
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_status_ready_includes_letter_data(db):
+    """When status is ready, letter_data must be returned in the response."""
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import get_cover_letter_status
+
+    letter_data = {"header": {"name": "Test User"}, "body": {"paragraphs": ["Hello"]}}
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data=letter_data,
+        pre_gen_inputs={},
+        status=CoverLetterStatus.ready.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    result = await get_cover_letter_status(cl.id, db, "http://localhost:8001")
+    assert result.letter_data == letter_data
+
+
+@pytest.mark.asyncio
+async def test_get_cover_letter_status_pending_letter_data_is_none(db):
+    """When status is not ready, letter_data must be None."""
+    from applire.models.cover_letter import GeneratedCoverLetter, CoverLetterStatus
+    from applire.services.cover_letter import get_cover_letter_status
+
+    cl = GeneratedCoverLetter(
+        job_analysis_id=uuid.uuid4(),
+        profile_id=uuid.uuid4(),
+        template="classic_german",
+        letter_data={"body": {"paragraphs": ["draft"]}},
+        pre_gen_inputs={},
+        status=CoverLetterStatus.generating.value,
+    )
+    db.add(cl)
+    await db.commit()
+    await db.refresh(cl)
+
+    result = await get_cover_letter_status(cl.id, db, "http://localhost:8001")
+    assert result.letter_data is None

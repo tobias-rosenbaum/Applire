@@ -44,6 +44,7 @@ class CoverLetterStatusResponse(BaseModel):
     pdf_url: Optional[str] = None
     error_message: Optional[str] = None
     expires_at: datetime
+    letter_data: Optional[dict] = None  # populated only when status == ready
 
     model_config = {"from_attributes": True}
 
