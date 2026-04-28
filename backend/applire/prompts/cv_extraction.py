@@ -76,7 +76,7 @@ _SCHEMA_DESCRIPTION = """\
   "languages": [
     {
       "language": "Language name e.g. 'German', 'English'",
-      "level": "Proficiency e.g. 'Native', 'C1', 'B2', 'Fluent', 'Business fluent'"
+      "level": "Proficiency e.g. 'Native', 'C1', 'B2', 'Fluent', 'Business fluent' or null if not stated"
     }
   ],
   "publications": [

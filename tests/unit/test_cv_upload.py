@@ -154,7 +154,27 @@ class TestExtractTextFromPdf:
 
 
 # ---------------------------------------------------------------------------
-# 3. CVUploadResponse status logic
+# 3. Language schema — null level tolerance
+# ---------------------------------------------------------------------------
+
+
+class TestLanguageSchema:
+    def test_null_level_is_accepted(self):
+        from applire.schemas.profile import Language
+
+        lang = Language(language="French", level=None)
+        assert lang.language == "French"
+        assert lang.level is None
+
+    def test_missing_level_defaults_to_none(self):
+        from applire.schemas.profile import Language
+
+        lang = Language.model_validate({"language": "French"})
+        assert lang.level is None
+
+
+# ---------------------------------------------------------------------------
+# 4. CVUploadResponse status logic
 # ---------------------------------------------------------------------------
 
 

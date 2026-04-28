@@ -175,7 +175,7 @@ class Skill(BaseModel):
 
 class Language(BaseModel):
     language: str
-    level: str
+    level: str | None = None
 
 
 class Publication(BaseModel):
