@@ -41,6 +41,7 @@
     "jdFetchFailed": "Die Seite hat uns blockiert — du kannst den Text später einfügen",
     "cancel": "Abbrechen",
     "uploadingCV": "Lebenslauf wird hochgeladen",
+    "uploadingCVN": "Lebenslauf {n} von {total} wird hochgeladen",
     "detectingGaps": "Lücken werden erkannt",
     "title": "Profil wird verarbeitet",
     "subtitle": "Lebenslauf wird analysiert und Master-Profil wird erstellt",
@@ -240,7 +241,11 @@
     "viewCoverLetter": "Anschreiben anzeigen →",
     "contentTab": "Inhalt",
     "actionsTab": "Aktionen",
-    "designTab": "Design"
+    "designTab": "Design",
+    "progressSubtitle": "KI formuliert Ihr Anschreiben",
+    "stepPreparing": "Daten werden aufbereitet",
+    "stepGenerating": "Anschreiben wird generiert",
+    "stepReady": "Fertig"
   },
   "settings": {
     "title": "Einstellungen",

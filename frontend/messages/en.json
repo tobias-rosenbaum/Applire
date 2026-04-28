@@ -41,6 +41,7 @@
     "jdFetchFailed": "The site blocked us — you can paste the text later",
     "cancel": "Cancel",
     "uploadingCV": "Uploading CV",
+    "uploadingCVN": "Uploading CV {n} of {total}",
     "detectingGaps": "Detecting Gaps",
     "title": "Processing Your Profile",
     "subtitle": "Analyzing your CV and building your master profile",
@@ -240,7 +241,11 @@
     "viewCoverLetter": "View Cover Letter →",
     "contentTab": "Content",
     "actionsTab": "Actions",
-    "designTab": "Design"
+    "designTab": "Design",
+    "progressSubtitle": "AI is writing your cover letter",
+    "stepPreparing": "Preparing data",
+    "stepGenerating": "Generating cover letter",
+    "stepReady": "Done"
   },
   "settings": {
     "title": "Settings",
