@@ -35,6 +35,11 @@
   --color-surface-container: #f1f3ff;
   --color-surface-container-high: #e9edff;
   --color-surface-container-highest: #dce1ff;
+
+  /* On-surface / outline (Material 3 semantic tokens) */
+  --color-on-surface: #141b2b;
+  --color-on-surface-variant: #44547a;
+  --color-outline-variant: #c8cfe8;
   
   /* Fonts */
   --font-heading: "Poppins", sans-serif;
@@ -112,7 +117,7 @@
   background: linear-gradient(
     90deg,
     var(--color-gold-container),
-    rgba(254, 203, 0, 0.06),
+    color-mix(in srgb, var(--color-gold) 6%, transparent),
     var(--color-gold-container)
   );
   background-size: 200% 100%;

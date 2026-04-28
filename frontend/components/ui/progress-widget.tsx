@@ -23,7 +23,7 @@ function StepIcon({ status }: { status: ProgressStepStatus }) {
   if (status === "done") {
     return (
       <div className="flex-shrink-0 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-        <svg className="w-2.5 h-2.5" fill="none" stroke="white" viewBox="0 0 24 24" aria-hidden="true">
+        <svg className="w-2.5 h-2.5 stroke-white" fill="none" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
         </svg>
       </div>
