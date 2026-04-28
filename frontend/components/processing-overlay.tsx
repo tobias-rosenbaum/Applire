@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
-import { ProgressLinear } from "@/components/ui/progress";
-import { StepChecklist, StepItem, StepState } from "@/components/ui/step-checklist";
+import { ProgressWidget, ProgressStep } from "@/components/ui/progress-widget";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
@@ -22,13 +21,6 @@ async function apiErrorMessage(res: Response): Promise<string> {
   }
 }
 
-const INITIAL_STATES: Record<string, StepState> = {
-  analyze_jd: "pending",
-  upload: "pending",
-  build_profile: "pending",
-  detect_gaps: "pending",
-};
-
 interface Props {
   files: File[];
   jdMode: "url" | "text";
@@ -41,21 +33,29 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
   const router = useRouter();
   const t = useTranslations("processing");
 
-  const STEPS: StepItem[] = [
-    { key: "analyze_jd", label: t("analyzingJD") },
-    { key: "upload", label: t("uploadingCV") },
-    { key: "build_profile", label: t("buildingProfile") },
-    { key: "detect_gaps", label: t("detectingGaps") },
-  ];
+  // Indices are stable for the component lifetime
+  const profileIdx = 1 + files.length;
+  const gapsIdx = 2 + files.length;
 
-  const [stepStates, setStepStates] = useState<Record<string, StepState>>(INITIAL_STATES);
-  const [stepDetails, setStepDetails] = useState<Record<string, string>>({});
+  const [steps, setSteps] = useState<ProgressStep[]>(() => [
+    { label: t("analyzingJD"), status: "pending" },
+    ...files.map((_, i) => ({
+      label:
+        files.length === 1
+          ? t("uploadingCV")
+          : t("uploadingCVN", { n: i + 1, total: files.length }),
+      status: "pending" as const,
+    })),
+    { label: t("buildingProfile"), status: "pending" },
+    { label: t("detectingGaps"), status: "pending" },
+  ]);
+
+  const [jdNote, setJdNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
-  function markStep(key: string, state: StepState, detail?: string) {
-    setStepStates((prev) => ({ ...prev, [key]: state }));
-    if (detail !== undefined) setStepDetails((prev) => ({ ...prev, [key]: detail }));
+  function setStepStatus(index: number, status: ProgressStep["status"]) {
+    setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, status } : s)));
   }
 
   useEffect(() => {
@@ -67,8 +67,8 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
         let jobId: string | null = null;
         let jdFailReason: "url_invalid" | "fetch_failed" | null = null;
 
-        // Step 1: Analyze Job Description
-        markStep("analyze_jd", "in_progress");
+        // Step 0: Analyze Job Description
+        setStepStatus(0, "active");
         if (jdMode === "url" && jdUrl.trim()) {
           const res = await fetch(`${API_BASE}/api/job/analyze`, {
             method: "POST",
@@ -89,16 +89,18 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
                   : null;
               const errorCode = detail?.error_code;
               if (errorCode === "jd_url_invalid") {
-                markStep("analyze_jd", "skipped", t("jdUrlInvalid"));
+                setStepStatus(0, "done");
+                setJdNote(t("jdUrlInvalid"));
                 jdFailReason = "url_invalid";
               } else if (errorCode === "jd_fetch_failed") {
-                markStep("analyze_jd", "skipped", t("jdFetchFailed"));
+                setStepStatus(0, "done");
+                setJdNote(t("jdFetchFailed"));
                 jdFailReason = "fetch_failed";
               } else {
-                // Unrecognised 422 — hard stop
                 const msg =
-                  typeof body?.detail === "string" ? body.detail
-                  : detail?.message ?? res.statusText ?? `HTTP ${res.status}`;
+                  typeof body?.detail === "string"
+                    ? body.detail
+                    : detail?.message ?? res.statusText ?? `HTTP ${res.status}`;
                 throw new Error(msg);
               }
             } else {
@@ -107,7 +109,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           } else {
             const data = await res.json();
             jobId = data.id;
-            markStep("analyze_jd", "completed", data.role_title ? t("roleLabel", { title: data.role_title }) : t("jdAnalyzed"));
+            setStepStatus(0, "done");
           }
         } else if (jdMode === "text" && jdText.trim()) {
           const res = await fetch(`${API_BASE}/api/job/analyze`, {
@@ -118,17 +120,14 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           if (!res.ok) throw new Error(await apiErrorMessage(res));
           const data = await res.json();
           jobId = data.id;
-          markStep("analyze_jd", "completed", data.role_title ? t("roleLabel", { title: data.role_title }) : t("jdAnalyzed"));
+          setStepStatus(0, "done");
         } else {
-          markStep("analyze_jd", "completed", t("jdNoDescription"));
+          setStepStatus(0, "done");
         }
 
-        // Step 2: Create flow session + Upload CVs
-        markStep("upload", "in_progress");
+        // Activate the first upload step then create the flow session
+        setStepStatus(1, "active");
 
-        // When a job was analyzed, create an Application record (+ FlowSession)
-        // atomically so it appears on the dashboard. Without a job there is nothing
-        // to track yet, so fall back to a bare FlowSession.
         let flowId: string;
         if (jobId !== null) {
           const appRes = await fetch(`${API_BASE}/api/applications`, {
@@ -150,28 +149,30 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           flowId = flow.flow_id;
         }
 
-        for (const file of files) {
+        // Steps 1..N: one upload step per file
+        for (let i = 0; i < files.length; i++) {
+          const uploadIdx = 1 + i;
+          if (i > 0) setStepStatus(uploadIdx, "active");
           const formData = new FormData();
-          formData.append("file", file);
+          formData.append("file", files[i]);
           const uploadRes = await fetch(`${API_BASE}/api/profile/upload`, {
             method: "POST",
             body: formData,
           });
           if (!uploadRes.ok) throw new Error(await apiErrorMessage(uploadRes));
+          setStepStatus(uploadIdx, "done");
         }
 
-        markStep("upload", "completed", t("cvUploaded", { count: files.length }));
-
-        // Step 3: Build profile (instant — upload already did the work)
-        markStep("build_profile", "in_progress");
+        // Build profile (instant — upload already did the work)
+        setStepStatus(profileIdx, "active");
         await new Promise((r) => setTimeout(r, 400));
-        markStep("build_profile", "completed", t("profileUpdated", { count: files.length }));
+        setStepStatus(profileIdx, "done");
 
-        // Step 4: Detect gaps (only if a job was linked)
-        markStep("detect_gaps", "in_progress");
+        // Detect gaps
+        setStepStatus(gapsIdx, "active");
 
         if (!jobId) {
-          markStep("detect_gaps", "completed", t("jdNoJobLinked"));
+          setStepStatus(gapsIdx, "done");
           await new Promise((r) => setTimeout(r, 400));
           const gapsUrl = jdFailReason
             ? `/flow/${flowId}/gaps?jd_status=${jdFailReason}`
@@ -197,10 +198,7 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
           body: JSON.stringify({ step: "gap_analysis", artifact_id: gapData.id ?? null }),
         });
 
-        const score = gapData.match_score ?? gapData.overall_score;
-        const gapDetail =
-          score != null ? `Match score: ${Math.round(score * 100)}%` : "Gap analysis complete";
-        markStep("detect_gaps", "completed", gapDetail);
+        setStepStatus(gapsIdx, "done");
 
         await new Promise((r) => setTimeout(r, 400));
         const gapsUrl = jdFailReason
@@ -215,54 +213,37 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
     runPipeline();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const completedCount = Object.values(stepStates).filter((s) => s === "completed" || s === "skipped").length;
-  const progress = (completedCount / STEPS.length) * 100;
-
-  const stepsWithDetails = STEPS.map((step) => ({
-    ...step,
-    detail: stepDetails[step.key],
-  }));
-
   return (
-    <div data-testid="processing-indicator" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+    <div
+      data-testid="processing-indicator"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+    >
       <Card className="w-full max-w-[560px] p-8">
-        <div className="text-center mb-8">
-          <h2 className="font-heading text-2xl font-bold text-neutral-dark mb-2">
-            {t("title")}
-          </h2>
-          <p className="text-sm text-gray-500">
-            {t("subtitle")}
-          </p>
-        </div>
-
         {error ? (
           <div className="space-y-4">
-            <div data-testid="processing-error" className="p-4 rounded-lg bg-critical/10 border border-critical/20">
+            <div
+              data-testid="processing-error"
+              className="p-4 rounded-lg bg-critical/10 border border-critical/20"
+            >
               <p className="text-sm text-critical">{error}</p>
             </div>
             <div className="flex justify-center">
               <button
                 onClick={onCancel}
                 data-testid="cancel-button"
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-neutral-dark transition-colors"
+                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-neutral-dark transition-colors"
               >
                 {t("goBack")}
               </button>
             </div>
           </div>
         ) : (
-          <>
-            <StepChecklist steps={stepsWithDetails} stepStates={stepStates} />
-            <div className="mt-8">
-              <ProgressLinear value={progress} data-testid="progress-bar" />
-              <p data-testid="progress-text" className="text-xs text-gray-500 text-center mt-2">
-                {Math.round(progress)}% complete
-              </p>
-            </div>
-            <p className="text-xs text-gray-500 text-center mt-6">
-              {t("usuallyTakes")}
-            </p>
-          </>
+          <div className="flex flex-col items-center">
+            <ProgressWidget steps={steps} title={t("title")} subtitle={t("subtitle")} />
+            {jdNote && (
+              <p className="text-xs text-on-surface-variant mt-3 text-center">{jdNote}</p>
+            )}
+          </div>
         )}
       </Card>
     </div>

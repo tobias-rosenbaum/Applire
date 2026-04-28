@@ -1,8 +1,5 @@
 /**
- * ProcessingOverlay — JD URL error handling (Sprint 26)
- *
- * Verifies that a 422 response with error_code="jd_fetch_failed" causes the
- * JD step to be marked "skipped" (not error) and the pipeline to continue.
+ * ProcessingOverlay — JD URL error handling (Sprint 26) + dynamic CV steps (Sprint 31)
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
@@ -160,5 +157,33 @@ describe("ProcessingOverlay — JD URL error handling", () => {
       },
       { timeout: 5000 }
     );
+  });
+
+  it("renders one upload step per file when multiple CVs are provided", () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ flow_id: "multi-flow-xyz" }),
+    } as Response);
+
+    const file1 = new File(["cv1"], "cv1.pdf", { type: "application/pdf" });
+    const file2 = new File(["cv2"], "cv2.pdf", { type: "application/pdf" });
+    const file3 = new File(["cv3"], "cv3.pdf", { type: "application/pdf" });
+
+    render(
+      withIntl(
+        <ProcessingOverlay
+          files={[file1, file2, file3]}
+          jdMode="url"
+          jdUrl=""
+          jdText=""
+          onCancel={vi.fn()}
+        />
+      )
+    );
+
+    expect(screen.getByText("Uploading CV 1 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Uploading CV 2 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Uploading CV 3 of 3")).toBeInTheDocument();
   });
 });
