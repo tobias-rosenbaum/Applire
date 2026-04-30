@@ -204,9 +204,9 @@ async def get_cover_letter_html(
 
     color_ctx = _default_color_context()
     if cl.color_profile_id is not None:
-        from applire.models.color import CVColorProfile
+        from applire.models.color_profile import ColorProfile
         cp_result = await db.execute(
-            select(CVColorProfile).where(CVColorProfile.id == cl.color_profile_id)
+            select(ColorProfile).where(ColorProfile.id == cl.color_profile_id)
         )
         cp = cp_result.scalar_one_or_none()
         if cp is not None:
