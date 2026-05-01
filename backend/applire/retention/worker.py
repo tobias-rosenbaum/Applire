@@ -111,7 +111,8 @@ async def _tombstone_inactive_profiles(db: AsyncSession) -> int:
         )
         await db.commit()
         return result.rowcount  # type: ignore[return-value]
-    except (ProgrammingError, OperationalError):
+    except (ProgrammingError, OperationalError) as exc:
+        logger.warning("_tombstone_inactive_profiles skipped: %s", exc)
         await db.rollback()
         return 0
 
@@ -129,7 +130,8 @@ async def _tombstone_inactive_users(db: AsyncSession) -> int:
         )
         await db.commit()
         return result.rowcount  # type: ignore[return-value]
-    except (ProgrammingError, OperationalError):
+    except (ProgrammingError, OperationalError) as exc:
+        logger.warning("_tombstone_inactive_users skipped: %s", exc)
         await db.rollback()
         return 0
 
@@ -150,7 +152,8 @@ async def _tombstone_inactive_applications(db: AsyncSession) -> int:
         )
         await db.commit()
         return result.rowcount  # type: ignore[return-value]
-    except (ProgrammingError, OperationalError):
+    except (ProgrammingError, OperationalError) as exc:
+        logger.warning("_tombstone_inactive_applications skipped: %s", exc)
         await db.rollback()
         return 0
 

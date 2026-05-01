@@ -32,7 +32,7 @@ interface CLState {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 const POLL_INTERVAL_MS = 2000;
 
-function buildClProgressSteps(
+export function buildClProgressSteps(
   status: string,
   t: (key: string) => string
 ): ProgressStep[] {

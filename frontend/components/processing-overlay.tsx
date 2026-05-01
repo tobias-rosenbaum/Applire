@@ -33,10 +33,6 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
   const router = useRouter();
   const t = useTranslations("processing");
 
-  // Indices are stable for the component lifetime
-  const profileIdx = 1 + files.length;
-  const gapsIdx = 2 + files.length;
-
   const [steps, setSteps] = useState<ProgressStep[]>(() => [
     { label: t("analyzingJD"), status: "pending" },
     ...files.map((_, i) => ({
@@ -63,6 +59,8 @@ export function ProcessingOverlay({ files, jdMode, jdUrl, jdText, onCancel }: Pr
     started.current = true;
 
     async function runPipeline() {
+      const profileIdx = 1 + files.length;
+      const gapsIdx = 2 + files.length;
       try {
         let jobId: string | null = null;
         let jdFailReason: "url_invalid" | "fetch_failed" | null = null;

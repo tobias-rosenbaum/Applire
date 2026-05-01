@@ -305,3 +305,67 @@ async def test_tombstone_skips_already_deleted_users(db):
 
     tombstoned = await _tombstone_inactive_users(db)
     assert tombstoned == 0
+
+
+# ---------------------------------------------------------------------------
+# OperationalError logging — tombstone functions must not swallow errors silently
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_tombstone_inactive_profiles_logs_warning_on_operational_error(caplog):
+    """OperationalError (e.g. lost DB connection) must be logged, not silently discarded."""
+    import logging
+    from unittest.mock import AsyncMock
+    from sqlalchemy.exc import OperationalError
+    from applire.retention.worker import _tombstone_inactive_profiles
+
+    mock_db = AsyncMock()
+    mock_db.execute.side_effect = OperationalError("stmt", {}, Exception("connection lost"))
+    mock_db.rollback = AsyncMock()
+
+    with caplog.at_level(logging.WARNING, logger="applire.retention.worker"):
+        result = await _tombstone_inactive_profiles(mock_db)
+
+    assert result == 0
+    assert any(rec.levelname == "WARNING" for rec in caplog.records), (
+        "expected a WARNING log when OperationalError is caught"
+    )
+
+
+@pytest.mark.asyncio
+async def test_tombstone_inactive_users_logs_warning_on_operational_error(caplog):
+    """OperationalError during user tombstone must be logged as a warning."""
+    import logging
+    from unittest.mock import AsyncMock
+    from sqlalchemy.exc import OperationalError
+    from applire.retention.worker import _tombstone_inactive_users
+
+    mock_db = AsyncMock()
+    mock_db.execute.side_effect = OperationalError("stmt", {}, Exception("connection lost"))
+    mock_db.rollback = AsyncMock()
+
+    with caplog.at_level(logging.WARNING, logger="applire.retention.worker"):
+        result = await _tombstone_inactive_users(mock_db)
+
+    assert result == 0
+    assert any(rec.levelname == "WARNING" for rec in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_tombstone_inactive_applications_logs_warning_on_operational_error(caplog):
+    """OperationalError during application tombstone must be logged as a warning."""
+    import logging
+    from unittest.mock import AsyncMock
+    from sqlalchemy.exc import OperationalError
+    from applire.retention.worker import _tombstone_inactive_applications
+
+    mock_db = AsyncMock()
+    mock_db.execute.side_effect = OperationalError("stmt", {}, Exception("connection lost"))
+    mock_db.rollback = AsyncMock()
+
+    with caplog.at_level(logging.WARNING, logger="applire.retention.worker"):
+        result = await _tombstone_inactive_applications(mock_db)
+
+    assert result == 0
+    assert any(rec.levelname == "WARNING" for rec in caplog.records)
