@@ -102,28 +102,36 @@ async def _tombstone_inactive_profiles(db: AsyncSession) -> int:
     """Soft-delete master profiles inactive for ≥ 24 months."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=_INACTIVITY_TTL_DAYS)
     now = datetime.now(timezone.utc)
-    result = await db.execute(
-        update(MasterProfile)
-        .where(MasterProfile.updated_at < cutoff)
-        .where(MasterProfile.deleted_at.is_(None))
-        .values(deleted_at=now)
-    )
-    await db.commit()
-    return result.rowcount  # type: ignore[return-value]
+    try:
+        result = await db.execute(
+            update(MasterProfile)
+            .where(MasterProfile.updated_at < cutoff)
+            .where(MasterProfile.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
 
 
 async def _tombstone_inactive_users(db: AsyncSession) -> int:
     """Soft-delete users inactive for ≥ 24 months (based on profile activity)."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=_INACTIVITY_TTL_DAYS)
     now = datetime.now(timezone.utc)
-    result = await db.execute(
-        update(User)
-        .where(User.created_at < cutoff)
-        .where(User.deleted_at.is_(None))
-        .values(deleted_at=now)
-    )
-    await db.commit()
-    return result.rowcount  # type: ignore[return-value]
+    try:
+        result = await db.execute(
+            update(User)
+            .where(User.created_at < cutoff)
+            .where(User.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
+        await db.commit()
+        return result.rowcount  # type: ignore[return-value]
+    except (ProgrammingError, OperationalError):
+        await db.rollback()
+        return 0
 
 
 async def _tombstone_inactive_applications(db: AsyncSession) -> int:
