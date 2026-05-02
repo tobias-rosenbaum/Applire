@@ -2,16 +2,19 @@
 
 ## V-Model Tier Structure
 
-Applire uses a V-model-aligned test structure with four tiers:
+Applire uses a V-model-aligned test structure with five tiers:
 
-| Tier | Scope | Runs in CI | LLM | Blocking |
+| Tier | Directory | Tool | LLM | Run condition |
 |---|---|---|---|---|
-| **Unit (DQ)** | Individual functions and components in isolation | Yes | No | Yes |
-| **IQ** | Docker stack starts cleanly; health endpoint responds; UI reachable | Yes | No | Yes |
-| **OQ** | Critical UI flows, all API routes mocked via `page.route()` | Yes | No | Yes |
-| **PQ** | Marcus happy-path end-to-end with real LLM (OpenRouter) | Manual only | Yes | No |
+| **Unit** | `tests/unit/` | pytest | No (no Docker) | Every commit — fast, no infrastructure |
+| **Integration** | `tests/integration/` | pytest | Mock by default; real with `INTEGRATION_LLM=1` | CI (after IQ/OQ); local with Docker stack |
+| **IQ** | `tests/iq/` | Playwright | No (mock via Docker stack) | CI (first E2E gate); local with Docker stack |
+| **OQ** | `tests/oq/` | Playwright | No (API routes mocked via `page.route()`) | CI (after IQ); local with Docker stack |
+| **PQ** | `tests/pq/` | Playwright | No (mock via Docker stack in CI) | CI (after OQ+Integration); real-LLM via separate workflow |
 
-**LLM boundary rule:** OQ tests never call an LLM. All backend routes are intercepted with `page.route()` and return deterministic fixtures. PQ tests always call a real LLM and are never run in the standard CI job.
+**LLM boundary rule:** IQ and OQ tests never call an LLM. OQ backend routes are intercepted with `page.route()` and return deterministic fixtures. PQ tests in CI use `LLM_PROVIDER=mock`. Real-LLM PQ runs are triggered via the separate `pq.yml` workflow with `INTEGRATION_LLM=1`.
+
+**CI pipeline order:** Unit → IQ → OQ + Integration → PQ (all within the `integration-and-e2e-tests` job in `test.yml`)
 
 ---
 
@@ -19,35 +22,39 @@ Applire uses a V-model-aligned test structure with four tiers:
 
 ```
 tests/
-├── unit/                        # Unit tests (DQ tier) — no Docker
+├── unit/                        # Unit tests — no Docker required
 │   ├── conftest.py              # Overrides Docker fixture; adds backend/ to sys.path
 │   ├── test_gap_analysis.py
 │   ├── test_flow_orchestrator.py
 │   └── ...                      # One file per module
-├── integration/                 # Full-stack LLM tests (PQ tier)
-│   └── test_happy_path.py       # Requires INTEGRATION_LLM=1
-├── e2e/
-│   ├── iq/
-│   │   └── startup.spec.ts      # Health + UI reachable
-│   ├── oq/
-│   │   ├── gaps-page.spec.ts    # Gaps page critical flows (mocked)
-│   │   ├── upload-flow.spec.ts  # Home → processing → gaps (mocked)
-│   │   ├── match-page.spec.ts   # Match page (mocked)
-│   │   ├── cv-preview.spec.ts   # CV preview iframe (mocked)
-│   │   ├── cv-section-editor.spec.ts  # FineTuner section editing (mocked)
-│   │   └── photo-management.spec.ts   # Photo upload/crop (mocked)
-│   └── pq/
-│       └── marcus-new-user-journey.spec.ts  # Full happy path (real LLM)
+├── integration/                 # Full-stack integration tests (pytest)
+│   └── test_happy_path.py       # 16-step happy path; mock LLM by default
+├── iq/                          # Installation Qualification (Playwright)
+│   └── startup.spec.ts          # Health endpoint + UI reachable
+├── oq/                          # Operational Qualification (Playwright, mocked)
+│   ├── admin-appearance.spec.ts
+│   ├── cv-color.spec.ts
+│   ├── cv-preview.spec.ts
+│   ├── cv-section-editor.spec.ts
+│   ├── gaps-page.spec.ts
+│   ├── jd-url-error.spec.ts
+│   ├── match-page.spec.ts
+│   ├── photo-management.spec.ts
+│   ├── profile-enrichment.spec.ts
+│   └── upload-flow.spec.ts
+├── pq/                          # Performance Qualification — persona journeys
+│   ├── marcus/
+│   │   ├── marcus-new-user-journey.spec.ts
+│   │   └── markus-complete-journey.spec.ts
+│   └── felix/
+│       ├── cover-letter.spec.ts
+│       ├── felix-cv-design.spec.ts
+│       ├── felix-cv-templates.spec.ts
+│       └── felix-dashboard-sprint29.spec.ts
 ├── fixtures/
 │   ├── profiles/sample_cv.pdf
 │   └── JDs/sample_jd.txt
-├── test_health.py               # Integration: health endpoint
-├── test_jd_analysis.py          # Integration: JD analysis API
-├── test_gap_analysis.py         # Integration: gap detection API
-└── ...                          # One file per backend module
-
-backend/tests/
-└── conftest.py                  # In-container CI variant (connects to backend:8000)
+└── ...                          # Legacy per-iteration API tests
 ```
 
 ---
@@ -57,8 +64,7 @@ backend/tests/
 ### Unit tests (no Docker)
 
 ```bash
-cd Solution
-PYTHONPATH=backend pytest tests/unit/ -v \
+pytest tests/unit/ -v \
   --cov=applire --cov-config=backend/.coveragerc \
   --cov-report=html:backend/htmlcov \
   --cov-fail-under=75
@@ -72,57 +78,61 @@ Coverage threshold: **≥ 75%** (enforced in CI).
 cd frontend && npm test
 ```
 
-### IQ + OQ Playwright tests (requires running frontend)
-
-```bash
-# Start frontend dev server first:
-cd frontend && npm run dev
-
-# Run IQ + OQ (excludes pq/ automatically):
-npx playwright test
-
-# Run a specific spec:
-npx playwright test tests/e2e/oq/gaps-page.spec.ts --headed
-```
-
 ### Integration tests (requires Docker stack)
 
 ```bash
 docker compose up -d
-pytest tests/ --ignore=tests/e2e --ignore=tests/unit -v
+# Mock LLM (default — used in CI):
+pytest tests/integration/ -v
+# Real LLM (requires .env.dev with a configured LLM provider):
+INTEGRATION_LLM=1 pytest tests/integration/ -v
 ```
 
-### PQ tests (requires Docker stack + OpenRouter API key)
+### IQ + OQ Playwright tests (requires Docker stack)
 
 ```bash
 docker compose up -d
-OPENROUTER_API_KEY=<your-key> npx playwright test --config=playwright.config.pq.ts
+
+# Run IQ + OQ (pq/ excluded automatically via testMatch):
+npx playwright test
+
+# Run a specific spec:
+npx playwright test tests/oq/gaps-page.spec.ts --headed
 ```
 
-Or trigger via GitHub Actions:
-1. Go to **Actions → PQ Tests (Manual)**
-2. Click **Run workflow**
-3. Requires `OPENROUTER_API_KEY` secret to be configured in the repository
+The default `playwright.config.ts` uses `testMatch: ['**/iq/**/*.spec.ts', '**/oq/**/*.spec.ts']` so PQ specs are never picked up by accident.
+
+### PQ tests (requires Docker stack)
+
+```bash
+docker compose up -d
+# Mock LLM (same as CI):
+npx playwright test --config=playwright.config.pq.ts
+# Real LLM (requires .env.dev with a configured LLM provider):
+INTEGRATION_LLM=1 npx playwright test --config=playwright.config.pq.ts
+```
+
+The `playwright.config.pq.ts` uses `testDir: './tests/pq'` and runs both `marcus/` and `felix/` persona suites.
 
 ---
 
 ## Naming Convention
 
-Test files are named after the module they test, not the sprint they were written in.
+Test files are named after the module or feature they test, not the sprint they were written in.
 
 | Tier | Pattern | Example |
 |---|---|---|
 | Backend unit | `test_<module>.py` | `test_gap_analysis.py` |
-| Backend integration | `test_<module>.py` | `test_cv_generation.py` |
-| E2E OQ | `<page-or-feature>.spec.ts` | `gaps-page.spec.ts` |
-| E2E PQ | `<persona>-<journey>.spec.ts` | `marcus-new-user-journey.spec.ts` |
+| Backend integration | `test_<journey>.py` | `test_happy_path.py` |
+| Playwright IQ/OQ | `<page-or-feature>.spec.ts` | `gaps-page.spec.ts` |
+| Playwright PQ | `<persona>-<journey>.spec.ts` | `marcus-new-user-journey.spec.ts` |
 
 ---
 
 ## Coverage Gate
 
 - Backend unit: **≥ 75%** (`--cov-fail-under=75`)
-- No coverage gate on E2E tests (covered by traceability matrix instead)
+- No coverage gate on Playwright tests (covered by traceability matrix instead)
 
 See `docs/TRACEABILITY.md` for mapping of functional spec items to test IDs.
 
@@ -130,33 +140,35 @@ See `docs/TRACEABILITY.md` for mapping of functional spec items to test IDs.
 
 ## Personas in PQ Tests
 
-| Persona | Journey | PQ spec | Status |
+| Persona | Journey | Directory | Status |
 |---|---|---|---|
-| Marcus | New user: upload → gaps → interview → CV | `pq/marcus-new-user-journey.spec.ts` | Active |
-| Emma | Returning user: dashboard → one-click tailoring | To be added when returning-user flow is built | Planned |
+| Marcus | New user: upload → gaps → interview → CV | `pq/marcus/` | Active (2 specs) |
+| Felix | Power user: dashboard, CV design, templates, cover letter | `pq/felix/` | Active (4 specs) |
+| Emma | Returning user: dashboard → one-click tailoring | To be added | Planned |
 | Priya | International relocator: cultural adaptation | To be added | Planned |
 
 ---
 
 ## Troubleshooting
 
-**Unit tests fail:**
+**Unit tests fail with import errors:**
 ```bash
-python --version   # must be 3.12.3
+python --version   # must be 3.12+
 pip install -r backend/requirements.txt
 pytest tests/unit/ -vv --tb=long
 ```
 
-**Playwright OQ tests fail:**
+**Playwright IQ/OQ tests fail:**
 ```bash
 node --version     # must be 20+
-npx playwright install --with-deps chromium firefox
-npx playwright test --headed    # see browser
-npx playwright test --debug     # step through
+npx playwright install --with-deps chromium
+docker compose up -d          # ensure stack is running
+npx playwright test --headed  # see browser
+npx playwright test --debug   # step through
 ```
 
-**PQ tests skip most cases:**
-Verify `OPENROUTER_API_KEY` is set and the Docker stack is fully running.
+**PQ tests fail or skip:**
+Ensure the Docker stack is fully running and `LLM_PROVIDER=mock` is set in the environment (`.env.ci` or `.env.dev`).
 ```bash
 curl http://localhost:8001/health
 curl http://localhost:3000
@@ -164,4 +176,4 @@ curl http://localhost:3000
 
 ---
 
-*Last updated: 2026-04-10*
+*Last updated: 2026-05-02*
