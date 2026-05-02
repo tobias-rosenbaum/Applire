@@ -385,6 +385,7 @@ async def erase_profile(
     job_analyses are NOT deleted (shared/global, no user_id).
     """
     from applire.models.application import Application
+    from applire.models.cover_letter import GeneratedCoverLetter
     from applire.models.cv import GeneratedCV
     from applire.models.flow import FlowSession
     from applire.models.gap import GapAnalysis
@@ -483,6 +484,13 @@ async def erase_profile(
             delete(GapAnalysis).where(GapAnalysis.profile_id.in_(profile_ids_sq))
         )
         counts["gap_analyses"] = r.rowcount
+
+        # 5c. generated_cover_letters — profile_id → master_profiles.id FK (RESTRICT)
+        #     safe to delete now that flow_sessions (which reference cover_letter_id) are gone
+        r = await db.execute(
+            delete(GeneratedCoverLetter).where(GeneratedCoverLetter.profile_id.in_(profile_ids_sq))
+        )
+        counts["generated_cover_letters"] = r.rowcount
 
         # 6. applications — safe now that FlowSession rows (which held application_id FKs)
         #    are deleted

@@ -14,7 +14,6 @@ Mirrors services/cv.py:
 """
 
 import copy
-import json
 import logging
 import uuid
 from datetime import timezone
@@ -355,10 +354,7 @@ async def _render_cover_letter_background(
                 pre_gen_inputs=pre_gen,
                 detected_language=detected_language,
             )
-            raw = await provider.acomplete(user_prompt, system=SYSTEM_PROMPT)
-
-            # Parse JSON response
-            letter_data = json.loads(raw)
+            letter_data = await provider.aparse_json(user_prompt, system=SYSTEM_PROMPT)
 
             # Store and mark ready
             cl.letter_data = letter_data
