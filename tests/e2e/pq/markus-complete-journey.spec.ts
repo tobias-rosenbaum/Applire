@@ -138,7 +138,7 @@ async function setupCompleteJourney(page: Page): Promise<string> {
 }
 
 test.describe('Marcus — Complete Journey (PQ)', () => {
-  test.setTimeout(5 * 60 * 1000); // 5 min: full journey chains many waits
+  test.setTimeout(8 * 60 * 1000); // 8 min: helper sequential timeouts sum to ~7.5 min worst-case
 
   test('US-MK01: complete journey ends on cover letter page with iframe visible', async ({
     page,
