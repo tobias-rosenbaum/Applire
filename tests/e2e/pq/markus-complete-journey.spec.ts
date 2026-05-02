@@ -81,12 +81,15 @@ async function setupCompleteJourney(page: Page): Promise<string> {
   // Wait for question to change or completion screen to appear after the answer
   await expect(page.getByTestId('interview-question'))
     .not.toHaveText(firstQuestion ?? '', { timeout: 30000 })
-    .catch(() => {});
+    .catch((err: Error) => {
+      if (!err.message.includes('Timeout')) throw err;
+    });
 
   // End early if not already on completion screen
   const completionVisible = await page
     .getByTestId('completion-screen')
-    .isVisible()
+    .waitFor({ state: 'visible', timeout: 3000 })
+    .then(() => true)
     .catch(() => false);
   if (!completionVisible) {
     await page.getByTestId('done-button').click();
