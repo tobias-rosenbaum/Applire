@@ -6,7 +6,6 @@ End-to-end validation of the new user journey:
 Run with real LLM (requires INTEGRATION_LLM=1):
     INTEGRATION_LLM=1 pytest tests/integration/test_happy_path.py -v
 """
-import os
 import time
 from pathlib import Path
 
