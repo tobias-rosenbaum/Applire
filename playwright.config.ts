@@ -1,20 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright Configuration for Applire E2E Tests
- * 
- * This config is designed to work in both local development and CI/CD (GitHub Actions) environments.
- * Key settings:
- * - Base URL: http://localhost:3000 (backend running locally or in Docker)
- * - Test directory: ./tests/e2e/
- * - Timeout: 60 seconds per test (accommodates LLM processing in backend)
- * - Screenshots/Videos: Retained only on failure for faster feedback
- * - Retries: 2 on CI (GitHub Actions), 0 locally for faster iteration
+ * Playwright Configuration — IQ + OQ tiers
+ *
+ * Runs installation checks (tests/iq/) and operational feature tests (tests/oq/).
+ * Uses the CI Docker stack (LLM_PROVIDER=mock) — no API key required.
+ * For full persona journey tests, use: npx playwright test --config=playwright.config.pq.ts
  */
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  testIgnore: ['**/pq/**'], // PQ tests require real LLM — run via workflow_dispatch only
+  testDir: './tests',
+  testMatch: ['**/iq/**/*.spec.ts', '**/oq/**/*.spec.ts'],
 
   /**
    * Test execution settings
