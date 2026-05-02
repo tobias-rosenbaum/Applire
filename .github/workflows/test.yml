@@ -151,15 +151,23 @@ jobs:
 
       - name: Run integration tests
         run: |
-          pytest tests/ \
-            --ignore=tests/e2e \
-            --ignore=tests/unit \
+          pytest tests/integration/ \
             --junitxml=integration-test-results.xml \
             -v \
             --tb=short
 
-      - name: Run Playwright E2E tests
-        run: node_modules/.bin/playwright test
+      - name: Run Playwright IQ tests
+        run: node_modules/.bin/playwright test tests/iq/
+        env:
+          CI: true
+
+      - name: Run Playwright OQ tests
+        run: node_modules/.bin/playwright test tests/oq/
+        env:
+          CI: true
+
+      - name: Run Playwright PQ tests
+        run: node_modules/.bin/playwright test --config=playwright.config.pq.ts
         env:
           CI: true
 
