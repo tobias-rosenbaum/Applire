@@ -1,15 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * PQ (Performance Qualification) Playwright config.
- * Runs only tests/e2e/pq/ using a real LLM via OpenRouter.
- * Never run automatically in CI — trigger via GitHub Actions workflow_dispatch.
+ * Playwright Configuration — PQ tier (persona journey tests)
  *
- * Requires: OPENROUTER_API_KEY environment variable
- * Requires: Full Docker stack running (docker compose up -d)
+ * Runs full persona journey tests (tests/pq/). Uses the CI Docker stack
+ * (LLM_PROVIDER=mock) — no API key required.
+ * Runs automatically in CI after IQ and OQ tiers pass.
+ * For manual runs: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
  */
 export default defineConfig({
-  testDir: './tests/e2e/pq',
+  testDir: './tests/pq',
   fullyParallel: false,
   workers: 1,
   timeout: 120 * 1000,
