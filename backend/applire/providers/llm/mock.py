@@ -13,7 +13,7 @@ System prompt fingerprints:
   "dach career consultant"         → CV tailoring          (aparse_json → dict)
   "expert career analyst"          → gap clustering        (aparse_json → list)
   "expert career coach"            → targeted question     (aparse_json → dict)
-  "dach career coach"              → cover letter          (aparse_json → dict)
+  "expert dach career coach"       → cover letter          (aparse_json → dict)
   (acomplete, any)                 → interview question    (acomplete → str)
 """
 
