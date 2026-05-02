@@ -273,3 +273,34 @@ async def test_ollama_strips_trailing_slash_from_base_url():
 
     url = mock_client.post.call_args.args[0]
     assert url == "http://localhost:11434/api/chat"
+
+
+# ---------------------------------------------------------------------------
+# MockLLMProvider — cover letter fingerprint
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_mock_cover_letter_fingerprint():
+    """MockLLMProvider must return a schema-valid cover letter dict."""
+    from applire.providers.llm.mock import MockLLMProvider
+
+    provider = MockLLMProvider()
+    result = await provider.aparse_json(
+        "Generate a cover letter.",
+        system="You are an expert DACH career coach writing a professional Bewerbungsschreiben (German cover letter).",
+    )
+
+    assert isinstance(result, dict), "Expected a dict"
+    for key in ("header", "recipient", "body", "signature"):
+        assert key in result, f"Missing key: {key}"
+
+    header = result["header"]
+    assert "name" in header and "address" in header
+
+    body = result["body"]
+    assert "paragraphs" in body
+    assert isinstance(body["paragraphs"], list)
+    assert len(body["paragraphs"]) >= 3
+
+    signature = result["signature"]
+    assert "closing" in signature and "name" in signature

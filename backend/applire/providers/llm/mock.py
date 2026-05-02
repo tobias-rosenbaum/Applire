@@ -13,6 +13,7 @@ System prompt fingerprints:
   "dach career consultant"         → CV tailoring          (aparse_json → dict)
   "expert career analyst"          → gap clustering        (aparse_json → list)
   "expert career coach"            → targeted question     (aparse_json → dict)
+  "dach career coach"              → cover letter          (aparse_json → dict)
   (acomplete, any)                 → interview question    (acomplete → str)
 """
 
@@ -195,6 +196,52 @@ _QUESTION_RESPONSE: dict[str, Any] = {
     ],
 }
 
+_COVER_LETTER_RESPONSE: dict[str, Any] = {
+    "header": {
+        "name": "Anna Bauer",
+        "address": "Hauptstraße 42, 10115 Berlin",
+        "phone": "+49 170 1234567",
+        "email": "anna.bauer@example.de",
+        "photo_url": None,
+    },
+    "recipient": {
+        "name": "Herr Dr. Müller",
+        "title": "Personalleiter",
+        "company": "TechVision GmbH",
+        "address": "Unter den Linden 1, 10117 Berlin",
+        "date": "02. Mai 2026",
+    },
+    "body": {
+        "paragraphs": [
+            (
+                "Sehr geehrter Herr Dr. Müller, mit großem Interesse habe ich Ihre "
+                "Stellenausschreibung als Senior Software Engineer gelesen und bewerbe "
+                "mich hiermit auf diese Position."
+            ),
+            (
+                "Als erfahrene Software-Ingenieurin mit über sechs Jahren Praxis in "
+                "Python und FastAPI bringe ich die gesuchten Kernkompetenzen vollständig "
+                "mit. Bei TechVision GmbH habe ich skalierbare REST-APIs entwickelt und "
+                "CI/CD-Prozesse eingeführt, die die Deployment-Zeit um 40 % reduzierten."
+            ),
+            (
+                "Ihr Fokus auf Microservice-Architekturen und agile Entwicklungsmethoden "
+                "spricht mich besonders an, da ich in diesem Umfeld bereits erfolgreich "
+                "gearbeitet habe und weitere Impulse setzen möchte."
+            ),
+            (
+                "Über die Möglichkeit, mich in einem persönlichen Gespräch vorzustellen, "
+                "würde ich mich sehr freuen. Meine Gehaltsvorstellung liegt bei "
+                "95.000 € brutto jährlich."
+            ),
+        ]
+    },
+    "signature": {
+        "closing": "Mit freundlichen Grüßen",
+        "name": "Anna Bauer",
+    },
+}
+
 _INTERVIEW_QUESTION = (
     "Can you describe a specific project where you implemented CI/CD pipelines "
     "and explain the tools and processes you used?"
@@ -248,6 +295,9 @@ class MockLLMProvider(LLMProvider):
 
         if "expert career coach" in system_lower:
             return dict(_QUESTION_RESPONSE)
+
+        if "dach career coach" in system_lower:
+            return dict(_COVER_LETTER_RESPONSE)
 
         # Fallback: return a minimal valid dict for any unrecognised prompt
         return {"mock": True, "raw_prompt_length": len(prompt)}
