@@ -136,3 +136,32 @@ async function setupCompleteJourney(page: Page): Promise<string> {
   const match = url.match(/\/flow\/([^/]+)\//);
   return match ? match[1] : '';
 }
+
+test.describe('Marcus — Complete Journey (PQ)', () => {
+  test.setTimeout(5 * 60 * 1000); // 5 min: full journey chains many waits
+
+  test('US-MK01: complete journey ends on cover letter page with iframe visible', async ({
+    page,
+  }) => {
+    await setupCompleteJourney(page);
+    await expect(page).toHaveURL(/\/flow\/.*\/cover-letter/);
+    await expect(page.getByTestId('cover-letter-iframe')).toBeVisible();
+  });
+
+  test('US-MK02: back-to-CV navigation works from cover letter page', async ({
+    page,
+  }) => {
+    const flowId = await setupCompleteJourney(page);
+    await expect(page.getByTestId('cl-view-cv-btn')).toBeVisible();
+    await page.getByTestId('cl-view-cv-btn').click();
+    await page.waitForURL(`**/flow/${flowId}/cv`);
+  });
+
+  test('US-MK03: PDF download button is present and enabled after full journey', async ({
+    page,
+  }) => {
+    await setupCompleteJourney(page);
+    await expect(page.getByTestId('cl-topbar-download-btn')).toBeVisible();
+    await expect(page.getByTestId('cl-topbar-download-btn')).toBeEnabled();
+  });
+});
