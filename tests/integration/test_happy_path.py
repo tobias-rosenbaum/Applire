@@ -7,16 +7,11 @@ Run with real LLM (requires INTEGRATION_LLM=1):
     INTEGRATION_LLM=1 pytest tests/integration/test_happy_path.py -v
 """
 import os
+import time
 from pathlib import Path
 
 import pytest
 import requests
-
-# Skip all tests in this module unless INTEGRATION_LLM is set
-pytestmark = pytest.mark.skipif(
-    not os.getenv("INTEGRATION_LLM"),
-    reason="Set INTEGRATION_LLM=1 to run integration tests with real LLM"
-)
 
 JD_FILE = Path(__file__).parent.parent / "files" / "jd.txt"
 CV_FILE = Path(__file__).parent.parent / "files" / "cv.pdf"
@@ -107,3 +102,92 @@ def test_happy_path_new_user(api):
     # Verify match score is within valid range
     match_score = state["gap_summary"]["match_score"]
     assert 0.0 <= match_score <= 1.0, f"Invalid match score: {match_score}"
+
+    # Step 8: Create interview session
+    r = requests.post(
+        f"{api}/api/session",
+        json={"job_id": str(job_id)},
+        timeout=60,
+    )
+    assert r.status_code == 201, f"Session creation failed: {r.text}"
+    session_data = r.json()
+    session_id = session_data["session_id"]
+    assert session_data.get("first_question"), "Session must return a first question"
+
+    # Step 9: Advance flow to interview, linking the session
+    r = requests.post(
+        f"{api}/api/flow/{flow_id}/advance",
+        json={"step": "interview", "artifact_id": str(session_id)},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"Flow advance to interview failed: {r.text}"
+    assert r.json()["current_step"] == "interview"
+
+    # Step 10: Send one interview answer
+    r = requests.post(
+        f"{api}/api/session/{session_id}/message",
+        json={"message": (
+            "Ich habe über 8 Jahre Erfahrung in der professionellen Softwareentwicklung "
+            "mit Python, davon 5 Jahre mit FastAPI in produktiven Microservice-Umgebungen."
+        )},
+        timeout=60,
+    )
+    assert r.status_code == 200, f"Session message failed: {r.text}"
+
+    # Step 11: Advance flow to cv_generation (ends interview)
+    r = requests.post(
+        f"{api}/api/flow/{flow_id}/advance",
+        json={"step": "cv_generation"},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"Flow advance to cv_generation failed: {r.text}"
+    assert r.json()["current_step"] == "cv_generation"
+
+    # Step 12: Trigger CV generation
+    r = requests.post(
+        f"{api}/api/cv/generate",
+        json={"job_id": str(job_id)},
+        timeout=60,
+    )
+    assert r.status_code == 201, f"CV generation failed: {r.text}"
+    cv_id = r.json()["cv_id"]
+    assert cv_id, "CV ID must be present"
+
+    # Step 13: Poll CV status until ready (max 60 s)
+    cv_ready = False
+    for _ in range(60):
+        r = requests.get(f"{api}/api/cv/{cv_id}/status", timeout=10)
+        assert r.status_code == 200, f"CV status check failed: {r.text}"
+        if r.json()["status"] == "ready":
+            cv_ready = True
+            break
+        assert r.json()["status"] != "error", f"CV generation errored: {r.text}"
+        time.sleep(1)
+    assert cv_ready, "CV did not reach 'ready' within 60 s"
+
+    # Step 14: Trigger cover letter generation
+    r = requests.post(
+        f"{api}/api/cover-letter/generate",
+        json={"job_id": str(job_id), "salary": "95.000 € p.a."},
+        timeout=60,
+    )
+    assert r.status_code == 201, f"Cover letter generation failed: {r.text}"
+    cl_id = r.json()["cover_letter_id"]
+    assert cl_id, "Cover letter ID must be present"
+
+    # Step 15: Poll cover letter status until ready (max 60 s)
+    cl_ready = False
+    for _ in range(60):
+        r = requests.get(f"{api}/api/cover-letter/{cl_id}/status", timeout=10)
+        assert r.status_code == 200, f"Cover letter status check failed: {r.text}"
+        status_data = r.json()
+        if status_data["status"] == "ready":
+            cl_ready = True
+            assert status_data.get("letter_data"), "Ready cover letter must have letter_data"
+            letter = status_data["letter_data"]
+            for section in ("header", "recipient", "body", "signature"):
+                assert section in letter, f"Missing cover letter section: {section}"
+            break
+        assert status_data["status"] != "error", f"Cover letter generation errored: {r.text}"
+        time.sleep(1)
+    assert cl_ready, "Cover letter did not reach 'ready' within 60 s"
