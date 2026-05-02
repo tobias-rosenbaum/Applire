@@ -16,7 +16,7 @@ export default defineConfig({
   expect: { timeout: 15 * 1000 },
   reporter: [['html'], ['github']],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

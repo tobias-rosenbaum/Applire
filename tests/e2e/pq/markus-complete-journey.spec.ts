@@ -39,7 +39,7 @@ async function resetBackendState(page: Page): Promise<void> {
 async function setupCompleteJourney(page: Page): Promise<string> {
   await resetBackendState(page);
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 
   // Paste JD (unique token prevents flow-creation idempotency re-using a stale flow)
   const uniqueJD = `${JD_TEXT}\n\n<!-- markus-complete-journey: ${Date.now()} -->`;
