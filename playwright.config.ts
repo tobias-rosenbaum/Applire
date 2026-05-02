@@ -33,7 +33,7 @@ export default defineConfig({
    */
   reporter: [
     ['html'],
-    ...(process.env.CI ? [['github']] : []), // Add GitHub reporter only in CI
+    ...(process.env.CI ? [['github'] as ['github']] : []), // Add GitHub reporter only in CI
   ],
 
   /**

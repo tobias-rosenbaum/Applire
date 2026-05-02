@@ -1,0 +1,135 @@
+// tests/e2e/pq/markus-complete-journey.spec.ts
+import { test, expect, Page } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Marcus — Complete Journey (PQ)
+ *
+ * Full happy path: CV upload + JD paste → gap analysis → interview (one answer) →
+ * CV generation → cover letter generation.
+ *
+ * PQ tier: requires the full Docker stack AND a real LLM via OpenRouter.
+ * Run locally:   OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts tests/e2e/pq/markus-complete-journey.spec.ts
+ * Run in CI:     Trigger the "PQ Tests" workflow_dispatch in GitHub Actions.
+ *
+ * DO NOT run this file with the standard `npx playwright test` command.
+ */
+
+const CV_PATH = path.join(__dirname, '../../fixtures/profiles/sample_cv.pdf');
+const JD_TEXT = fs.readFileSync(
+  path.join(__dirname, '../../fixtures/JDs/sample_jd.txt'),
+  'utf-8'
+);
+const API_BASE = 'http://localhost:8001';
+
+async function resetBackendState(page: Page): Promise<void> {
+  await page.request.delete(`${API_BASE}/api/profile`).catch(() => {});
+}
+
+/**
+ * Drives the full Marcus journey from scratch through to a ready cover letter.
+ * Returns the flowId extracted from the URL.
+ *
+ * Journey: home → gaps → interview (1 answer, end early) → CV generation → cover letter
+ */
+async function setupCompleteJourney(page: Page): Promise<string> {
+  await resetBackendState(page);
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+
+  // Paste JD (unique token prevents flow-creation idempotency re-using a stale flow)
+  const uniqueJD = `${JD_TEXT}\n\n<!-- markus-complete-journey: ${Date.now()} -->`;
+  await page.getByRole('button', { name: 'Paste Text' }).click();
+  await page
+    .locator('textarea[placeholder="Paste the full job description here..."]')
+    .fill(uniqueJD);
+
+  // Upload CV
+  await page.getByTestId('file-input').setInputFiles(CV_PATH);
+  await expect(page.getByTestId('submit-button')).toBeEnabled();
+  await page.getByTestId('submit-button').click();
+
+  // Wait for gap analysis
+  await expect(page).toHaveURL(/\/flow\/.*\/gaps/, { timeout: 90000 });
+  await expect(page.getByTestId('loading-indicator')).not.toBeVisible({
+    timeout: 30000,
+  });
+
+  // Start interview
+  const interviewButton = page.getByTestId('interview-button');
+  await expect(interviewButton).toBeVisible({ timeout: 10000 });
+  await interviewButton.click();
+  await expect(page).toHaveURL(/\/flow\/.*\/interview/, { timeout: 30000 });
+  await expect(page.getByTestId('interview-loading')).not.toBeVisible({
+    timeout: 30000,
+  });
+  await expect(page.getByTestId('interview-question')).toBeVisible();
+
+  // Answer one question
+  const firstQuestion = await page.getByTestId('interview-question').textContent();
+  await page.getByTestId('answer-textarea').fill(
+    'Ich habe über 10 Jahre Erfahrung in der Softwareentwicklung, davon 6 Jahre mit ' +
+      'Python und FastAPI in produktiven Umgebungen. Ich habe mehrere ' +
+      'Microservice-Architekturen entworfen und betrieben.'
+  );
+  await page.getByTestId('send-button').click();
+
+  // Wait for question to change or completion screen to appear after the answer
+  await expect(page.getByTestId('interview-question'))
+    .not.toHaveText(firstQuestion ?? '', { timeout: 30000 })
+    .catch(() => {});
+
+  // End early if not already on completion screen
+  const completionVisible = await page
+    .getByTestId('completion-screen')
+    .isVisible()
+    .catch(() => false);
+  if (!completionVisible) {
+    await page.getByTestId('done-button').click();
+    await expect(page.getByTestId('done-confirm')).toBeVisible();
+    await page.getByRole('button', { name: /End interview/i }).click();
+  }
+  await expect(page.getByTestId('completion-screen')).toBeVisible({
+    timeout: 30000,
+  });
+
+  // Navigate to CV page
+  await page.getByTestId('generate-cv-button').click();
+  await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
+
+  // Skip photo prompt if shown
+  const skipPhotoBtn = page.getByText('Skip for now');
+  if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await skipPhotoBtn.click();
+  }
+
+  // Generate CV
+  await page.getByText('CV generieren').click({ timeout: 10000 });
+  await expect(page.getByTestId('refinement-panel')).toBeVisible({
+    timeout: 90000,
+  });
+
+  // Open cover letter generation modal
+  await page.getByTestId('tab-actions').click();
+  await page.getByTestId('generate-cover-letter-btn').click();
+  await expect(page.getByTestId('cover-letter-modal')).toBeVisible();
+
+  // Fill minimal inputs and generate
+  await page.getByTestId('cl-salary').fill('95.000 € p.a.');
+  await page.getByTestId('cl-modal-generate').click();
+
+  // Wait for cover letter page and iframe
+  await page.waitForURL(/\/flow\/.*\/cover-letter/, { timeout: 30000 });
+  await expect(page.getByTestId('cover-letter-iframe')).toBeVisible({
+    timeout: 60000,
+  });
+
+  // Extract and return flowId
+  const url = page.url();
+  const match = url.match(/\/flow\/([^/]+)\//);
+  return match ? match[1] : '';
+}
