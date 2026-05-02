@@ -157,10 +157,11 @@ def test_happy_path_new_user(api):
     for _ in range(60):
         r = requests.get(f"{api}/api/cv/{cv_id}/status", timeout=10)
         assert r.status_code == 200, f"CV status check failed: {r.text}"
-        if r.json()["status"] == "ready":
+        cv_data = r.json()
+        if cv_data["status"] == "ready":
             cv_ready = True
             break
-        assert r.json()["status"] != "error", f"CV generation errored: {r.text}"
+        assert cv_data["status"] != "failed", f"CV generation failed: {r.text}"
         time.sleep(1)
     assert cv_ready, "CV did not reach 'ready' within 60 s"
 
@@ -187,6 +188,15 @@ def test_happy_path_new_user(api):
             for section in ("header", "recipient", "body", "signature"):
                 assert section in letter, f"Missing cover letter section: {section}"
             break
-        assert status_data["status"] != "error", f"Cover letter generation errored: {r.text}"
+        assert status_data["status"] != "failed", f"Cover letter generation failed: {r.text}"
         time.sleep(1)
     assert cl_ready, "Cover letter did not reach 'ready' within 60 s"
+
+    # Step 16: Advance flow to complete
+    r = requests.post(
+        f"{api}/api/flow/{flow_id}/advance",
+        json={"step": "complete", "artifact_id": str(cv_id)},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"Flow advance to complete failed: {r.text}"
+    assert r.json()["current_step"] == "complete"
