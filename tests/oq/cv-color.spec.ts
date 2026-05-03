@@ -71,7 +71,10 @@ test.describe("CV Design tab", () => {
       });
     });
     await page.goto(CV_PAGE_URL);
-    await page.waitForLoadState("networkidle");
+    // Wait for the RefinementPanel's appearance tab button — signals the CV preview phase
+    // is fully rendered. Avoids networkidle which never resolves due to external font
+    // requests (Google Fonts) loaded by the root layout.
+    await page.waitForSelector('[data-testid="tab-appearance"]', { state: "visible", timeout: 30000 });
   });
 
   test("Design tab is visible in RefinementPanel", async ({ page }) => {

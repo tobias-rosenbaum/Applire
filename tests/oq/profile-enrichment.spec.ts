@@ -107,7 +107,11 @@ test.describe("Profile Enrichment", () => {
 
     // Navigate to profile page
     await page.goto("/profile");
-    await page.waitForLoadState("networkidle");
+    // Wait for the completeness progress bar — signals that the profile data has loaded
+    // and the page has finished its initial fetch. Avoids networkidle which never
+    // resolves due to external font requests (Google Fonts) in the root layout.
+    // The progress bar inside the completeness banner is locale-agnostic.
+    await page.waitForSelector(".bg-muted.rounded-full", { state: "visible", timeout: 30000 });
   });
 
   test("completeness banner is visible when profile has gaps", async ({
@@ -413,7 +417,8 @@ test.describe("Profile Enrichment", () => {
 
     // Reload page with new profile mock
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    // Wait for the completeness progress bar to confirm page data has loaded
+    await page.waitForSelector(".bg-muted.rounded-full", { state: "visible", timeout: 30000 });
 
     // Try to find Enrich button — should not exist when profile has no gaps
     const enrichBtn = page.locator('button:has-text("Enrich")').first();
