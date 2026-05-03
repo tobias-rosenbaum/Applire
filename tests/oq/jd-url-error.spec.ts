@@ -83,7 +83,6 @@ test.describe("Branch F — JD URL fetch failure", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
 
     // The URL input is in "URL" mode by default
     const urlInput = page.locator('input[type="url"]');
@@ -123,7 +122,6 @@ test.describe("Branch F — JD URL fetch failure", () => {
   }) => {
     // Navigate directly to the gaps page with the query param (simulates the redirect)
     await page.goto(`/flow/${FLOW_ID}/gaps?jd_status=fetch_failed`);
-    await page.waitForLoadState("networkidle");
 
     // Banner must appear
     const banner = page.getByTestId("jd-recovery-banner");
@@ -137,7 +135,6 @@ test.describe("Branch F — JD URL fetch failure", () => {
     page,
   }) => {
     await page.goto(`/flow/${FLOW_ID}/gaps?jd_status=url_invalid`);
-    await page.waitForLoadState("networkidle");
 
     const banner = page.getByTestId("jd-recovery-banner");
     await expect(banner).toBeVisible({ timeout: 5000 });
@@ -146,7 +143,6 @@ test.describe("Branch F — JD URL fetch failure", () => {
 
   test("CTA navigates to home page", async ({ page }) => {
     await page.goto(`/flow/${FLOW_ID}/gaps?jd_status=fetch_failed`);
-    await page.waitForLoadState("networkidle");
 
     await expect(page.getByTestId("jd-recovery-cta")).toBeVisible({ timeout: 5000 });
     await page.getByTestId("jd-recovery-cta").click();
@@ -156,7 +152,6 @@ test.describe("Branch F — JD URL fetch failure", () => {
 
   test("dismiss button hides the banner", async ({ page }) => {
     await page.goto(`/flow/${FLOW_ID}/gaps?jd_status=fetch_failed`);
-    await page.waitForLoadState("networkidle");
 
     const banner = page.getByTestId("jd-recovery-banner");
     await expect(banner).toBeVisible({ timeout: 5000 });
