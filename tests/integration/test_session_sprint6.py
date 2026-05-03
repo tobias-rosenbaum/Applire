@@ -79,7 +79,11 @@ def _wait_for_ready(api: str, cv_id: str, timeout: int = 120) -> dict:
 class TestSprint6FullFlow:
     @pytest.fixture(scope="class")
     def flow_and_cv(self, api):
-        """Create job + flow + CV, advance through gap_analysis then cv_generation step."""
+        """Create job + flow + CV, advance through gap_analysis then cv_generation step.
+
+        Idempotent: if the flow is already at a later step (e.g. after a previous local
+        test run against a non-ephemeral DB), skips already-completed transitions.
+        """
         jd_text = JD_FILE.read_text() if JD_FILE.exists() else (
             "QA Manager, 21 CFR Part 11 — München\n"
             "Requirements: GMP, quality assurance, regulatory compliance."
@@ -90,23 +94,33 @@ class TestSprint6FullFlow:
         assert jd_r.status_code == 200
         job_id = jd_r.json()["id"]
 
-        # Create flow — POST /api/flow returns 201 with flow_id
+        # Create flow (idempotent for same user+job)
         flow_r = requests.post(f"{api}/api/flow", json={"job_id": job_id}, timeout=30)
         assert flow_r.status_code in (200, 201), f"Flow creation failed: {flow_r.text}"
         flow_id = flow_r.json()["flow_id"]
 
-        # Run gap analysis (required before cv_generation step)
-        gap_r = requests.post(f"{api}/api/job/{job_id}/gaps", timeout=60)
-        assert gap_r.status_code == 200, f"Gap analysis failed: {gap_r.text}"
-        gap_id = gap_r.json()["id"]
+        # Inspect current step — previous runs may have advanced it already.
+        state_r = requests.get(f"{api}/api/flow/{flow_id}/state", timeout=10)
+        assert state_r.status_code == 200
+        current_step = state_r.json()["current_step"]
 
-        # Advance flow to gap_analysis (jd_analysis → gap_analysis)
-        adv_gap = requests.post(
-            f"{api}/api/flow/{flow_id}/advance",
-            json={"step": "gap_analysis", "artifact_id": gap_id},
-            timeout=10,
-        )
-        assert adv_gap.status_code == 200, f"Flow advance to gap_analysis failed: {adv_gap.text}"
+        # Already finished — return existing cv_id from the flow state.
+        if current_step == "complete":
+            cv_summary = state_r.json().get("cv_summary") or {}
+            return {"flow_id": flow_id, "cv_id": cv_summary["cv_id"], "job_id": job_id}
+
+        # Advance to gap_analysis if still in an earlier step.
+        if current_step in ("jd_analysis", "cv_import"):
+            gap_r = requests.post(f"{api}/api/job/{job_id}/gaps", timeout=60)
+            assert gap_r.status_code == 200, f"Gap analysis failed: {gap_r.text}"
+            gap_id = gap_r.json()["id"]
+            adv_gap = requests.post(
+                f"{api}/api/flow/{flow_id}/advance",
+                json={"step": "gap_analysis", "artifact_id": gap_id},
+                timeout=10,
+            )
+            assert adv_gap.status_code == 200, f"Flow advance to gap_analysis failed: {adv_gap.text}"
+            current_step = "gap_analysis"
 
         # Generate CV
         cv_r = requests.post(
@@ -116,19 +130,18 @@ class TestSprint6FullFlow:
         )
         assert cv_r.status_code == 201, f"CV generate failed: {cv_r.text}"
         cv_id = cv_r.json()["cv_id"]
-
-        # Poll until ready
         _wait_for_ready(api, cv_id)
 
-        # Advance flow to cv_generation (Task 20.9)
-        adv_r = requests.post(
-            f"{api}/api/flow/{flow_id}/advance",
-            json={"step": "cv_generation"},
-            timeout=10,
-        )
-        assert adv_r.status_code == 200, f"Flow advance failed: {adv_r.text}"
+        # Advance to cv_generation if still at gap_analysis.
+        if current_step == "gap_analysis":
+            adv_r = requests.post(
+                f"{api}/api/flow/{flow_id}/advance",
+                json={"step": "cv_generation"},
+                timeout=10,
+            )
+            assert adv_r.status_code == 200, f"Flow advance to cv_generation failed: {adv_r.text}"
 
-        # Advance to complete, recording the generated cv
+        # Advance to complete, recording the generated cv.
         done_r = requests.post(
             f"{api}/api/flow/{flow_id}/advance",
             json={"step": "complete", "artifact_id": cv_id},

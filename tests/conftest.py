@@ -73,7 +73,7 @@ def docker_environment():
         _wait_for_api()
         yield
         return
-    _docker_compose("down")
+    _docker_compose("down", "-v")  # wipe volumes for a clean DB every run
     _docker_compose("build")
     _docker_compose("up", "-d", "--force-recreate")
     _wait_for_api()

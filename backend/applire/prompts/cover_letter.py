@@ -79,7 +79,10 @@ def build_cover_letter_prompt(
         for bullet in entry.get("bullets", [])[:2]:
             work_snippet += f"  • {bullet}\n"
 
-    skills_snippet = ", ".join(skills[:10]) if skills else "—"
+    skills_snippet = ", ".join(
+        s if isinstance(s, str) else s.get("name", "")
+        for s in skills[:10]
+    ) if skills else "—"
 
     lines = [
         f"LANGUAGE: {detected_language.upper()}",
