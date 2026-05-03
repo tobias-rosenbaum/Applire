@@ -17,7 +17,7 @@ import { fileURLToPath } from "url";
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SAMPLE_CV = path.join(__dirname, "../../fixtures/profiles/sample_cv.pdf");
+const SAMPLE_CV = path.join(__dirname, "../fixtures/profiles/sample_cv.pdf");
 
 const FLOW_ID = "flow-upload-0000-0000-0000-000000000001";
 const JOB_ID = "job-upload-0000-0000-0000-000000000002";

@@ -2,6 +2,25 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Admin appearance page", () => {
   test("loads the appearance page with scheme editor and preview", async ({ page }) => {
+    await page.route("**/api/admin/color-schemes", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "scheme-eu-blue-0000-0000-0000-000000000001",
+            name: "EU Blue",
+            is_active: true,
+            is_builtin: true,
+            seed_primary: "#003399",
+            seed_accent: "#FFCC00",
+            seed_secondary: "#003399",
+            surface_lightness: 0.97,
+            derived: {},
+          },
+        ]),
+      })
+    );
     await page.goto("/admin/appearance");
     // Header
     await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
