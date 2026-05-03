@@ -12,9 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Full happy path: CV upload + JD paste → gap analysis → interview (one answer) →
  * CV generation → cover letter generation.
  *
- * PQ tier: requires the full Docker stack AND a real LLM via OpenRouter.
- * Run locally:   OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts tests/e2e/pq/markus-complete-journey.spec.ts
- * Run in CI:     Trigger the "PQ Tests" workflow_dispatch in GitHub Actions.
+ * PQ tier: requires the full Docker stack (LLM_PROVIDER=mock).
+ * Run locally: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+ *              npx playwright test --config=playwright.config.pq.ts tests/pq/marcus/markus-complete-journey.spec.ts
+ * Run in CI:   Trigger the "PQ Tests" workflow in GitHub Actions.
  *
  * DO NOT run this file with the standard `npx playwright test` command.
  */
@@ -52,7 +53,7 @@ async function setupCompleteJourney(page: Page): Promise<string> {
 
   // Paste JD (unique token prevents flow-creation idempotency re-using a stale flow)
   const uniqueJD = `${JD_TEXT}\n\n<!-- markus-complete-journey: ${Date.now()} -->`;
-  await page.getByRole('button', { name: 'Paste Text' }).click();
+  await page.getByTestId('jd-mode-text').click();
   await page
     .getByPlaceholder(/Paste the full job description/i)
     .fill(uniqueJD);

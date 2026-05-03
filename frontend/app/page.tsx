@@ -173,6 +173,7 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
+                    data-testid="jd-mode-text"
                     onClick={() => setJdMode("text")}
                     className={cn(
                       "px-4 py-2 text-sm font-medium transition-colors relative",

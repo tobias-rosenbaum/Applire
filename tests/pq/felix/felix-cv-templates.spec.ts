@@ -12,8 +12,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  - The Actions tab shows a template picker with 7 options
  *  - Selecting the 'executive' template and regenerating produces a valid CV
  *
- * PQ tier: requires the full Docker stack + real LLM via OpenRouter.
- * Run: OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts tests/e2e/pq/felix-cv-templates.spec.ts
+ * PQ tier: requires the full Docker stack (LLM_PROVIDER=mock).
+ * Run locally: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+ *              npx playwright test --config=playwright.config.pq.ts tests/pq/felix/felix-cv-templates.spec.ts
  */
 
 const CV_PATH = path.join(__dirname, "../../fixtures/profiles/sample_cv.pdf");
@@ -33,7 +34,7 @@ async function generateCvAndNavigateToView(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
 
   const uniqueJD = `${JD_TEXT}\n\n<!-- felix-template-test: ${Date.now()} -->`;
-  await page.getByRole("button", { name: "Paste Text" }).click();
+  await page.getByTestId("jd-mode-text").click();
   await page.locator('textarea[placeholder="Paste the full job description here..."]').fill(uniqueJD);
 
   const fileInput = page.getByTestId("file-input");
@@ -49,12 +50,13 @@ async function generateCvAndNavigateToView(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
   // Wait for either the photo prompt or the template selector to appear after page init
-  const skipPhotoBtn = page.getByText("Skip for now");
+  const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
   if (await skipPhotoBtn.isVisible({ timeout: 20000 }).catch(() => false)) {
     await skipPhotoBtn.click();
   }
 
-  await page.getByText("CV generieren").click({ timeout: 20000 });
+  // Trigger CV generation (testid is locale-independent)
+  await page.getByTestId("regenerate-cv-button").click({ timeout: 20000 });
   await expect(page.getByTestId("refinement-panel")).toBeVisible({ timeout: 90000 });
 }
 

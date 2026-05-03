@@ -11,8 +11,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Tests cover letter generation, navigation, editing, and templates.
  * Each test builds its own state from scratch via the full UI flow.
  *
- * PQ tier: requires the full Docker stack + real LLM via OpenRouter.
- * Run: OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts tests/e2e/pq/cover-letter.spec.ts
+ * PQ tier: requires the full Docker stack (LLM_PROVIDER=mock).
+ * Run locally: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+ *              npx playwright test --config=playwright.config.pq.ts tests/pq/felix/cover-letter.spec.ts
+ * Run in CI:   Trigger the "PQ Tests" workflow in GitHub Actions.
  *
  * NOTE: This replaces tests/e2e/test_cover_letter.spec.ts which was silently
  * skipped on every run due to a broken beforeAll (GET /api/flow returned 404)
@@ -42,7 +44,7 @@ async function setupCoverLetter(page: Page): Promise<string> {
   await page.waitForLoadState("networkidle");
 
   const uniqueJD = `${JD_TEXT}\n\n<!-- cover-letter-test: ${Date.now()} -->`;
-  await page.getByRole("button", { name: "Paste Text" }).click();
+  await page.getByTestId("jd-mode-text").click();
   await page
     .locator('textarea[placeholder="Paste the full job description here..."]')
     .fill(uniqueJD);
@@ -62,14 +64,14 @@ async function setupCoverLetter(page: Page): Promise<string> {
   // Wait for CV page
   await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
-  // Skip photo prompt if shown
-  const skipPhotoBtn = page.getByText("Skip for now");
-  if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+  // Skip photo prompt if shown (testid is locale-independent)
+  const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
+  if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
     await skipPhotoBtn.click();
   }
 
-  // Trigger CV generation
-  await page.getByText("CV generieren").click({ timeout: 10000 });
+  // Trigger CV generation (testid is locale-independent)
+  await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
 
   // Wait for CV to be ready
   await expect(page.getByTestId("refinement-panel")).toBeVisible({
@@ -117,7 +119,7 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     await page.waitForLoadState("networkidle");
 
     const uniqueJD = `${JD_TEXT}\n\n<!-- cl-btn-test: ${Date.now()} -->`;
-    await page.getByRole("button", { name: "Paste Text" }).click();
+    await page.getByTestId("jd-mode-text").click();
     await page
       .locator('textarea[placeholder="Paste the full job description here..."]')
       .fill(uniqueJD);
@@ -128,11 +130,11 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     await page.getByTestId("generate-cv-button").click();
     await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
-    const skipPhotoBtn = page.getByText("Skip for now");
-    if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
+    if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
       await skipPhotoBtn.click();
     }
-    await page.getByText("CV generieren").click({ timeout: 10000 });
+    await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
     await expect(page.getByTestId("refinement-panel")).toBeVisible({
       timeout: 90000,
     });
@@ -151,7 +153,7 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     await page.waitForLoadState("networkidle");
 
     const uniqueJD = `${JD_TEXT}\n\n<!-- cl-modal-test: ${Date.now()} -->`;
-    await page.getByRole("button", { name: "Paste Text" }).click();
+    await page.getByTestId("jd-mode-text").click();
     await page
       .locator('textarea[placeholder="Paste the full job description here..."]')
       .fill(uniqueJD);
@@ -162,11 +164,11 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     await page.getByTestId("generate-cv-button").click();
     await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
-    const skipPhotoBtn = page.getByText("Skip for now");
-    if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
+    if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
       await skipPhotoBtn.click();
     }
-    await page.getByText("CV generieren").click({ timeout: 10000 });
+    await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
     await expect(page.getByTestId("refinement-panel")).toBeVisible({
       timeout: 90000,
     });

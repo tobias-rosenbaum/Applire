@@ -12,9 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Covers the full happy path for a new Marcus-persona user:
  *   CV upload → JD analysis → gap detection → interview → CV generation
  *
- * PQ tier: requires the full Docker stack AND a real LLM via OpenRouter.
- * Run locally:   OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts
- * Run in CI:     Trigger the "PQ Tests" workflow_dispatch in GitHub Actions.
+ * PQ tier: requires the full Docker stack (LLM_PROVIDER=mock).
+ * Run locally: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+ *              npx playwright test --config=playwright.config.pq.ts tests/pq/marcus/marcus-new-user-journey.spec.ts
+ * Run in CI:   Trigger the "PQ Tests" workflow in GitHub Actions.
  *
  * DO NOT run this file with the standard `npx playwright test` command.
  */
@@ -45,7 +46,7 @@ async function navigateToGapsPage(page: Page): Promise<string> {
   // Switch to "Paste Text" mode for JD and fill it in.
   // Append a unique token so each test gets a fresh job_id (flow creation is idempotent per job_id).
   const uniqueJD = `${JD_TEXT}\n\n<!-- test-run: ${Date.now()} -->`;
-  await page.getByRole('button', { name: 'Paste Text' }).click();
+  await page.getByTestId('jd-mode-text').click();
   await page.locator('textarea[placeholder="Paste the full job description here..."]').fill(uniqueJD);
 
   // Upload CV

@@ -55,6 +55,7 @@ export function PhotoPromptStep({ onContinue, currentPhotoUrl, onPhotoChange }: 
           <p className="text-xs text-blue-500 mt-0.5">{t("uploadPhotoSaved")}</p>
         </button>
         <button
+          data-testid="photo-prompt-skip"
           className="border border-gray-200 bg-gray-50 rounded-lg p-4 text-center hover:bg-gray-100 transition-colors"
           onClick={onContinue}
         >

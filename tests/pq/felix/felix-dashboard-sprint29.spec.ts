@@ -15,9 +15,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *   4. My Documents page shows the generated CV in the table
  *   5. Quick Tailor widget is usable for a second application
  *
- * PQ tier: requires the full Docker stack + a real LLM via OpenRouter.
- * Run: OPENROUTER_API_KEY=<key> npx playwright test --config=playwright.config.pq.ts tests/e2e/pq/felix-dashboard-sprint29.spec.ts
- * DO NOT include in the standard `npx playwright test` run.
+ * PQ tier: requires the full Docker stack (LLM_PROVIDER=mock).
+ * Run locally: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+ *              npx playwright test --config=playwright.config.pq.ts tests/pq/felix/felix-dashboard-sprint29.spec.ts
  */
 
 const CV_PATH = path.join(__dirname, "../../fixtures/profiles/sample_cv.pdf");
@@ -42,7 +42,7 @@ async function runFullOnboardingFlow(page: Page): Promise<string> {
 
   // Use Paste Text mode so we can inject a unique JD and avoid flow dedup
   const uniqueJD = `${JD_TEXT}\n\n<!-- felix-dashboard-test: ${Date.now()} -->`;
-  await page.getByRole("button", { name: "Paste Text" }).click();
+  await page.getByTestId("jd-mode-text").click();
   await page
     .locator('textarea[placeholder="Paste the full job description here..."]')
     .fill(uniqueJD);
@@ -66,16 +66,16 @@ async function runFullOnboardingFlow(page: Page): Promise<string> {
 
   const flowId = page.url().match(/\/flow\/([^/]+)\//)?.[1] ?? "";
 
-  // Dismiss photo prompt if present
-  const skipPhotoBtn = page.getByText("Skip for now");
-  if (await skipPhotoBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+  // Dismiss photo prompt if present (testid is locale-independent)
+  const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
+  if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
     await skipPhotoBtn.click();
   }
 
-  // Trigger CV generation
-  await page.getByText("CV generieren").click({ timeout: 10000 });
+  // Trigger CV generation (testid is locale-independent)
+  await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
 
-  // Wait for generation to complete (real LLM can take ~90s)
+  // Wait for generation to complete
   await expect(page.getByTestId("refinement-panel")).toBeVisible({
     timeout: 90000,
   });
