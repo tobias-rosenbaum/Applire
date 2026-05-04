@@ -125,7 +125,8 @@ async def _next_question_or_done(
         return None, True
 
     state["current_gap_index"] = idx
-    question = await question_generator_with_profile(state, profile_data, provider)
+    q_data = await question_generator_with_profile(state, profile_data, provider)
+    question = q_data["question"]
     state["current_question"] = question
     state["messages"].append({"role": "assistant", "content": question})
     session.state = state
@@ -179,7 +180,8 @@ async def start_enrich_session(
         "na_gaps": [],
     }
 
-    first_question = await question_generator_with_profile(state, profile_data, provider)
+    q_data = await question_generator_with_profile(state, profile_data, provider)
+    first_question = q_data["question"]
     state["current_question"] = first_question
     state["messages"].append({"role": "assistant", "content": first_question})
 
