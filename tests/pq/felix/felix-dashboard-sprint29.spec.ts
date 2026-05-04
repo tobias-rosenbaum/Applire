@@ -38,7 +38,7 @@ async function resetBackendState(page: Page): Promise<void> {
 async function runFullOnboardingFlow(page: Page): Promise<string> {
   await resetBackendState(page);
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
 
   // Use Paste Text mode so we can inject a unique JD and avoid flow dedup
   const uniqueJD = `${JD_TEXT}\n\n<!-- felix-dashboard-test: ${Date.now()} -->`;
@@ -67,10 +67,9 @@ async function runFullOnboardingFlow(page: Page): Promise<string> {
   const flowId = page.url().match(/\/flow\/([^/]+)\//)?.[1] ?? "";
 
   // Dismiss photo prompt if present (testid is locale-independent)
+  // Note: isVisible() does not wait — must use waitFor to handle async phase transition
   const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
-  if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-    await skipPhotoBtn.click();
-  }
+  await skipPhotoBtn.waitFor({ state: "visible", timeout: 10000 }).then(() => skipPhotoBtn.click()).catch(() => {});
 
   // Trigger CV generation (testid is locale-independent)
   await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
@@ -100,7 +99,7 @@ test.describe("Felix — Power-User Dashboard (Sprint 29 PQ)", () => {
     await page.goto("/dashboard");
 
     await expect(page.getByRole("button", { name: /dashboard/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /profile|masterprofil/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /profile|masterprofil/i }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /documents|dokumente/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /settings|einstellungen/i })).toBeVisible();
   });
@@ -113,19 +112,17 @@ test.describe("Felix — Power-User Dashboard (Sprint 29 PQ)", () => {
     await expect(page.getByText(/CV Ready/i)).toBeVisible({ timeout: 10000 });
 
     // Open button is available for the ready CV
-    await expect(
-      page.getByRole("button", { name: /^Open$/i }).first()
-    ).toBeVisible();
+    await expect(page.getByTestId("dashboard-card-open-btn").first()).toBeVisible();
   });
 
   test("Open button on dashboard card navigates to the CV view", async ({ page }) => {
     await runFullOnboardingFlow(page);
     await page.goto("/dashboard");
-    await expect(page.getByRole("button", { name: /^Open$/i }).first()).toBeVisible({
+    await expect(page.getByTestId("dashboard-card-open-btn").first()).toBeVisible({
       timeout: 10000,
     });
 
-    await page.getByRole("button", { name: /^Open$/i }).first().click();
+    await page.getByTestId("dashboard-card-open-btn").first().click();
     await expect(page).toHaveURL(/\/flow\/.+\/cv/, { timeout: 10000 });
   });
 
@@ -137,20 +134,18 @@ test.describe("Felix — Power-User Dashboard (Sprint 29 PQ)", () => {
     await expect(page.locator("tbody tr").first()).toBeVisible({ timeout: 10000 });
 
     // Open button for the ready CV exists
-    await expect(
-      page.getByRole("button", { name: /^Open$|^Öffnen$/i }).first()
-    ).toBeVisible();
+    await expect(page.getByTestId("documents-table-open-btn").first()).toBeVisible();
   });
 
   test("Documents table Open button navigates to the CV view", async ({ page }) => {
     await runFullOnboardingFlow(page);
     await page.goto("/documents");
 
-    await expect(
-      page.getByRole("button", { name: /^Open$|^Öffnen$/i }).first()
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("documents-table-open-btn").first()).toBeVisible({
+      timeout: 10000,
+    });
 
-    await page.getByRole("button", { name: /^Open$|^Öffnen$/i }).first().click();
+    await page.getByTestId("documents-table-open-btn").first().click();
     await expect(page).toHaveURL(/\/flow\/.+\/cv/, { timeout: 10000 });
   });
 

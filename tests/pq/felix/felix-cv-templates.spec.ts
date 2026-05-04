@@ -31,7 +31,7 @@ async function resetBackendState(page: Page): Promise<void> {
 async function generateCvAndNavigateToView(page: Page): Promise<void> {
   await resetBackendState(page);
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
 
   const uniqueJD = `${JD_TEXT}\n\n<!-- felix-template-test: ${Date.now()} -->`;
   await page.getByTestId("jd-mode-text").click();
@@ -51,9 +51,7 @@ async function generateCvAndNavigateToView(page: Page): Promise<void> {
 
   // Wait for either the photo prompt or the template selector to appear after page init
   const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
-  if (await skipPhotoBtn.isVisible({ timeout: 20000 }).catch(() => false)) {
-    await skipPhotoBtn.click();
-  }
+  await skipPhotoBtn.waitFor({ state: "visible", timeout: 20000 }).then(() => skipPhotoBtn.click()).catch(() => {});
 
   // Trigger CV generation (testid is locale-independent)
   await page.getByTestId("regenerate-cv-button").click({ timeout: 20000 });

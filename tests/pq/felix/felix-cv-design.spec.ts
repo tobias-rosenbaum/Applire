@@ -33,7 +33,7 @@ async function resetBackendState(page: Page): Promise<void> {
 async function generateCvAndNavigateToView(page: Page): Promise<void> {
   await resetBackendState(page);
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
 
   // Unique JD so flow isn't de-duped
   const uniqueJD = `${JD_TEXT}\n\n<!-- felix-color-test: ${Date.now()} -->`;
@@ -56,10 +56,9 @@ async function generateCvAndNavigateToView(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
   // Skip photo prompt if it appears (testid is locale-independent)
+  // Note: isVisible() does not wait — must use waitFor to handle async phase transition
   const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
-  if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-    await skipPhotoBtn.click();
-  }
+  await skipPhotoBtn.waitFor({ state: "visible", timeout: 10000 }).then(() => skipPhotoBtn.click()).catch(() => {});
 
   // Trigger CV generation from template selector (testid is locale-independent)
   await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
@@ -89,7 +88,7 @@ test.describe("Felix — CV Design tab (PQ)", () => {
 
     // Click the Rot preset
     await page.getByRole("button", { name: "Farbe wählen: Rot" }).click();
-    const applyBtn = page.getByText("Farbe übernehmen");
+    const applyBtn = page.getByTestId("color-apply-btn");
     await expect(applyBtn).toBeEnabled();
 
     // Intercept PATCH to confirm it's called

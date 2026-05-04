@@ -583,9 +583,7 @@ export default function GapsPage({
                           <GapClickPanel
                             state={clusterState}
                             onUpdate={(patch) => updateGapState(cluster.id, patch)}
-                            onResolved={() => {
-                              updateGapState(cluster.id, { status: "resolved" });
-                            }}
+                            onResolved={() => void handleGapResolved(cluster.id)}
                           />
                         </div>
                       )}
@@ -661,7 +659,7 @@ export default function GapsPage({
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-        {flowState?.user_type === "new" && totalGaps > 0 && (
+        {totalGaps > 0 && (
           <div className="flex flex-col items-center">
             <Button
               size="lg"
@@ -678,7 +676,7 @@ export default function GapsPage({
           </div>
         )}
         <Button
-          variant={flowState?.user_type === "returning" || totalGaps === 0 ? "primary" : "secondary"}
+          variant={totalGaps === 0 ? "primary" : "secondary"}
           size="lg"
           onClick={() => void advance("cv_generation")}
           disabled={actionLoading}

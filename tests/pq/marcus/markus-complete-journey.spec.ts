@@ -115,11 +115,8 @@ async function setupCompleteJourney(page: Page): Promise<string> {
   await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
   // Skip photo prompt if shown
-  await page
-    .getByText('Skip for now')
-    .waitFor({ state: 'visible', timeout: 8000 })
-    .then(() => page.getByText('Skip for now').click())
-    .catch(() => {});
+  const skipBtn = page.getByTestId('photo-prompt-skip');
+  await skipBtn.waitFor({ state: 'visible', timeout: 8000 }).then(() => skipBtn.click()).catch(() => {});
 
   // Generate CV (button testid is stable regardless of locale)
   await page.getByTestId('regenerate-cv-button').click({ timeout: 15000 });

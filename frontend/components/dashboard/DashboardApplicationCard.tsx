@@ -128,6 +128,7 @@ export function DashboardApplicationCard({
         <span className="text-[11.5px] text-gray-400">{relativeTime}</span>
         <button
           onClick={handleAction}
+          data-testid={status === "cv_ready" ? "dashboard-card-open-btn" : undefined}
           className={cn(
             "text-[12px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors",
             status === "cv_ready"

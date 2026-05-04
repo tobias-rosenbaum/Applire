@@ -44,6 +44,7 @@ services:
       target: dev
     environment:
       NEXT_PUBLIC_API_URL: ""
+      BACKEND_URL: "http://backend:8000"
     ports:
       - "3000:3000"
     depends_on:

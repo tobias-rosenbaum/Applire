@@ -177,6 +177,7 @@ export function DesignTab({
         type="button"
         onClick={handleApply}
         disabled={!isDirty || applying}
+        data-testid="color-apply-btn"
         className="w-full py-2 rounded text-sm font-semibold bg-teal text-white disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
       >
         {applying ? t("applyColor") : t("applyColor")}

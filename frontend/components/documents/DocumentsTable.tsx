@@ -213,6 +213,7 @@ export function DocumentsTable({ items, total, page, pageSize, onPageChange }: D
                     <td className="px-4 py-3.5 text-right">
                       {isReady && item.flow_id ? (
                         <button
+                          data-testid="documents-table-open-btn"
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/flow/${item.flow_id}/cv`);

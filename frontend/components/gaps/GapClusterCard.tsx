@@ -47,7 +47,7 @@ export function GapClusterCard({
 
   return (
     <div
-      data-testid="gap-cluster-card"
+      data-testid={onClick ? "gap-click-trigger" : "gap-cluster-card"}
       className={cn(
         "rounded-lg border border-gray-200 bg-white shadow-sm border-l-4 p-4 transition-all",
         borderColor,
@@ -78,7 +78,7 @@ export function GapClusterCard({
             </div>
           )}
           {resolved && (
-            <p className="mt-1.5 text-xs font-medium text-green-600">
+            <p data-testid="gap-resolved" className="mt-1.5 text-xs font-medium text-green-600">
               ✓ {t("clusterStatusResolved")}
             </p>
           )}

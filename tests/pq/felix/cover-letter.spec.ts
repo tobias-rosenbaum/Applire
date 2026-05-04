@@ -41,7 +41,7 @@ async function resetBackendState(page: Page): Promise<void> {
 async function setupCoverLetter(page: Page): Promise<string> {
   await resetBackendState(page);
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("load");
 
   const uniqueJD = `${JD_TEXT}\n\n<!-- cover-letter-test: ${Date.now()} -->`;
   await page.getByTestId("jd-mode-text").click();
@@ -65,10 +65,9 @@ async function setupCoverLetter(page: Page): Promise<string> {
   await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
   // Skip photo prompt if shown (testid is locale-independent)
+  // Note: isVisible() does not wait — must use waitFor to handle async phase transition
   const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
-  if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-    await skipPhotoBtn.click();
-  }
+  await skipPhotoBtn.waitFor({ state: "visible", timeout: 10000 }).then(() => skipPhotoBtn.click()).catch(() => {});
 
   // Trigger CV generation (testid is locale-independent)
   await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
@@ -116,7 +115,7 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     // Test stays on CV page — no need to navigate to cover-letter
     await resetBackendState(page);
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const uniqueJD = `${JD_TEXT}\n\n<!-- cl-btn-test: ${Date.now()} -->`;
     await page.getByTestId("jd-mode-text").click();
@@ -131,9 +130,7 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
     const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
-    if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await skipPhotoBtn.click();
-    }
+    await skipPhotoBtn.waitFor({ state: "visible", timeout: 10000 }).then(() => skipPhotoBtn.click()).catch(() => {});
     await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
     await expect(page.getByTestId("refinement-panel")).toBeVisible({
       timeout: 90000,
@@ -150,7 +147,7 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
   }) => {
     await resetBackendState(page);
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const uniqueJD = `${JD_TEXT}\n\n<!-- cl-modal-test: ${Date.now()} -->`;
     await page.getByTestId("jd-mode-text").click();
@@ -165,9 +162,7 @@ test.describe("Cover Letter — Happy path (PQ)", () => {
     await expect(page).toHaveURL(/\/flow\/.*\/cv/, { timeout: 60000 });
 
     const skipPhotoBtn = page.getByTestId("photo-prompt-skip");
-    if (await skipPhotoBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
-      await skipPhotoBtn.click();
-    }
+    await skipPhotoBtn.waitFor({ state: "visible", timeout: 10000 }).then(() => skipPhotoBtn.click()).catch(() => {});
     await page.getByTestId("regenerate-cv-button").click({ timeout: 15000 });
     await expect(page.getByTestId("refinement-panel")).toBeVisible({
       timeout: 90000,
