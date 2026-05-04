@@ -330,7 +330,7 @@ test.describe('Gap-Click Mode', () => {
     }
 
     // At least one gap-click trigger must be visible
-    const triggers = page.getByTestId('gap-click-trigger');
+    const triggers = page.getByTestId('gap-cluster-card');
     await expect(triggers.first()).toBeVisible();
   });
 
@@ -342,7 +342,7 @@ test.describe('Gap-Click Mode', () => {
       test.skip(true, 'No gaps section visible');
     }
 
-    const trigger = page.getByTestId('gap-click-trigger').first();
+    const trigger = page.getByTestId('gap-cluster-card').first();
     await expect(trigger).toBeVisible();
     await trigger.click();
 
@@ -365,7 +365,7 @@ test.describe('Gap-Click Mode', () => {
       test.skip(true, 'No gaps section visible');
     }
 
-    const trigger = page.getByTestId('gap-click-trigger').first();
+    const trigger = page.getByTestId('gap-cluster-card').first();
     await trigger.click();
 
     await expect(page.getByTestId('gap-answer-textarea')).toBeVisible({ timeout: 30000 });
@@ -437,7 +437,7 @@ test.describe('Gap-Click Mode', () => {
     );
 
     // Trigger gap resolution
-    const trigger = page.getByTestId('gap-click-trigger').first();
+    const trigger = page.getByTestId('gap-cluster-card').first();
     await trigger.click();
     await expect(page.getByTestId('gap-answer-textarea')).toBeVisible({ timeout: 30000 });
     await page.getByTestId('gap-answer-textarea').fill('Yes, extensive production experience.');
@@ -457,7 +457,7 @@ test.describe('Gap-Click Mode', () => {
       test.skip(true, 'No gaps section visible');
     }
 
-    const triggers = page.getByTestId('gap-click-trigger');
+    const triggers = page.getByTestId('gap-cluster-card');
     const triggerCount = await triggers.count();
     if (triggerCount < 2) {
       test.skip(true, 'Fewer than 2 gaps present — cannot test sequential resolution');
@@ -525,8 +525,8 @@ test.describe('Gap-Click Mode', () => {
     await page.getByTestId('gap-submit-button').click();
     await expect(page.getByTestId('gap-resolved').first()).toBeVisible({ timeout: 30000 });
 
-    // Resolve second gap (triggers are re-evaluated since first is now resolved)
-    const remainingTriggers = page.getByTestId('gap-click-trigger');
+    // Resolve second gap — filter out already-resolved cards
+    const remainingTriggers = page.getByTestId('gap-cluster-card').filter({ hasNot: page.getByTestId('gap-resolved') });
     await expect(remainingTriggers.first()).toBeVisible({ timeout: 10000 });
     await remainingTriggers.first().click();
     await expect(page.getByTestId('gap-answer-textarea')).toBeVisible({ timeout: 30000 });

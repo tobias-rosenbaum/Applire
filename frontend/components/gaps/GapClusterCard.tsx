@@ -47,7 +47,7 @@ export function GapClusterCard({
 
   return (
     <div
-      data-testid={onClick ? "gap-click-trigger" : "gap-cluster-card"}
+      data-testid="gap-cluster-card"
       className={cn(
         "rounded-lg border border-gray-200 bg-white shadow-sm border-l-4 p-4 transition-all",
         borderColor,
