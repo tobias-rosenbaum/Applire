@@ -58,8 +58,10 @@ services:
     image: nginx:alpine
     ports:
       - "80:80"
+    environment:
+      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
     volumes:
-      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro,z
+      - ./nginx/dev.conf.template:/etc/nginx/templates/default.conf.template:ro,z
     depends_on:
       - backend
       - frontend

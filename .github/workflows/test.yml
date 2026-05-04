@@ -141,6 +141,9 @@ jobs:
           echo "Waiting for frontend..."
           timeout 180 bash -c 'until curl -sf http://localhost:3000; do sleep 2; done'
           echo "Frontend ready."
+          echo "Waiting for nginx (PQ tests require port 80)..."
+          timeout 60 bash -c 'until curl -sf http://localhost; do sleep 2; done'
+          echo "Nginx ready."
 
       - name: Show backend logs on startup failure
         if: failure()

@@ -43,25 +43,42 @@ _STALE_CV_JOB_MINUTES = 10        # pending/generating → failed after this lon
 
 
 async def _purge_uploads(db: AsyncSession) -> int:
-    """Hard-delete uploads older than 7 days.
+    """Hard-delete uploads older than 7 days and remove their physical files.
 
-    Uses raw SQL because no ORM model exists yet for the uploads table.
+    Collects file paths first, then deletes DB rows, then deletes files so that
+    a storage I/O error cannot block the DB deletion (mirrors GDPR erasure).
     Catches ProgrammingError gracefully so the worker runs cleanly when the
     table is absent (anticipated-but-not-yet-created pattern).
     """
+    from applire.storage import get_storage
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=_UPLOADS_TTL_DAYS)
     try:
+        rows = await db.execute(
+            text("SELECT file_path FROM uploads WHERE created_at < :cutoff"),
+            {"cutoff": cutoff},
+        )
+        file_paths: list[str] = [row[0] for row in rows.fetchall()]
+
         result = await db.execute(
             text("DELETE FROM uploads WHERE created_at < :cutoff"),
             {"cutoff": cutoff},
         )
         await db.commit()
-        return result.rowcount  # type: ignore[return-value]
     except (ProgrammingError, OperationalError):
         # ProgrammingError: PostgreSQL "table does not exist"
         # OperationalError: SQLite "no such table" (test environments)
         await db.rollback()
         return 0
+
+    storage = get_storage()
+    for path in file_paths:
+        try:
+            await storage.delete(path)
+        except Exception as exc:
+            logger.warning("Retention: failed to delete upload file %s: %s", path, exc)
+
+    return result.rowcount  # type: ignore[return-value]
 
 
 async def _purge_sessions(db: AsyncSession) -> int:

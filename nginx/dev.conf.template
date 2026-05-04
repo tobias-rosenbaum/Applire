@@ -8,6 +8,9 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         # Allow large CV/photo uploads (default nginx limit is 1 MB)
         client_max_body_size 20M;
+        # LLM inference can take several minutes; override nginx's 60s default
+        proxy_read_timeout ${NGINX_PROXY_TIMEOUT}s;
+        proxy_send_timeout ${NGINX_PROXY_TIMEOUT}s;
     }
 
     location /static/ {
