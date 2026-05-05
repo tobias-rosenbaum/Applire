@@ -382,7 +382,9 @@ test.describe("Profile Enrichment", () => {
 
       // Close drawer by pressing Escape
       await page.keyboard.press("Escape");
-      await page.waitForTimeout(300);
+      // Wait for the drawer panel to leave the DOM before trying to click again
+      await page.locator(".fixed.inset-y-0.right-0").waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(200);
 
       // Reopen enrichment drawer
       const enrichBtnAgain = page.locator('button:has-text("Enrich")').first();
