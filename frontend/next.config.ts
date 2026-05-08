@@ -17,8 +17,7 @@
 
 import type { NextConfig } from "next";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { version } = require("./package.json") as { version: string };
+import { version } from "./package.json";
 
 const nextConfig: NextConfig = {
   output: "standalone",
