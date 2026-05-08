@@ -94,12 +94,13 @@ test.describe("Felix — Power-User Dashboard (Sprint 29 PQ)", () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test("dashboard sidebar renders all four nav items", async ({ page }) => {
+  test("dashboard sidebar renders all five nav items", async ({ page }) => {
     await runFullOnboardingFlow(page);
     await page.goto("/dashboard");
 
     await expect(page.getByRole("button", { name: /dashboard/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /profile|masterprofil/i }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /profil aktualisieren|update profile/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /documents|dokumente/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /settings|einstellungen/i })).toBeVisible();
   });

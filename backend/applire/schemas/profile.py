@@ -394,3 +394,12 @@ class CVUploadResponse(BaseModel):
     conflicts: list[ConflictSummary] = Field(default_factory=list)
     enrichment_record_id: uuid.UUID
     expires_at: datetime
+
+
+class UploadHistoryItem(BaseModel):
+    id: uuid.UUID
+    original_filename: str
+    mime_type: str
+    byte_size: int
+    created_at: datetime
+    completeness_score: float | None = None  # TODO: join to EnrichmentRecord when score persistence is wired

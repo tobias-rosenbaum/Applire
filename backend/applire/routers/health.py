@@ -19,7 +19,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from applire import __version__
-from applire.config import HAS_CLOUD
+from applire.config import HAS_CLOUD, settings
 
 router = APIRouter()
 
@@ -28,6 +28,7 @@ class HealthResponse(BaseModel):
     status: str
     edition: str
     version: str
+    llm_provider: str
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -36,4 +37,5 @@ async def health() -> HealthResponse:
         status="ok",
         edition="cloud" if HAS_CLOUD else "community",
         version=__version__,
+        llm_provider=settings.llm_provider,
     )

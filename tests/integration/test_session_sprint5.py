@@ -8,11 +8,17 @@ Covers:
 Run with:
     INTEGRATION_LLM=1 pytest tests/integration/test_session_sprint5.py -v
 """
+import os
 import time
 from pathlib import Path
 
 import pytest
 import requests
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("INTEGRATION_LLM"),
+    reason="Real-LLM test — set INTEGRATION_LLM=1 to run",
+)
 
 _CV_FILE = Path(__file__).parent.parent / "files" / "Profile.pdf"
 

@@ -38,12 +38,14 @@ from applire.ocr import get_ocr_extractor
 from applire.ocr.base import CVImageExtractor
 from applire.providers import get_provider
 from applire.providers.llm.base import LLMProvider
+from applire.models.uploads import UploadRecord
 from applire.schemas.profile import (
     ConflictResolutionRequest,
     CVUploadResponse,
     EnrichmentRecord,
     LinkedInImportRequest,
     MasterProfileResponse,
+    UploadHistoryItem,
 )
 from applire.services.profile import (
     get_enrichment_history,
@@ -320,6 +322,34 @@ async def get_current_profile(
             detail="No profile found. Import a CV first.",
         )
     return profile
+
+
+@router.get("/uploads", response_model=list[UploadHistoryItem], status_code=status.HTTP_200_OK)
+async def get_upload_history(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    auth: AuthProvider = Depends(get_auth_provider),
+) -> list[UploadHistoryItem]:
+    """Return the last 10 uploads for the current user, newest first."""
+    user = await auth.get_current_user(request)
+    result = await db.execute(
+        select(UploadRecord)
+        .where(UploadRecord.user_id == user.id)
+        .order_by(UploadRecord.created_at.desc())
+        .limit(10)
+    )
+    records = result.scalars().all()
+    return [
+        UploadHistoryItem(
+            id=r.id,
+            original_filename=r.original_filename,
+            mime_type=r.mime_type,
+            byte_size=r.byte_size,
+            created_at=r.created_at,
+            completeness_score=None,  # TODO: link to EnrichmentRecord for actual score
+        )
+        for r in records
+    ]
 
 
 @router.get(

@@ -37,15 +37,21 @@ describe("AppSidebar", () => {
     mockPathname = "/dashboard";
   });
 
+  it("renders Applire logo image", () => {
+    render(<AppSidebar />);
+    expect(screen.getByRole("img", { name: /applire/i })).toBeInTheDocument();
+  });
+
   it("renders Applire brand name", () => {
     render(<AppSidebar />);
     expect(screen.getByText("Applire")).toBeInTheDocument();
   });
 
-  it("renders all four nav items", () => {
+  it("renders all five nav items", () => {
     render(<AppSidebar />);
     expect(screen.getByRole("button", { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /profile/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /import/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /documents/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /settings/i })).toBeInTheDocument();
   });
@@ -55,6 +61,20 @@ describe("AppSidebar", () => {
     render(<AppSidebar />);
     const btn = screen.getByRole("button", { name: /dashboard/i });
     expect(btn.className).toContain("bg-primary-container");
+  });
+
+  it("highlights import nav when pathname is /profile/upload", () => {
+    mockPathname = "/profile/upload";
+    render(<AppSidebar />);
+    const btn = screen.getByRole("button", { name: /import/i });
+    expect(btn.className).toContain("bg-primary-container");
+  });
+
+  it("does not highlight profile nav when pathname is /profile/upload", () => {
+    mockPathname = "/profile/upload";
+    render(<AppSidebar />);
+    const btn = screen.getByRole("button", { name: /profile/i });
+    expect(btn.className).not.toContain("bg-primary-container");
   });
 
   it("highlights Documents when pathname is /documents", () => {
@@ -83,6 +103,12 @@ describe("AppSidebar", () => {
     expect(mockPush).toHaveBeenCalledWith("/profile");
   });
 
+  it("clicking import nav navigates to /profile/upload", () => {
+    render(<AppSidebar />);
+    fireEvent.click(screen.getByRole("button", { name: /import/i }));
+    expect(mockPush).toHaveBeenCalledWith("/profile/upload");
+  });
+
   it("computes initials from userName 'Max Mustermann' → 'MM'", () => {
     render(<AppSidebar userName="Max Mustermann" />);
     expect(screen.getByText("MM")).toBeInTheDocument();
@@ -106,5 +132,17 @@ describe("AppSidebar", () => {
   it("shows em-dash when userName is null", () => {
     render(<AppSidebar userName={null} />);
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("does not render a help button", () => {
+    render(<AppSidebar />);
+    expect(screen.queryByRole("button", { name: /help/i })).not.toBeInTheDocument();
+  });
+
+  it("renders a version string in the footer", () => {
+    render(<AppSidebar />);
+    // NEXT_PUBLIC_APP_VERSION is undefined in test env — component falls back to empty string
+    // We just check the footer element exists with the right test-id
+    expect(screen.getByTestId("sidebar-version")).toBeInTheDocument();
   });
 });

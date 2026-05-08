@@ -400,6 +400,7 @@
   "shell": {
     "dashboard": "Dashboard",
     "profile": "Master Profile",
+    "import": "Update Profile",
     "documents": "My Documents",
     "settings": "Settings",
     "help": "Help & Support",
@@ -414,6 +415,27 @@
     "textPlaceholder": "Paste the full job description here…",
     "analyseButton": "Analyse →",
     "analysing": "Analysing…"
+  },
+  "profileImport": {
+    "title": "Update Profile",
+    "subtitle": "Upload your CV as PDF or DOCX — or a LinkedIn export as ZIP. The format is detected automatically.",
+    "dropTitle": "Drop file here",
+    "browse": "Choose file",
+    "formats": "PDF · DOCX · ZIP up to 10 MB",
+    "linkedinCardTitle": "Upload LinkedIn data export",
+    "linkedinCardDesc": "Full archive (ZIP) from LinkedIn privacy settings — provides structured profile data for more accurate extraction.",
+    "uploading": "Uploading …",
+    "successPrefix": "Profile updated — completeness: ",
+    "successNoScore": "Profile updated",
+    "uploadErrorGeneric": "Upload failed",
+    "flowErrorGeneric": "Navigation failed",
+    "flowNotFound": "Flow not found",
+    "historyTitle": "Recent uploads",
+    "historyEmpty": "No uploads yet",
+    "viewAll": "View all",
+    "whyTag": "Profile intelligence",
+    "whyTitle": "Why update?",
+    "whyBody": "An up-to-date CV improves accuracy across all AI analyses — from gap analysis to CV generation. Changes are merged into your Master Profile immediately."
   },
   "documents": {
     "title": "My Documents",

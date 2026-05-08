@@ -1,8 +1,10 @@
 <div align="center">
 
-<img src="docs/images/applire_full.png" alt="Applire" width="320">
+![Applire - AI-Powered CV Intelligence Platform](https://cdn.simtheory.ai/image/upload/v1775325052/user_7324/ai-document-processing_492199c1.png)
 
-**Open-Source Career Intelligence Platform — Built in Europe, for Europe**
+# Applire
+
+**Open-Source Career Intelligence Platform for the DACH Market**
 
 *Transform hours of CV tailoring into seconds. Upload your CVs, paste a job description, and let AI guide you through an intelligent interview to create perfectly matched application documents.*
 
@@ -11,7 +13,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
-[![GitHub Stars](https://img.shields.io/github/stars/tobias-rosenbaum/Applire?style=social)](https://github.com/tobias-rosenbaum/applire)
+[![GitHub Stars](https://img.shields.io/github/stars/tobias-rosenbaum/Applire?style=social)](https://github.com/tobias-rosenbaum/Applire)
 
 [🚀 Quick Start](#-installation) • [📖 Documentation](docs/) • [💬 Community](#-community--support) • [🐛 Report Bug](https://github.com/tobias-rosenbaum/Applire/issues)
 
@@ -21,7 +23,9 @@
 
 ## 💡 What is Applire?
 
-**Applire** is an open-source AI platform that combines deep career intelligence with European job market expertise to automate high-quality CV tailoring. Starting with the DACH region (Germany, Austria, Switzerland), Applire is built to grow across the entire EU.
+**Applire** is an open-source AI platform that combines deep career intelligence with DACH-specific cultural expertise to automate high-quality CV tailoring.
+
+Built for **all job seekers in the DACH market**, with unmatched depth in regulated industries (Pharma, GxP, Medtech) — a specialization that proves our precision for every user.
 
 Unlike generic CV builders, Applire:
 - 🧠 **Learns from you**: Builds a persistent Master Profile that gets smarter with every CV you upload
@@ -29,8 +33,6 @@ Unlike generic CV builders, Applire:
 - ✨ **Tailors with precision**: Generates culturally appropriate CVs optimized for DACH recruiters and ATS systems
 - 🤖 **Agent-first design**: Accessible to AI assistants via the Model Context Protocol (MCP)
 - 🔒 **Privacy by design**: GDPR-compliant, self-hosted, full data sovereignty
-- 🔍 **Transparent by design**: Open-source code you can audit — no black-box algorithms, no hidden data flows
-- 🔑 **Your AI, your rules**: Bring your own API key or run fully offline with local LLMs — no forced AI vendor dependency
 
 **In 3 simple steps:**
 1. 📄 Upload 2-4 versions of your CV
@@ -39,33 +41,23 @@ Unlike generic CV builders, Applire:
 
 ---
 
-## 🏠 Applire at Home &nbsp;·&nbsp; ☁️ Applire Cloud *(coming soon)*
-
-| | **Applire at Home** (this repo) | **Applire Cloud** *(coming soon)* |
-|---|---|---|
-| **Hosting** | Your own server or laptop | Managed by Applire |
-| **Setup** | Docker Compose, 5 minutes | Zero setup — just sign up |
-| **Privacy** | 100% your data, your infrastructure | EU data residency (Hetzner DE) |
-| **Cost** | Free (AGPL-3.0) | Subscription-based |
-| **Updates** | Self-managed | Automatic |
-| **Auth** | Single-user (pluggable OIDC) | OAuth / SSO included |
-
-Applire at Home is ideal for developers, privacy-conscious users, and anyone who wants full control over their career data. [Join the waitlist](https://applire.de) for Applire Cloud when it launches.
-
----
-
 ## 👥 Who is Applire for?
 
-### 💼 **Marcus — The Expert**
+Applire serves diverse personas across the DACH job market:
+
+### 💼 **Marcus - The Expert**
 Experienced professional with deep domain expertise who needs precision tailoring for demanding roles. Values efficiency and quality over hand-holding.
 
-### 🌍 **Priya — The Relocator**
+### 🌍 **Priya - The Relocator**
 International candidate moving to DACH who needs cultural "translation" of their career history to meet local CV conventions and recruiter expectations.
 
-### ✏️ **Felix — The Finetuner**
+### 🔍 **Jason - The Recruiter**
+Professional headhunter who needs to efficiently generate high-quality, tailored CVs for clients across various industries.
+
+### ✏️ **Felix - The Finetuner**
 Any user who wants surgical, section-level control over their CV. Trusts AI to draft but wants to fine-tune the output to sound authentic and personal.
 
-### 🤖 **Kaile — The AI Agent**
+### 🤖 **Kaile - The AI Agent**
 AI assistant (Claude, ChatGPT, custom agents) calling Applire on behalf of human users via MCP or REST API for seamless career intelligence integration.
 
 ---
@@ -107,11 +99,12 @@ AI assistant (Claude, ChatGPT, custom agents) calling Applire on behalf of human
 - **Cover Letter Generation**: AI-powered cover letter creation based on JD and Master Profile
 - **Cultural Adaptation**: Automatic detection and formatting for German, Austrian, and Swiss CV conventions
 
-### 🗺️ European Cultural Intelligence
+### 🗺️ DACH Cultural Intelligence
 
-- **Market-Specific Formatting**: Lebenslauf vs. international CV formats — starting with DACH, expanding across the EU
-- **Cultural Signal Detection**: Identifies when a CV needs adaptation for the target market
+- **Market-Specific Formatting**: Lebenslauf vs. international CV formats
+- **Cultural Signal Detection**: Identifies when a CV needs adaptation (e.g., Indian → German pharma standards)
 - **Multilingual Support**: German and English UI; French and Spanish planned
+- **Regulatory Industry Depth**: Specialized knowledge for Pharma, GxP, Medtech roles
 
 ### 🔒 Privacy & GDPR Compliance
 
@@ -175,15 +168,14 @@ python -m applire.mcp
 
 ### AI/ML
 
-- **Mistral AI** (EU-hosted): Strong European language support (`mistral-large-latest`)
-- **LLM Provider Abstraction**: Pluggable backends for OpenRouter, Mistral, OpenAI, Ollama (self-hosted)
+- **Mistral AI** (default): EU-hosted LLM with strong German proficiency (`mistral-large-latest`)
+- **LLM Provider Abstraction**: Pluggable backends for Mistral, OpenAI, Ollama (self-hosted)
 - **Custom State Machine**: Async interview orchestrator (no LangGraph dependency)
 - **Playwright**: Headless Chromium for PDF generation
 
 ### Infrastructure
 
 - **Docker & Docker Compose**: Containerized deployment
-- **nginx**: Reverse proxy bundled in the Docker Compose stack
 - **PostgreSQL 16**: Primary database with JSONB support
 - **Retention Worker**: Daily cron for GDPR TTL enforcement
 - **GitHub Actions**: CI/CD pipeline with pytest and Playwright E2E tests
@@ -202,7 +194,7 @@ python -m applire.mcp
 ### Prerequisites
 
 - **Docker & Docker Compose** (recommended)
-- **LLM API Key**: OpenRouter (recommended), Mistral AI, OpenAI, or Ollama (fully local — no key needed)
+- **LLM API Key**: Mistral AI (default), OpenAI, or Ollama (local)
 
 ### Quick Start with Docker Compose
 
@@ -212,12 +204,12 @@ git clone https://github.com/tobias-rosenbaum/Applire.git
 cd Applire
 
 # Copy environment template
-cp .env.dev.example .env.dev
+cp .env.dev.example .env
 
-# Edit .env.dev and set your LLM provider key, for example:
-#   LLM_PROVIDER=openrouter
-#   OPENROUTER_API_KEY=your_key_here
-# (See the Configuration section below for all options)
+# Edit .env and configure:
+# - LLM_PROVIDER=mistral (or openai, ollama)
+# - MISTRAL_API_KEY=your_key_here (or OPENAI_API_KEY)
+# - DATABASE_URL=postgresql://applire:password@db:5432/applire
 
 # Start all services
 docker-compose up -d
@@ -225,10 +217,10 @@ docker-compose up -d
 # Run database migrations
 docker-compose exec backend alembic upgrade head
 
-# Access the application:
-# http://localhost          — Full app (nginx, recommended)
-# http://localhost:3000     — Frontend (direct)
-# http://localhost:8001/docs — API documentation (Swagger UI)
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8001
+# API Docs: http://localhost:8001/docs
 ```
 
 ### Manual Setup (Development)
@@ -245,11 +237,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy and edit the environment file
-cp ../.env.dev.example ../.env.dev
-# Update DATABASE_URL to point to your local PostgreSQL instance,
-# e.g. postgresql+asyncpg://applire:applire@localhost:5433/applire
-# (port 5433 if you're using the Docker Compose postgres service)
+# Set up environment variables
+cp ../.env.dev.example .env
+# Edit .env with your configuration
 
 # Run migrations
 alembic upgrade head
@@ -266,8 +256,9 @@ cd frontend
 # Install dependencies
 npm install
 
-# Point the frontend at the standalone backend
-echo "NEXT_PUBLIC_API_URL=http://localhost:8001" > .env.local
+# Set up environment variables
+cp ../.env.dev.example .env.local
+# Edit .env.local with your configuration
 
 # Start development server
 npm run dev
@@ -276,7 +267,7 @@ npm run dev
 #### Retention Worker (GDPR Compliance)
 
 ```bash
-# The retention worker runs as a daily loop in Docker Compose.
+# The retention worker runs as a daily cron in Docker Compose
 # For manual execution:
 python -m applire.retention
 ```
@@ -287,41 +278,35 @@ python -m applire.retention
 
 ### Environment Variables
 
-Copy `.env.dev.example` to `.env.dev` and configure your LLM provider:
+Copy `.env.dev.example` to `.env` and configure:
 
 ```env
+# LLM Provider (mistral, openai, ollama)
+LLM_PROVIDER=mistral
+MISTRAL_API_KEY=your_mistral_api_key_here
+# OPENAI_API_KEY=your_openai_api_key_here  # Alternative
+# OLLAMA_BASE_URL=http://localhost:11434   # For local Ollama
+
 # Database
-DATABASE_URL=postgresql+asyncpg://applire:applire@postgres:5432/applire
+DATABASE_URL=postgresql://applire:password@localhost:5432/applire
 
-# LLM Provider — choose one: openrouter | mistral | openai | ollama
-LLM_PROVIDER=openrouter
+# Backend
+SECRET_KEY=your-secret-key-here-generate-with-openssl-rand-hex-32
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1
+APPLIRE_BASE_URL=http://localhost:8001
 
-# OpenRouter (recommended — multi-model gateway, one key for many models)
-OPENROUTER_API_KEY=your-openrouter-api-key-here
-OPENROUTER_MODEL=mistralai/mistral-medium-3
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8001
 
-# Mistral AI — EU-hosted, GDPR-native
-# MISTRAL_API_KEY=your-mistral-api-key-here
+# Storage (local by default)
+UPLOAD_DIR=./data/uploads
 
-# OpenAI (or any OpenAI-compatible server such as LM Studio)
-# OPENAI_API_KEY=your-openai-api-key-here
-# OPENAI_BASE_URL=http://host.docker.internal:1234/v1  # LM Studio example
+# OCR Backend (mistral_vision or tesseract)
+OCR_BACKEND=mistral_vision
 
-# Ollama — fully offline, no API key needed
-# docker compose --profile ollama up
-# OLLAMA_BASE_URL=http://ollama:11434
-# OLLAMA_MODEL=llama3.2
-
-# Auth (single-user mode — no login required for Community Edition)
+# Auth (none for Community Edition single-user mode)
 AUTH_PROVIDER=none
-
-# CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:3001
-
-# Frontend API URL
-# Leave empty when using Docker Compose — nginx routes /api/* to the backend.
-# Set to http://localhost:8001 only when running the frontend outside Docker.
-# NEXT_PUBLIC_API_URL=http://localhost:8001
 ```
 
 ### LLM Provider Options
@@ -330,10 +315,9 @@ Applire supports multiple LLM backends via a pluggable abstraction layer:
 
 | Provider | Configuration | Use Case |
 |----------|---------------|----------|
-| **OpenRouter** (default) | `LLM_PROVIDER=openrouter`<br>`OPENROUTER_API_KEY=...` | Multi-model gateway — access Mistral, Claude, and others with one key |
-| **Mistral AI** | `LLM_PROVIDER=mistral`<br>`MISTRAL_API_KEY=...` | EU-hosted, GDPR-native, strong European language support |
-| **OpenAI** | `LLM_PROVIDER=openai`<br>`OPENAI_API_KEY=...` | High quality; also compatible with LM Studio and other OpenAI-compatible servers |
-| **Ollama** (local) | `LLM_PROVIDER=ollama`<br>`OLLAMA_BASE_URL=http://localhost:11434` | Fully offline, no API costs, maximum privacy |
+| **Mistral AI** (default) | `LLM_PROVIDER=mistral`<br>`MISTRAL_API_KEY=...` | EU-hosted, GDPR-native, strong German proficiency |
+| **OpenAI** | `LLM_PROVIDER=openai`<br>`OPENAI_API_KEY=...` | High quality, widely available |
+| **Ollama** (local) | `LLM_PROVIDER=ollama`<br>`OLLAMA_BASE_URL=http://localhost:11434` | Fully offline, no API costs, privacy-first |
 
 ---
 
@@ -598,6 +582,7 @@ For organizations that cannot comply with AGPL requirements (e.g., proprietary S
 - **Mistral AI** for EU-hosted LLM infrastructure
 - **FastAPI** and **Next.js** communities
 - All contributors and early adopters
+- DACH industry professionals who provided domain expertise
 - The open-source community for inspiration and tools
 
 ---
@@ -613,7 +598,7 @@ For organizations that cannot comply with AGPL requirements (e.g., proprietary S
 
 <div align="center">
 
-**Built with ❤️ for job seekers across Europe**
+**Built with ❤️ for job seekers in the DACH market**
 
 *Open-source career intelligence. Privacy-first. Agent-ready.*
 

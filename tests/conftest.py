@@ -45,8 +45,9 @@ _DOCKER_ENV = {
 
 
 def _docker_compose(*args: str) -> None:
+    # Always overlay docker-compose.ci.yml so tests run with LLM_PROVIDER=mock.
     subprocess.run(
-        ["docker", "compose", *args],
+        ["docker", "compose", "-f", "docker-compose.yml", "-f", "docker-compose.ci.yml", *args],
         cwd=PROJECT_ROOT,
         env=_DOCKER_ENV,
         check=True,

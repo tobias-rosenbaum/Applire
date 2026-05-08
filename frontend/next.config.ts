@@ -17,8 +17,14 @@
 
 import type { NextConfig } from "next";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { version } = require("./package.json") as { version: string };
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_APP_VERSION: `v${version}`,
+  },
   experimental: {
     // LLM operations (CV extraction, gap analysis) can take 30-60s+;
     // Next.js dev proxy defaults to 30s which causes ECONNRESET mid-request.

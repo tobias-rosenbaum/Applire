@@ -400,6 +400,7 @@
   "shell": {
     "dashboard": "Dashboard",
     "profile": "Masterprofil",
+    "import": "Profil aktualisieren",
     "documents": "Meine Dokumente",
     "settings": "Einstellungen",
     "help": "Hilfe & Support",
@@ -414,6 +415,27 @@
     "textPlaceholder": "Vollständige Stellenbeschreibung hier einfügen…",
     "analyseButton": "Analysieren →",
     "analysing": "Analysiert…"
+  },
+  "profileImport": {
+    "title": "Profil aktualisieren",
+    "subtitle": "Lebenslauf als PDF oder DOCX — oder LinkedIn-Export als ZIP. Das Format wird automatisch erkannt.",
+    "dropTitle": "Datei hier ablegen",
+    "browse": "Datei auswählen",
+    "formats": "PDF · DOCX · ZIP bis 10 MB",
+    "linkedinCardTitle": "LinkedIn-Datenexport hochladen",
+    "linkedinCardDesc": "Vollständiges Archiv (ZIP) aus den LinkedIn-Datenschutzeinstellungen — enthält strukturierte Profildaten für präzisere Extraktion.",
+    "uploading": "Wird hochgeladen …",
+    "successPrefix": "Profil aktualisiert — Vollständigkeit: ",
+    "successNoScore": "Profil aktualisiert",
+    "uploadErrorGeneric": "Upload fehlgeschlagen",
+    "flowErrorGeneric": "Navigation fehlgeschlagen",
+    "flowNotFound": "Flow nicht gefunden",
+    "historyTitle": "Letzte Uploads",
+    "historyEmpty": "Noch keine Uploads",
+    "viewAll": "Alle anzeigen",
+    "whyTag": "Profil-Intelligenz",
+    "whyTitle": "Warum aktualisieren?",
+    "whyBody": "Ein aktueller Lebenslauf verbessert die Treffsicherheit aller KI-Analysen — von der Lückenanalyse bis zur CV-Generierung. Änderungen werden sofort im Masterprofil zusammengeführt."
   },
   "documents": {
     "title": "Meine Dokumente",

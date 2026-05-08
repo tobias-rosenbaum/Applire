@@ -11,6 +11,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: ['**/iq/**/*.spec.ts', '**/oq/**/*.spec.ts'],
+  globalSetup: './tests/global-setup.ts',
 
   /**
    * Test execution settings
