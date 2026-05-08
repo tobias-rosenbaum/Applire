@@ -1,0 +1,357 @@
+name: Test Suite
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12.3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.3'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio pytest-mock requests
+
+      - name: Run unit tests with coverage
+        run: |
+          PYTHONPATH=backend pytest tests/unit/ backend/tests/unit/ \
+            --ignore=tests/conftest.py \
+            --ignore=backend/tests/conftest.py \
+            --cov=applire \
+            --cov-config=backend/.coveragerc \
+            --cov-report=term-missing \
+            --cov-report=html:backend/htmlcov \
+            --cov-fail-under=75 \
+            --junitxml=backend/test-results.xml \
+            -v
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/htmlcov/
+          retention-days: 30
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-unit-test-results
+          path: backend/test-results.xml
+          retention-days: 30
+
+      - name: Publish unit test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend Unit Tests
+          path: backend/test-results.xml
+          reporter: 'java-junit'
+          fail-on-error: false
+
+  integration-and-e2e-tests:
+    name: Integration & E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghclient /opt/hostedtoolcache/CodeQL
+          df -h
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12.3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.3'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-mock requests
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: node_modules/.bin/playwright install --with-deps chromium firefox
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('backend/Dockerfile', 'backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Create .env.dev from CI template
+        run: cp .env.ci .env.dev
+
+      - name: Start Docker services
+        run: docker compose up -d --build
+
+      - name: Wait for application to be ready
+        run: |
+          echo "Waiting for backend..."
+          timeout 300 bash -c 'until curl -sf http://localhost:8001/health; do sleep 3; done'
+          echo "Backend ready."
+          echo "Waiting for frontend..."
+          timeout 180 bash -c 'until curl -sf http://localhost:3000; do sleep 2; done'
+          echo "Frontend ready."
+          echo "Waiting for nginx (PQ tests require port 80)..."
+          timeout 60 bash -c 'until curl -sf http://localhost; do sleep 2; done'
+          echo "Nginx ready."
+
+      - name: Show backend logs on startup failure
+        if: failure()
+        run: docker compose logs backend postgres
+
+      - name: Run database migrations
+        run: docker compose exec backend python -m alembic upgrade head
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ \
+            --junitxml=integration-test-results.xml \
+            -v \
+            --tb=short
+
+      - name: Run Playwright IQ tests
+        run: node_modules/.bin/playwright test tests/iq/
+        env:
+          CI: true
+
+      - name: Run Playwright OQ tests
+        run: node_modules/.bin/playwright test tests/oq/
+        env:
+          CI: true
+
+      - name: Run Playwright PQ tests
+        run: node_modules/.bin/playwright test --config=playwright.config.pq.ts
+        env:
+          CI: true
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-test-results
+          path: integration-test-results.xml
+          retention-days: 30
+
+      - name: Publish integration test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend Integration Tests
+          path: integration-test-results.xml
+          reporter: 'java-junit'
+          fail-on-error: false
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 30
+
+      - name: Show Docker logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down Docker services
+        if: always()
+        run: docker compose down -v
+
+  frontend-unit-tests:
+    name: Frontend Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Vitest unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-unit-test-results
+          path: frontend/test-results/
+          retention-days: 30
+
+  module-system-check:
+    name: Module System Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify ES module mode in root package.json
+        run: |
+          echo "Checking root package.json..."
+          if ! grep -q '"type": "module"' package.json; then
+            echo "❌ Root package.json must declare '\"type\": \"module\"'"
+            exit 1
+          fi
+          echo "✅ Root package.json declares ES module mode"
+
+      - name: Verify ES module mode in frontend package.json
+        run: |
+          echo "Checking frontend package.json..."
+          if ! grep -q '"type": "module"' frontend/package.json; then
+            echo "❌ Frontend package.json must declare '\"type\": \"module\"'"
+            exit 1
+          fi
+          echo "✅ Frontend package.json declares ES module mode"
+
+      - name: Check for CommonJS require() in test files
+        run: |
+          echo "Scanning for CommonJS require() statements in test files..."
+          if grep -r "require(" tests/ frontend/ --include="*.ts" --include="*.tsx" --include="*.spec.ts" | grep -v node_modules; then
+            echo "❌ Found CommonJS require() statements in test files"
+            exit 1
+          fi
+          echo "✅ No CommonJS require() statements found"
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-unit-tests, integration-and-e2e-tests, frontend-unit-tests, module-system-check]
+    if: always()
+    permissions:
+      pull-requests: write
+      checks: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all test results
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: test-artifacts
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## Test Suite Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Unit Tests | ${{ needs.backend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration & E2E Tests | ${{ needs.integration-and-e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Unit Tests (Vitest) | ${{ needs.frontend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Module System Check | ${{ needs.module-system-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.backend-unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-and-e2e-tests.result }}" != "success" ] || \
+             [ "${{ needs.frontend-unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.module-system-check.result }}" != "success" ]; then
+            echo "**Test suite failed**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "**All tests passed!**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on PR with test results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const unitTestsResult = '${{ needs.backend-unit-tests.result }}';
+            const integrationE2eResult = '${{ needs.integration-and-e2e-tests.result }}';
+            const frontendUnitTestsResult = '${{ needs.frontend-unit-tests.result }}';
+            const moduleCheckResult = '${{ needs.module-system-check.result }}';
+            const allPassed = unitTestsResult === 'success' &&
+                              integrationE2eResult === 'success' &&
+                              frontendUnitTestsResult === 'success' &&
+                              moduleCheckResult === 'success';
+            const body = allPassed
+              ? '**All tests passed!** This PR is ready to merge.'
+              : [
+                  '**Test failures detected**\n',
+                  unitTestsResult !== 'success' ? `- Backend Unit Tests: ${unitTestsResult}` : '',
+                  integrationE2eResult !== 'success' ? `- Integration & E2E Tests: ${integrationE2eResult}` : '',
+                  frontendUnitTestsResult !== 'success' ? `- Frontend Unit Tests (Vitest): ${frontendUnitTestsResult}` : '',
+                  moduleCheckResult !== 'success' ? `- Module System Check: ${moduleCheckResult}` : '',
+                ].filter(Boolean).join('\n');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

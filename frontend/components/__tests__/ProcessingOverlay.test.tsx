@@ -1,0 +1,294 @@
+// Copyright (C) 2024-2026 Tobias Rosenbaum
+//
+// This file is part of Applire.
+//
+// Applire is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Applire is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with Applire. If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * ProcessingOverlay — JD URL error handling (Sprint 26) + dynamic CV steps (Sprint 31)
+ */
+import { render, screen, waitFor } from "@testing-library/react";
+import { vi, describe, it, expect, afterEach } from "vitest";
+import { ProcessingOverlay } from "../processing-overlay";
+import { withIntl } from "@/lib/test-utils/with-intl";
+
+// Shared push mock so happy-path test can assert on navigation
+const mockPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+const mockFile = new File(["cv content"], "cv.pdf", { type: "application/pdf" });
+
+const DEFAULT_PROPS = {
+  files: [mockFile],
+  jdMode: "url" as const,
+  jdUrl: "https://blocked.example.com/job",
+  jdText: "",
+  onCancel: vi.fn(),
+};
+
+describe("ProcessingOverlay — JD URL error handling", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockPush.mockClear();
+  });
+
+  it("marks JD step as skipped and continues to upload when JD analyze returns jd_fetch_failed", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      // JD analyze → 422 jd_fetch_failed
+      if (url.includes("/api/job/analyze")) {
+        return {
+          ok: false,
+          status: 422,
+          statusText: "Unprocessable Entity",
+          json: async () => ({ detail: { error_code: "jd_fetch_failed", message: "blocked" } }),
+        } as Response;
+      }
+
+      // Flow creation (bare flow, no job)
+      if (url.includes("/api/flow") && !url.includes("advance") && !url.includes("state")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ flow_id: "test-flow-xyz" }),
+        } as Response;
+      }
+
+      // CV upload
+      if (url.includes("/api/profile/upload")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+        } as Response;
+      }
+
+      // Fallback
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      } as Response;
+    });
+
+    render(withIntl(<ProcessingOverlay {...DEFAULT_PROPS} />));
+
+    // JD step skip message must appear
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("The site blocked us — you can paste the text later")
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+
+    // No hard error block should be rendered
+    expect(screen.queryByTestId("processing-error")).toBeNull();
+
+    // Upload step must become active (pipeline continued)
+    await waitFor(
+      () => {
+        expect(screen.getByText("Uploading CV")).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+  });
+
+  it("marks JD step as skipped with url_invalid copy when error_code is jd_url_invalid", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/api/job/analyze")) {
+        return {
+          ok: false,
+          status: 422,
+          statusText: "Unprocessable Entity",
+          json: async () => ({ detail: { error_code: "jd_url_invalid", message: "not a valid url" } }),
+        } as Response;
+      }
+
+      if (url.includes("/api/flow") && !url.includes("advance") && !url.includes("state")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ flow_id: "test-flow-abc" }),
+        } as Response;
+      }
+
+      if (url.includes("/api/profile/upload")) {
+        return { ok: true, status: 200, json: async () => ({}) } as Response;
+      }
+
+      return { ok: true, status: 200, json: async () => ({}) } as Response;
+    });
+
+    render(withIntl(<ProcessingOverlay {...DEFAULT_PROPS} />));
+
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("That doesn't look like a valid URL — you can add it later")
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+
+    expect(screen.queryByTestId("processing-error")).toBeNull();
+  });
+
+  it("still hard-stops on unrecognised 422 (no error_code)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/api/job/analyze")) {
+        return {
+          ok: false,
+          status: 422,
+          statusText: "Unprocessable Entity",
+          // Old-style plain string detail — should hard-stop
+          json: async () => ({ detail: "Some unknown validation error" }),
+        } as Response;
+      }
+
+      return { ok: true, status: 200, json: async () => ({}) } as Response;
+    });
+
+    render(withIntl(<ProcessingOverlay {...DEFAULT_PROPS} />));
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("processing-error")).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
+  });
+
+  it("renders one upload step per file when multiple CVs are provided", () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ flow_id: "multi-flow-xyz" }),
+    } as Response);
+
+    const file1 = new File(["cv1"], "cv1.pdf", { type: "application/pdf" });
+    const file2 = new File(["cv2"], "cv2.pdf", { type: "application/pdf" });
+    const file3 = new File(["cv3"], "cv3.pdf", { type: "application/pdf" });
+
+    render(
+      withIntl(
+        <ProcessingOverlay
+          files={[file1, file2, file3]}
+          jdMode="url"
+          jdUrl=""
+          jdText=""
+          onCancel={vi.fn()}
+        />
+      )
+    );
+
+    expect(screen.getByText("Uploading CV 1 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Uploading CV 2 of 3")).toBeInTheDocument();
+    expect(screen.getByText("Uploading CV 3 of 3")).toBeInTheDocument();
+  });
+});
+
+describe("ProcessingOverlay — happy path navigation", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockPush.mockClear();
+  });
+
+  it("navigates to /flow/{id}/gaps after full pipeline succeeds with a job", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/api/job/analyze")) {
+        return { ok: true, status: 200, json: async () => ({ id: "job-xyz", role_title: "Engineer" }) } as Response;
+      }
+      if (url.includes("/api/applications")) {
+        return { ok: true, status: 200, json: async () => ({ flow_session_id: "flow-happy" }) } as Response;
+      }
+      if (url.includes("/api/profile/upload")) {
+        return { ok: true, status: 200, json: async () => ({}) } as Response;
+      }
+      if (url.includes("/api/flow/flow-happy/state")) {
+        return { ok: true, status: 200, json: async () => ({ job_id: "job-xyz" }) } as Response;
+      }
+      if (url.includes("/api/job/job-xyz/gaps")) {
+        return { ok: true, status: 200, json: async () => ({ id: "gap-1", match_score: 0.8 }) } as Response;
+      }
+      if (url.includes("/api/flow/flow-happy/advance")) {
+        return { ok: true, status: 200, json: async () => ({}) } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({}) } as Response;
+    });
+
+    render(
+      withIntl(
+        <ProcessingOverlay
+          files={[mockFile]}
+          jdMode="url"
+          jdUrl="https://example.com/job"
+          jdText=""
+          onCancel={vi.fn()}
+        />
+      )
+    );
+
+    await waitFor(
+      () => {
+        expect(mockPush).toHaveBeenCalledWith("/flow/flow-happy/gaps");
+      },
+      { timeout: 5000 }
+    );
+  });
+
+  it("navigates to /flow/{id}/gaps without job when no JD is provided", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.includes("/api/flow") && !url.includes("state") && !url.includes("advance")) {
+        return { ok: true, status: 200, json: async () => ({ flow_id: "flow-nojob" }) } as Response;
+      }
+      if (url.includes("/api/profile/upload")) {
+        return { ok: true, status: 200, json: async () => ({}) } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({}) } as Response;
+    });
+
+    render(
+      withIntl(
+        <ProcessingOverlay
+          files={[mockFile]}
+          jdMode="url"
+          jdUrl=""
+          jdText=""
+          onCancel={vi.fn()}
+        />
+      )
+    );
+
+    await waitFor(
+      () => {
+        expect(mockPush).toHaveBeenCalledWith("/flow/flow-nojob/gaps");
+      },
+      { timeout: 5000 }
+    );
+  });
+});

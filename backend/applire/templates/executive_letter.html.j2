@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: {{ color.primary }};
+      --surface: {{ color.surface }};
+      --surface-text: {{ color.surface_text }};
+    }
+    body { font-family: Georgia, "Times New Roman", serif; font-size: 10.5pt; line-height: 1.65; color: #1a1a2e; background: #fff; }
+    .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0 22mm 20mm 25mm; }
+    .header { background: var(--surface); color: var(--surface-text); padding: 16px 20px; font-size: 9pt; letter-spacing: 1.5px; text-transform: uppercase; font-weight: bold; }
+    .gold-rule { height: 2px; background: var(--primary); margin-bottom: 14mm; }
+    .recipient { margin-bottom: 8mm; font-size: 10pt; }
+    .date { text-align: right; margin-bottom: 6mm; color: #666; }
+    .subject { font-weight: bold; font-size: 11pt; margin-bottom: 7mm; color: #1a1a2e; }
+    .body p { margin-bottom: 5mm; text-align: justify; }
+    .signature { margin-top: 10mm; }
+    .signature .closing { margin-bottom: 12mm; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    {{ letter.header.name }}{% if letter.header.email %} · {{ letter.header.email }}{% endif %}{% if letter.header.phone %} · {{ letter.header.phone }}{% endif %}{% if letter.header.address %} · {{ letter.header.address }}{% endif %}
+  </div>
+  <div class="gold-rule"></div>
+
+  <div class="recipient">
+    {% if letter.recipient.name %}{{ letter.recipient.name }}<br>{% endif %}
+    {% if letter.recipient.title %}{{ letter.recipient.title }}<br>{% endif %}
+    {% if letter.recipient.company %}{{ letter.recipient.company }}<br>{% endif %}
+    {% if letter.recipient.address %}{{ letter.recipient.address }}{% endif %}
+  </div>
+
+  <div class="date">{{ letter.recipient.date }}</div>
+  <div class="subject">Bewerbung{% if letter.recipient.company %} — {{ letter.recipient.company }}{% endif %}</div>
+
+  <div class="body">
+    {% for para in letter.body.paragraphs %}<p>{{ para }}</p>{% endfor %}
+  </div>
+
+  <div class="signature">
+    <div class="closing">{{ letter.signature.closing }},</div>
+    <div>{{ letter.signature.name }}</div>
+  </div>
+</div>
+</body>
+</html>

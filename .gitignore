@@ -1,0 +1,72 @@
+# Environment — never commit secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.ci
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Alembic — keep migrations, ignore generated artefacts
+backend/alembic/__pycache__/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# Docker
+postgres-data/
+
+# Uploaded files and generated assets — never commit user data or build artefacts
+backend/data/uploads/
+backend/data/static/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude Code
+.claude/
+
+# Internal documentation — tracked for project ownership
+Documents/
+
+# Test results and reports
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+
+.superpowers/
+.worktrees/
+
+# Editor configs (not project code)
+/.kilo/
+
+# Internal sprint plans at repo root (not docs/superpowers/plans/)
+/plans/
+
+# Session state
+/.remember/

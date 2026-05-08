@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
+
+@theme {
+  /* Brand Colors */
+  --color-primary: #003399;
+  --color-primary-container: #eef1ff;
+
+  /* Blue accent (links, interactive highlights) */
+  --color-teal: #3557bc;
+  --color-teal-dim: #002068;
+  --color-teal-container: #e9edff;
+  --color-teal-container-light: #f1f3ff;
+
+  /* Gold - Secondary accent */
+  --color-gold: #fecb00;
+  --color-gold-dim: #8b6500;
+  --color-gold-container: #fff8d6;
+
+  /* Semantic Colors */
+  --color-success: #2D9F6F;
+  --color-success-container: #c8f7e0;
+  --color-warning: #E5A832;
+  --color-warning-container: #fef3c7;
+  --color-critical: #D94F4F;
+  --color-critical-container: #fde8e8;
+
+  /* Neutral */
+  --color-neutral-light: #F5F7FA;
+  --color-neutral-dark: #141b2b;
+
+  /* Surface System (Material 3 style) */
+  --color-surface-dim: #f9f9ff;
+  --color-surface-bright: #ffffff;
+  --color-surface-container: #f1f3ff;
+  --color-surface-container-high: #e9edff;
+  --color-surface-container-highest: #dce1ff;
+
+  /* On-surface / outline (Material 3 semantic tokens) */
+  --color-on-surface: #141b2b;
+  --color-on-surface-variant: #44547a;
+  --color-outline-variant: #c8cfe8;
+  
+  /* Fonts */
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+  
+  /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-card: 0 4px 16px rgba(0,0,0,0.12);
+  
+  /* Border radius */
+  --radius-lg: 12px;
+}
+@layer base {
+  html {
+    font-family: "Inter", system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Poppins", sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out both;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.35s ease-out both;
+  }
+}
+
+/* Custom animations */
+@keyframes pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-gold-container),
+    color-mix(in srgb, var(--color-gold) 6%, transparent),
+    var(--color-gold-container)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease infinite;
+}
+
+/* Accessibility: reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
