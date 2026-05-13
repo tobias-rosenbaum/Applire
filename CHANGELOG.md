@@ -6,7 +6,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.31.0-beta] – 2026-05-05 (First public release)
+## [0.31.0-beta] – 2026-05-13 (First public release)
 
 ### Added
 - AI-powered CV tailoring for the DACH job market (Germany, Austria, Switzerland)
