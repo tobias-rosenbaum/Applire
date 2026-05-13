@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CV – {{ cv.contact.name }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cv-primary: {{ color.primary }};
+      --cv-primary-tint: {{ color.primary_tint }};
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+    }
+
+    body {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 16mm 20mm 16mm 20mm;
+    }
+
+    .accent-strip {
+      height: 3pt;
+      background: var(--cv-primary);
+      margin-bottom: 16pt;
+      border-radius: 1pt;
+    }
+
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12pt;
+      margin-bottom: 16pt;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .header-name {
+      font-size: 20pt;
+      font-weight: bold;
+      color: var(--cv-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .header-handle {
+      font-size: 9pt;
+      color: var(--muted);
+      margin-top: 2pt;
+    }
+
+    .header-contact {
+      text-align: right;
+      font-size: 8.5pt;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .section { margin-bottom: 16pt; }
+
+    .section-label {
+      font-size: 8pt;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 8pt;
+    }
+
+    .section-label::before { content: "// "; color: var(--border); }
+
+    .entry { margin-bottom: 10pt; }
+
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1pt;
+    }
+
+    .entry-title {
+      font-size: 10.5pt;
+      font-weight: bold;
+      color: var(--cv-primary);
+    }
+
+    .entry-dates {
+      font-size: 8.5pt;
+      color: var(--muted);
+    }
+
+    .entry-subtitle {
+      font-size: 9pt;
+      color: var(--muted);
+      margin-bottom: 3pt;
+    }
+
+    .entry-bullets {
+      padding-left: 12pt;
+      list-style-type: none;
+      margin-top: 3pt;
+    }
+
+    .entry-bullets li::before { content: "▸ "; color: var(--cv-primary); }
+
+    .entry-bullets li {
+      margin-bottom: 2pt;
+      font-size: 9.5pt;
+      color: var(--text);
+    }
+
+    .skills-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4pt 6pt;
+      list-style: none;
+    }
+
+    .skills-grid li {
+      font-size: 8.5pt;
+      padding: 2pt 7pt;
+      background: var(--bg2);
+      border: 1px solid var(--cv-primary);
+      border-radius: 2pt;
+      color: var(--cv-primary);
+    }
+
+    .summary-text {
+      font-size: 10pt;
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .lang-row {
+      display: flex;
+      gap: 8pt;
+      font-size: 9.5pt;
+      margin-bottom: 3pt;
+    }
+    .lang-name { color: var(--cv-primary); font-weight: bold; }
+    .lang-level { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="accent-strip"></div>
+
+  <header class="header">
+    <div>
+      <div class="header-name">{{ cv.contact.name }}</div>
+      {% if cv.contact.linkedin %}
+      <div class="header-handle">{{ cv.contact.linkedin }}</div>
+      {% endif %}
+    </div>
+    <div class="header-contact">
+      {% if cv.contact.location %}<div>{{ cv.contact.location }}</div>{% endif %}
+      {% if cv.contact.email %}<div>{{ cv.contact.email }}</div>{% endif %}
+      {% if cv.contact.phone %}<div>{{ cv.contact.phone }}</div>{% endif %}
+    </div>
+  </header>
+
+  {% if cv.summary %}
+  <div class="section">
+    <div class="section-label">about</div>
+    <p class="summary-text">{{ cv.summary }}</p>
+  </div>
+  {% endif %}
+
+  {% if cv.skills %}
+  <div class="section">
+    <div class="section-label">stack</div>
+    <ul class="skills-grid">
+      {% for skill in cv.skills %}
+      <li>{{ skill }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if cv.work_history %}
+  <div class="section">
+    <div class="section-label">experience</div>
+    {% for job in cv.work_history %}
+    <div class="entry">
+      <div class="entry-header">
+        <div class="entry-title">{{ job.role }}</div>
+        <div class="entry-dates">{{ job.start_date }} – {{ job.end_date if job.end_date else "present" }}</div>
+      </div>
+      <div class="entry-subtitle">{{ job.company }}</div>
+      {% if job.bullets %}
+      <ul class="entry-bullets">
+        {% for bullet in job.bullets %}
+        <li>{{ bullet }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if cv.education %}
+  <div class="section">
+    <div class="section-label">education</div>
+    {% for edu in cv.education %}
+    <div class="entry">
+      <div class="entry-header">
+        <div class="entry-title">{{ edu.degree }}{% if edu.field %}, {{ edu.field }}{% endif %}</div>
+        <div class="entry-dates">{{ edu.start_date }}{% if edu.start_date %} – {% endif %}{{ edu.end_date if edu.end_date else ("present" if edu.start_date else "") }}</div>
+      </div>
+      <div class="entry-subtitle">{{ edu.institution }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if cv.languages %}
+  <div class="section">
+    <div class="section-label">languages</div>
+    {% for lang in cv.languages %}
+    <div class="lang-row">
+      <span class="lang-name">{{ lang.language }}</span>
+      <span class="lang-level">{{ lang.level }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>

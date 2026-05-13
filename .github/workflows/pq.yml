@@ -1,0 +1,74 @@
+name: Real-LLM Integration Tests (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for running (e.g. pre-release, provider change)"
+        required: false
+        default: "Manual trigger"
+
+jobs:
+  real-llm-integration:
+    name: Full Journey — Real LLM
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12.3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.3'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio requests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env.dev with real LLM provider
+        run: |
+          cp .env.ci .env.dev
+          echo "LLM_PROVIDER=openrouter" >> .env.dev
+          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env.dev
+
+      - name: Start Docker services
+        run: docker compose up -d --build
+
+      - name: Wait for application to be ready
+        run: |
+          timeout 300 bash -c 'until curl -sf http://localhost:8001/health; do sleep 3; done'
+
+      - name: Run database migrations
+        run: docker compose exec backend python -m alembic upgrade head
+
+      - name: Run real-LLM integration tests
+        run: |
+          INTEGRATION_LLM=1 pytest tests/integration/ \
+            --junitxml=real-llm-test-results.xml \
+            -v \
+            --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-llm-integration-results
+          path: real-llm-test-results.xml
+          retention-days: 30
+
+      - name: Tear down Docker services
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,117 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: applire
+      POSTGRES_PASSWORD: applire
+      POSTGRES_DB: applire
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U applire"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
+    # LLM review layer — max generator retries per reviewed step (0 = disabled).
+    # Increase to 3 for higher quality at the cost of more LLM tokens.
+    # LLM_REVIEW_MAX_RETRIES=2
+    # Logging — set DEBUG to see full LLM prompts, responses, and per-call latency.
+    # LOG_LEVEL=DEBUG
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app:z
+    command: uvicorn applire.main:app --host 0.0.0.0 --port 8000 --reload
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      NEXT_PUBLIC_API_URL: ""
+      BACKEND_URL: "http://backend:8000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+      - /app/.next
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    environment:
+      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
+    volumes:
+      - ./nginx/dev.conf.template:/etc/nginx/templates/default.conf.template:ro,z
+    depends_on:
+      - backend
+      - frontend
+
+  ollama:
+    image: ollama/ollama
+    profiles: [ollama]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  # Retention worker — daily GDPR TTL enforcement (ADR 005).
+  # Not profile-gated: data hygiene is a core operational concern.
+  retention:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app:z
+    command: sh -c "while true; do python -m applire.retention; sleep 86400; done"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # MCP server — stdio transport for agent integration (ADR 010).
+  # This service is useful for verifying startup in CI.
+  # For actual agent use, launch directly: python -m applire.mcp
+  # See docs/mcp.md for Claude Desktop / Cursor configuration.
+  mcp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    profiles: [mcp]
+    env_file:
+      - .env.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app:z
+    command: python -m applire.mcp
+    stdin_open: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+  ollama_data:

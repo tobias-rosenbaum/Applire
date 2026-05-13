@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "applire"
+version = "0.31.0-beta"
+requires-python = ">=3.12"
+# Dependencies are declared in requirements.txt and installed separately.
+# This file exists solely to make `pip install -e .` work for Cloud's dev workflow (ADR-031).
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["applire*"]

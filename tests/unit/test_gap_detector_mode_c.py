@@ -1,0 +1,105 @@
+import pytest
+from applire.services.interview_graph import gap_detector_mode_c
+
+
+FULL_PROFILE = {
+    "work_experience": [
+        {
+            "company": "Beta GmbH",
+            "role": "Product Lead",
+            "achievements": [],
+            "team_size": None,
+            "budget_managed": None,
+            "industry_context": "SaaS",
+        },
+        {
+            "company": "Acme Corp",
+            "role": "Senior Engineer",
+            "achievements": ["Led migration to microservices"],
+            "team_size": 8,
+            "budget_managed": None,
+            "industry_context": "Fintech",
+        },
+    ],
+    "professional_summary": "",
+}
+
+
+def test_detects_achievements_gap():
+    gaps = gap_detector_mode_c(FULL_PROFILE)
+    assert "achievements: Product Lead @ Beta GmbH" in gaps
+
+
+def test_detects_team_size_gap():
+    gaps = gap_detector_mode_c(FULL_PROFILE)
+    assert "team_size: Product Lead @ Beta GmbH" in gaps
+
+
+def test_detects_budget_gap():
+    gaps = gap_detector_mode_c(FULL_PROFILE)
+    assert "budget_managed: Product Lead @ Beta GmbH" in gaps
+
+
+def test_detects_professional_summary_gap():
+    gaps = gap_detector_mode_c(FULL_PROFILE)
+    assert "professional_summary" in gaps
+
+
+def test_no_achievements_gap_when_filled():
+    profile = {
+        "work_experience": [
+            {
+                "company": "Beta GmbH",
+                "role": "Product Lead",
+                "achievements": ["Grew MRR by 40%"],
+                "team_size": 5,
+                "budget_managed": "€200k",
+                "industry_context": "SaaS",
+            }
+        ],
+        "professional_summary": "Experienced product leader.",
+    }
+    gaps = gap_detector_mode_c(profile)
+    assert gaps == []
+
+
+def test_achievements_gap_prioritised_first():
+    gaps = gap_detector_mode_c(FULL_PROFILE)
+    achievement_gaps = [g for g in gaps if g.startswith("achievements:")]
+    other_gaps = [g for g in gaps if not g.startswith("achievements:") and g != "professional_summary"]
+    if achievement_gaps and other_gaps:
+        assert gaps.index(achievement_gaps[0]) < gaps.index(other_gaps[0])
+
+
+def test_na_fields_excluded():
+    profile = {
+        **FULL_PROFILE,
+        "_meta": {
+            "na_fields": ["budget_managed: Product Lead @ Beta GmbH"]
+        },
+    }
+    gaps = gap_detector_mode_c(profile)
+    assert "budget_managed: Product Lead @ Beta GmbH" not in gaps
+
+
+def test_scope_filters_to_single_entry():
+    gaps = gap_detector_mode_c(
+        FULL_PROFILE,
+        scope="work_experience:Beta GmbH:Product Lead",
+    )
+    assert all("Beta GmbH" in g or g == "professional_summary" for g in gaps
+               if g != "professional_summary")
+    assert "budget_managed: Senior Engineer @ Acme Corp" not in gaps
+    # professional_summary excluded when scope is set to a specific entry
+    assert "professional_summary" not in gaps
+
+
+def test_complete_entry_with_missing_budget_detected():
+    # Acme has no budget_managed
+    gaps = gap_detector_mode_c(FULL_PROFILE)
+    assert "budget_managed: Senior Engineer @ Acme Corp" in gaps
+
+
+def test_empty_profile_returns_empty_list():
+    gaps = gap_detector_mode_c({})
+    assert gaps == []

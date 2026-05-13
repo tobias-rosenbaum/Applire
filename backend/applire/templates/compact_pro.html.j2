@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lebenslauf – {{ cv.contact.name }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cv-primary: {{ color.primary }};
+      --cv-primary-tint: {{ color.primary_tint }};
+      --text: #1a1a1a;
+      --muted: #555;
+      --rule: #d5d5d5;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 14mm 18mm 14mm 18mm;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 2.5px solid var(--cv-primary);
+      padding-bottom: 6pt;
+      margin-bottom: 10pt;
+    }
+
+    .header-name {
+      font-size: 17pt;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    .header-contact {
+      text-align: right;
+      font-size: 8pt;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .profile-section { margin-bottom: 10pt; }
+
+    .body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 14pt;
+    }
+
+    .section { margin-bottom: 10pt; }
+
+    .section-title {
+      font-size: 7.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--cv-primary);
+      border-bottom: 1px solid var(--cv-primary);
+      padding-bottom: 1.5pt;
+      margin-bottom: 5pt;
+    }
+
+    .entry { margin-bottom: 6pt; }
+
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .entry-title {
+      font-size: 9.5pt;
+      font-weight: bold;
+    }
+
+    .entry-dates {
+      font-size: 7.5pt;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .entry-subtitle {
+      font-size: 8.5pt;
+      color: var(--muted);
+      margin-bottom: 2pt;
+    }
+
+    .entry-bullets {
+      padding-left: 10pt;
+      list-style-type: disc;
+      margin-top: 2pt;
+    }
+
+    .entry-bullets li {
+      margin-bottom: 1pt;
+      font-size: 9pt;
+    }
+
+    .skills-compact {
+      font-size: 9pt;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .lang-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      padding: 1.5pt 0;
+      border-bottom: 1px dotted var(--rule);
+    }
+    .lang-name { font-weight: 600; }
+    .lang-level { color: var(--muted); }
+
+    .summary-text {
+      font-size: 9.5pt;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header class="header">
+    <div class="header-name">{{ cv.contact.name }}</div>
+    <div class="header-contact">
+      {% if cv.contact.location %}<span>{{ cv.contact.location }}</span>{% endif %}
+      {% if cv.contact.email %} &nbsp;·&nbsp; <span>{{ cv.contact.email }}</span>{% endif %}
+      {% if cv.contact.phone %} &nbsp;·&nbsp; <span>{{ cv.contact.phone }}</span>{% endif %}
+      {% if cv.contact.linkedin %}<br/><span>{{ cv.contact.linkedin }}</span>{% endif %}
+    </div>
+  </header>
+
+  {% if cv.summary %}
+  <div class="profile-section">
+    <div class="section-title">Profil</div>
+    <p class="summary-text">{{ cv.summary }}</p>
+  </div>
+  {% endif %}
+
+  <div class="body">
+    <div>
+      {% if cv.work_history %}
+      <div class="section">
+        <div class="section-title">Berufserfahrung</div>
+        {% for job in cv.work_history %}
+        <div class="entry">
+          <div class="entry-header">
+            <div class="entry-title">{{ job.role }}</div>
+            <div class="entry-dates">{{ job.start_date }} – {{ job.end_date if job.end_date else "heute" }}</div>
+          </div>
+          <div class="entry-subtitle">{{ job.company }}</div>
+          {% if job.bullets %}
+          <ul class="entry-bullets">
+            {% for bullet in job.bullets %}<li>{{ bullet }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if cv.education %}
+      <div class="section">
+        <div class="section-title">Ausbildung</div>
+        {% for edu in cv.education %}
+        <div class="entry">
+          <div class="entry-header">
+            <div class="entry-title">{{ edu.degree }}{% if edu.field %}, {{ edu.field }}{% endif %}</div>
+            <div class="entry-dates">{{ edu.start_date }}{% if edu.start_date %} – {% endif %}{{ edu.end_date if edu.end_date else ("heute" if edu.start_date else "") }}</div>
+          </div>
+          <div class="entry-subtitle">{{ edu.institution }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div>
+      {% if cv.skills %}
+      <div class="section">
+        <div class="section-title">Kompetenzen</div>
+        <div class="skills-compact">{{ cv.skills | join(" · ") }}</div>
+      </div>
+      {% endif %}
+
+      {% if cv.languages %}
+      <div class="section">
+        <div class="section-title">Sprachen</div>
+        {% for lang in cv.languages %}
+        <div class="lang-row">
+          <span class="lang-name">{{ lang.language }}</span>
+          <span class="lang-level">{{ lang.level }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
