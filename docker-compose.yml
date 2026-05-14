@@ -66,47 +66,9 @@ services:
       - backend
 
   nginx:
-    image: nginx:alpine
+    image: ghcr.io/tobias-rosenbaum/applire-nginx:latest
     ports:
       - "80:80"
-    command:
-      - sh
-      - -c
-      - |
-        cat > /etc/nginx/conf.d/default.conf << 'CONF'
-        server {
-            listen 80;
-
-            location /api/ {
-                proxy_pass http://backend:8000;
-                proxy_set_header Host $$host;
-                proxy_set_header X-Real-IP $$remote_addr;
-                client_max_body_size 20M;
-                proxy_read_timeout 300s;
-                proxy_send_timeout 300s;
-            }
-
-            location /static/ {
-                proxy_pass http://backend:8000;
-                proxy_set_header Host $$host;
-            }
-
-            location /health {
-                proxy_pass http://backend:8000;
-                proxy_set_header Host $$host;
-            }
-
-            location / {
-                proxy_pass http://frontend:3000;
-                proxy_set_header Host $$host;
-                proxy_set_header X-Real-IP $$remote_addr;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $$http_upgrade;
-                proxy_set_header Connection "upgrade";
-            }
-        }
-        CONF
-        exec nginx -g 'daemon off;'
     depends_on:
       - backend
       - frontend
