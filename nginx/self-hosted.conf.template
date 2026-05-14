@@ -1,0 +1,35 @@
+server {
+    listen 80;
+
+    # API and file uploads — proxied to FastAPI
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # Allow large CV/photo uploads (default nginx limit is 1 MB)
+        client_max_body_size 20M;
+        # LLM inference can take several minutes; override nginx's 60s default
+        proxy_read_timeout ${NGINX_PROXY_TIMEOUT}s;
+        proxy_send_timeout ${NGINX_PROXY_TIMEOUT}s;
+    }
+
+    location /static/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+    }
+
+    location /health {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+    }
+
+    # Frontend — Next.js standalone server
+    location / {
+        proxy_pass http://frontend:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
