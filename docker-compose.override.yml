@@ -33,6 +33,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: dev
+    environment:
+      NEXT_PUBLIC_API_URL: ""
+      BACKEND_URL: "http://backend:8000"
     volumes:
       - ./frontend:/app:z
       - /app/node_modules
