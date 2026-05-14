@@ -123,10 +123,10 @@ These are hard constraints. Do not work around them.
 
 ```bash
 # Start full stack
-docker-compose up -d
+docker compose up -d
 
 # Run database migrations
-docker-compose exec backend alembic upgrade head
+docker compose exec backend alembic upgrade head
 # or standalone:
 cd backend && alembic upgrade head
 
