@@ -45,8 +45,11 @@ services:
 
   backend:
     image: ghcr.io/tobias-rosenbaum/applire-backend:latest
+    environment:
+      DATABASE_URL: postgresql+asyncpg://applire:applire@postgres:5432/applire
     env_file:
-      - .env
+      - path: .env
+        required: false
     ports:
       - "8001:8000"
     depends_on:
@@ -73,8 +76,11 @@ services:
   # Retention worker — daily GDPR TTL enforcement (ADR 005).
   retention:
     image: ghcr.io/tobias-rosenbaum/applire-backend:latest
+    environment:
+      DATABASE_URL: postgresql+asyncpg://applire:applire@postgres:5432/applire
     env_file:
-      - .env
+      - path: .env
+        required: false
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,8 +94,11 @@ services:
   mcp:
     image: ghcr.io/tobias-rosenbaum/applire-backend:latest
     profiles: [mcp]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://applire:applire@postgres:5432/applire
     env_file:
-      - .env
+      - path: .env
+        required: false
     depends_on:
       postgres:
         condition: service_healthy

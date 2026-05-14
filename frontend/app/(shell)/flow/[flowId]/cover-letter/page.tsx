@@ -24,7 +24,8 @@ import { useTranslations } from "next-intl";
 import { CoverLetterDocument } from "@/components/cover-letter/CoverLetterDocument";
 import { CoverLetterRefinementPanel } from "@/components/cover-letter/CoverLetterRefinementPanel";
 import { GenerateCoverLetterModal } from "@/components/cover-letter/GenerateCoverLetterModal";
-import { ProgressWidget, ProgressStep } from "@/components/ui/progress-widget";
+import { ProgressWidget } from "@/components/ui/progress-widget";
+import { buildClProgressSteps } from "./cover-letter-utils";
 
 type CLTemplate =
   | "classic_german"
@@ -50,17 +51,6 @@ interface CLState {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 const POLL_INTERVAL_MS = 2000;
 
-export function buildClProgressSteps(
-  status: string,
-  t: (key: string) => string
-): ProgressStep[] {
-  const activeIdx = status === "generating" ? 1 : status === "ready" ? 2 : 0;
-  const labels = [t("stepPreparing"), t("stepGenerating"), t("stepReady")];
-  return labels.map((label, i) => ({
-    label,
-    status: (i < activeIdx ? "done" : i === activeIdx ? "active" : "pending") as ProgressStep["status"],
-  }));
-}
 
 export default function CoverLetterPage({
   params,

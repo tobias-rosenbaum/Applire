@@ -22,7 +22,7 @@ import { Suspense } from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
 import { withIntl } from "@/lib/test-utils/with-intl";
-import { buildClProgressSteps } from "../page";
+import { buildClProgressSteps } from "../cover-letter-utils";
 import type { ProgressStep } from "@/components/ui/progress-widget";
 
 // ─── mocks required for the page component ──────────────────────────────────

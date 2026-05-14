@@ -249,6 +249,33 @@ jobs:
           path: frontend/test-results/
           retention-days: 30
 
+  frontend-build-check:
+    name: Frontend Production Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run production build
+        working-directory: frontend
+        run: npm run build
+        env:
+          BACKEND_URL: http://backend:8000
+
   module-system-check:
     name: Module System Validation
     runs-on: ubuntu-latest
@@ -287,7 +314,7 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [backend-unit-tests, integration-and-e2e-tests, frontend-unit-tests, module-system-check]
+    needs: [backend-unit-tests, integration-and-e2e-tests, frontend-unit-tests, frontend-build-check, module-system-check]
     if: always()
     permissions:
       pull-requests: write
@@ -314,12 +341,14 @@ jobs:
           echo "| Backend Unit Tests | ${{ needs.backend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Integration & E2E Tests | ${{ needs.integration-and-e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend Unit Tests (Vitest) | ${{ needs.frontend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Production Build | ${{ needs.frontend-build-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Module System Check | ${{ needs.module-system-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.backend-unit-tests.result }}" != "success" ] || \
              [ "${{ needs.integration-and-e2e-tests.result }}" != "success" ] || \
              [ "${{ needs.frontend-unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.frontend-build-check.result }}" != "success" ] || \
              [ "${{ needs.module-system-check.result }}" != "success" ]; then
             echo "**Test suite failed**" >> $GITHUB_STEP_SUMMARY
             exit 1
@@ -335,10 +364,12 @@ jobs:
             const unitTestsResult = '${{ needs.backend-unit-tests.result }}';
             const integrationE2eResult = '${{ needs.integration-and-e2e-tests.result }}';
             const frontendUnitTestsResult = '${{ needs.frontend-unit-tests.result }}';
+            const frontendBuildResult = '${{ needs.frontend-build-check.result }}';
             const moduleCheckResult = '${{ needs.module-system-check.result }}';
             const allPassed = unitTestsResult === 'success' &&
                               integrationE2eResult === 'success' &&
                               frontendUnitTestsResult === 'success' &&
+                              frontendBuildResult === 'success' &&
                               moduleCheckResult === 'success';
             const body = allPassed
               ? '**All tests passed!** This PR is ready to merge.'
@@ -347,6 +378,7 @@ jobs:
                   unitTestsResult !== 'success' ? `- Backend Unit Tests: ${unitTestsResult}` : '',
                   integrationE2eResult !== 'success' ? `- Integration & E2E Tests: ${integrationE2eResult}` : '',
                   frontendUnitTestsResult !== 'success' ? `- Frontend Unit Tests (Vitest): ${frontendUnitTestsResult}` : '',
+                  frontendBuildResult !== 'success' ? `- Frontend Production Build: ${frontendBuildResult}` : '',
                   moduleCheckResult !== 'success' ? `- Module System Check: ${moduleCheckResult}` : '',
                 ].filter(Boolean).join('\n');
             github.rest.issues.createComment({
