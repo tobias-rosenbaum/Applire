@@ -29,8 +29,8 @@ Open an issue with the label `enhancement`. Describe the use case and why it mat
 1. **Fork** the repository and create a branch from `main`
 2. **Set up** the development environment:
    ```bash
-   cp .env.dev.example .env.dev   # fill in your values
-   docker-compose up -d
+   cp .env.example .env           # fill in your values
+   docker compose up -d           # docker-compose.override.yml is picked up automatically
    ```
 3. **Write tests** for any new functionality (coverage gate: ≥75%)
 4. **Run the test suite** before opening a PR:
