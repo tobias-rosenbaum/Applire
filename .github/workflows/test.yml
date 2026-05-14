@@ -127,8 +127,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Create .env.dev from CI template
-        run: cp .env.ci .env.dev
+      - name: Create .env from CI template
+        run: cp .env.ci .env
 
       - name: Start Docker services
         run: docker compose up -d --build
