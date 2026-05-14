@@ -69,10 +69,9 @@ services:
     image: nginx:alpine
     ports:
       - "80:80"
-    environment:
-      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
-    volumes:
-      - ./nginx/self-hosted.conf.template:/etc/nginx/templates/default.conf.template:ro
+    configs:
+      - source: nginx_conf
+        target: /etc/nginx/conf.d/default.conf
     depends_on:
       - backend
       - frontend
@@ -122,3 +121,38 @@ services:
 volumes:
   postgres_data:
   ollama_data:
+
+configs:
+  nginx_conf:
+    content: |
+      server {
+          listen 80;
+
+          location /api/ {
+              proxy_pass http://backend:8000;
+              proxy_set_header Host $$host;
+              proxy_set_header X-Real-IP $$remote_addr;
+              client_max_body_size 20M;
+              proxy_read_timeout ${NGINX_PROXY_TIMEOUT:-300}s;
+              proxy_send_timeout ${NGINX_PROXY_TIMEOUT:-300}s;
+          }
+
+          location /static/ {
+              proxy_pass http://backend:8000;
+              proxy_set_header Host $$host;
+          }
+
+          location /health {
+              proxy_pass http://backend:8000;
+              proxy_set_header Host $$host;
+          }
+
+          location / {
+              proxy_pass http://frontend:3000;
+              proxy_set_header Host $$host;
+              proxy_set_header X-Real-IP $$remote_addr;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $$http_upgrade;
+              proxy_set_header Connection "upgrade";
+          }
+      }
