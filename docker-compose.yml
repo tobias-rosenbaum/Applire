@@ -65,6 +65,18 @@ services:
     depends_on:
       - backend
 
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    environment:
+      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
+    volumes:
+      - ./nginx/self-hosted.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - backend
+      - frontend
+
   ollama:
     image: ollama/ollama
     profiles: [ollama]
