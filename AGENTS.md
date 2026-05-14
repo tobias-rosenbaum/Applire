@@ -74,7 +74,7 @@ applire-core/
 │   ├── TESTING.md               # Test strategy and commands
 │   └── CI_CD_GUIDE.md
 ├── docker-compose.yml           # Full stack (postgres, backend, frontend, nginx, retention)
-├── .env.dev.example             # Environment template — copy to .env.dev
+├── .env.example                 # Environment template — copy to .env
 └── AGENTS.md                    # This file
 ```
 
@@ -123,10 +123,10 @@ These are hard constraints. Do not work around them.
 
 ```bash
 # Start full stack
-docker-compose up -d
+docker compose up -d
 
 # Run database migrations
-docker-compose exec backend alembic upgrade head
+docker compose exec backend alembic upgrade head
 # or standalone:
 cd backend && alembic upgrade head
 
@@ -161,7 +161,7 @@ python -m applire.mcp
 
 ## LLM Provider Configuration
 
-Set in `.env.dev` (copy from `.env.dev.example`):
+Set in `.env` (copy from `.env.example`):
 
 ```env
 LLM_PROVIDER=openrouter          # openrouter | mistral | openai | ollama

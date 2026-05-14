@@ -14,6 +14,8 @@ RUN npm install
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+ARG BACKEND_URL=http://backend:8000
+ENV BACKEND_URL=$BACKEND_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

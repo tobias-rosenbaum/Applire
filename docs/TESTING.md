@@ -84,7 +84,7 @@ cd frontend && npm test
 docker compose up -d
 # Mock LLM (default — used in CI):
 pytest tests/integration/ -v
-# Real LLM (requires .env.dev with a configured LLM provider):
+# Real LLM (requires .env with a configured LLM provider):
 INTEGRATION_LLM=1 pytest tests/integration/ -v
 ```
 
@@ -108,7 +108,7 @@ The default `playwright.config.ts` uses `testMatch: ['**/iq/**/*.spec.ts', '**/o
 docker compose up -d
 # Mock LLM (same as CI):
 npx playwright test --config=playwright.config.pq.ts
-# Real LLM (requires .env.dev with a configured LLM provider):
+# Real LLM (requires .env with a configured LLM provider):
 INTEGRATION_LLM=1 npx playwright test --config=playwright.config.pq.ts
 ```
 
@@ -168,7 +168,7 @@ npx playwright test --debug   # step through
 ```
 
 **PQ tests fail or skip:**
-Ensure the Docker stack is fully running and `LLM_PROVIDER=mock` is set in the environment (`.env.ci` or `.env.dev`).
+Ensure the Docker stack is fully running and `LLM_PROVIDER=mock` is set in the environment (`.env.ci` or `.env`).
 ```bash
 curl http://localhost:8001/health
 curl http://localhost:3000

@@ -1,0 +1,68 @@
+# Copyright (C) 2024-2026 Tobias Rosenbaum
+#
+# This file is part of Applire.
+#
+# Applire is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Applire is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Applire. If not, see <https://www.gnu.org/licenses/>.
+
+# Development overrides — auto-applied by Docker Compose when present alongside docker-compose.yml.
+# Builds images from source, mounts code for hot-reload, and adds nginx at port 80.
+# Developers: cp .env.example .env  (fill in real API keys)
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app:z
+    command: uvicorn applire.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      NEXT_PUBLIC_API_URL: ""
+      BACKEND_URL: "http://backend:8000"
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+      - /app/.next
+
+  retention:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app:z
+
+  mcp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app:z
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    environment:
+      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
+    volumes:
+      - ./nginx/dev.conf.template:/etc/nginx/templates/default.conf.template:ro,z
+    depends_on:
+      - backend
+      - frontend

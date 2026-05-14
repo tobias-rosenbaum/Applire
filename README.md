@@ -190,84 +190,37 @@ python -m applire.mcp
 
 ### Prerequisites
 
-- **Docker & Docker Compose** (recommended)
-- **LLM API Key**: Mistral AI (default), OpenAI, or Ollama (local)
+- **Docker & Docker Compose**
+- **LLM API Key**: Mistral AI (default), OpenRouter, OpenAI, or Ollama (local/free)
 
-### Quick Start with Docker Compose
-
-```bash
-# Clone the repository
-git clone https://github.com/tobias-rosenbaum/Applire.git
-cd Applire
-
-# Copy environment template
-cp .env.dev.example .env
-
-# Edit .env and configure:
-# - LLM_PROVIDER=mistral (or openai, ollama)
-# - MISTRAL_API_KEY=your_key_here (or OPENAI_API_KEY)
-# - DATABASE_URL=postgresql://applire:password@db:5432/applire
-
-# Start all services
-docker-compose up -d
-
-# Run database migrations
-docker-compose exec backend alembic upgrade head
-
-# Access the application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8001
-# API Docs: http://localhost:8001/docs
-```
-
-### Manual Setup (Development)
-
-#### Backend
+### Self-hosting (no clone required)
 
 ```bash
-cd backend
+# 1. Download the two required files
+curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/.env.example
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# 2. Configure your environment
+cp .env.example .env
+# Edit .env: set LLM_PROVIDER and the matching API key (see Configuration below)
 
-# Install dependencies
-pip install -r requirements.txt
+# 3. Start all services
+docker compose up -d
 
-# Set up environment variables
-cp ../.env.dev.example .env
-# Edit .env with your configuration
-
-# Run migrations
-alembic upgrade head
-
-# Start development server
-uvicorn applire.main:app --reload --port 8001
+# 4. Run database migrations (first run only)
+docker compose exec backend alembic upgrade head
 ```
 
-#### Frontend
+Access the application:
+- **Frontend**: http://localhost:3000
+- **API docs**: http://localhost:8001/docs
 
+To update to the latest release:
 ```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp ../.env.dev.example .env.local
-# Edit .env.local with your configuration
-
-# Start development server
-npm run dev
+docker compose pull && docker compose up -d
 ```
 
-#### Retention Worker (GDPR Compliance)
-
-```bash
-# The retention worker runs as a daily cron in Docker Compose
-# For manual execution:
-python -m applire.retention
-```
+> **Contributing?** See [CONTRIBUTING.md](CONTRIBUTING.md) for the build-from-source developer setup.
 
 ---
 
@@ -275,7 +228,7 @@ python -m applire.retention
 
 ### Environment Variables
 
-Copy `.env.dev.example` to `.env` and configure:
+Copy `.env.example` to `.env` and configure:
 
 ```env
 # Database
@@ -480,7 +433,7 @@ Applire/
 │   └── TRACEABILITY.md          # Requirements traceability
 ├── tests/                       # Integration and E2E tests
 ├── docker-compose.yml
-├── .env.dev.example
+├── .env.example
 └── README.md
 ```
 

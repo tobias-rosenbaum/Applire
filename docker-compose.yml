@@ -1,3 +1,31 @@
+# Copyright (C) 2024-2026 Tobias Rosenbaum
+#
+# This file is part of Applire.
+#
+# Applire is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Applire is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Applire. If not, see <https://www.gnu.org/licenses/>.
+
+# Self-hosted Applire — pulls pre-built images from GHCR.
+#
+# Quick start (no git clone required):
+#   curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/docker-compose.yml
+#   curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/.env.example
+#   cp .env.example .env        # set LLM_PROVIDER and matching API key
+#   docker compose up -d
+#   docker compose exec backend alembic upgrade head
+#
+# To update: docker compose pull && docker compose up -d
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -16,55 +44,23 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/tobias-rosenbaum/applire-backend:latest
     env_file:
-      - .env.dev
-    # LLM review layer — max generator retries per reviewed step (0 = disabled).
-    # Increase to 3 for higher quality at the cost of more LLM tokens.
-    # LLM_REVIEW_MAX_RETRIES=2
-    # Logging — set DEBUG to see full LLM prompts, responses, and per-call latency.
-    # LOG_LEVEL=DEBUG
+      - .env
     ports:
       - "8001:8000"
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./backend:/app:z
-    command: uvicorn applire.main:app --host 0.0.0.0 --port 8000 --reload
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: dev
-    environment:
-      NEXT_PUBLIC_API_URL: ""
-      BACKEND_URL: "http://backend:8000"
+    image: ghcr.io/tobias-rosenbaum/applire-frontend:latest
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app:z
-      - /app/node_modules
-      - /app/.next
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    environment:
-      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
-    volumes:
-      - ./nginx/dev.conf.template:/etc/nginx/templates/default.conf.template:ro,z
-    depends_on:
-      - backend
-      - frontend
 
   ollama:
     image: ollama/ollama
@@ -75,38 +71,28 @@ services:
       - ollama_data:/root/.ollama
 
   # Retention worker — daily GDPR TTL enforcement (ADR 005).
-  # Not profile-gated: data hygiene is a core operational concern.
   retention:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/tobias-rosenbaum/applire-backend:latest
     env_file:
-      - .env.dev
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./backend:/app:z
     command: sh -c "while true; do python -m applire.retention; sleep 86400; done"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
   # MCP server — stdio transport for agent integration (ADR 010).
-  # This service is useful for verifying startup in CI.
   # For actual agent use, launch directly: python -m applire.mcp
   # See docs/mcp.md for Claude Desktop / Cursor configuration.
   mcp:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/tobias-rosenbaum/applire-backend:latest
     profiles: [mcp]
     env_file:
-      - .env.dev
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./backend:/app:z
     command: python -m applire.mcp
     stdin_open: true
     extra_hosts:
