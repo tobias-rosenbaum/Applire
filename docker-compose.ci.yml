@@ -1,9 +1,9 @@
-# CI override — swap .env.dev for .env.ci (no real secrets required).
+# CI override — use .env.ci instead of .env (no real secrets required).
 # Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.ci.yml up -d --build
 #
 # This file only overrides the env_file on services that carry it.
-# All other configuration is inherited from docker-compose.yml.
+# All other configuration is inherited from docker-compose.yml + docker-compose.override.yml.
 
 services:
   backend:
