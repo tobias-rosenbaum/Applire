@@ -197,8 +197,8 @@ python -m applire.mcp
 
 ```bash
 # 1. Download the two required files
-curl -O https://raw.githubusercontent.com/tobias-rosenbaum/applire/main/docker-compose.yml
-curl -O https://raw.githubusercontent.com/tobias-rosenbaum/applire/main/.env.example
+curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/.env.example
 
 # 2. Configure your environment
 cp .env.example .env

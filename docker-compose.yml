@@ -18,8 +18,8 @@
 # Self-hosted Applire — pulls pre-built images from GHCR.
 #
 # Quick start (no git clone required):
-#   curl -O https://raw.githubusercontent.com/tobias-rosenbaum/applire/main/docker-compose.yml
-#   curl -O https://raw.githubusercontent.com/tobias-rosenbaum/applire/main/.env.example
+#   curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/docker-compose.yml
+#   curl -O https://raw.githubusercontent.com/tobias-rosenbaum/Applire/main/.env.example
 #   cp .env.example .env        # set LLM_PROVIDER and matching API key
 #   docker compose up -d
 #   docker compose exec backend alembic upgrade head
