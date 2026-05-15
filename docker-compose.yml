@@ -61,6 +61,8 @@ services:
 
   frontend:
     image: ghcr.io/tobias-rosenbaum/applire-frontend:latest
+    environment:
+      BACKEND_URL: http://backend:8000
     expose:
       - "3000"
     depends_on:

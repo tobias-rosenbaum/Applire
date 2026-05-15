@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ProgressWidget, ProgressStep } from "@/components/ui/progress-widget";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 const POLL_INTERVAL_MS = 3000;
 const STALENESS_MS = 60_000;
 

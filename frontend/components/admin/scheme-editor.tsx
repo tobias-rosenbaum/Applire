@@ -22,7 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 import { deriveScheme, type DerivedScheme, type SeedColors } from "@/lib/theme";
 import { useTheme } from "@/components/theme-provider";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 
 function extractError(body: unknown, fallback: string): string {
   if (typeof body !== "object" || body === null) return fallback;

@@ -22,7 +22,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { JobCard, type JobMatchResult } from "@/components/match/JobCard";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 
 interface GapSummary {
   critical_gaps: string[];

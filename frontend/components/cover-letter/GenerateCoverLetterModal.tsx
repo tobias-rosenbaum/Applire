@@ -40,7 +40,7 @@ interface GenerateCoverLetterModalProps {
   onGenerated: (coverLetterId: string) => void;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 
 const TONE_OPTIONS: { value: CLTone; label: string; sub: string }[] = [
   { value: "formal", label: "Formal", sub: "Traditionelles Bewerbungsschreiben" },

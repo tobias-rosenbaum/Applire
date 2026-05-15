@@ -21,7 +21,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 
 // Curated professional preset colors (hue-diverse, all print-safe)
 const PRESET_COLORS = [

@@ -23,7 +23,7 @@ import { useTranslations } from "next-intl";
 import { AppTopbar } from "@/components/shell/AppTopbar";
 import { DocumentsTable, type DocumentItem } from "@/components/documents/DocumentsTable";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 const PAGE_SIZE = 10;
 
 export default function DocumentsPage() {

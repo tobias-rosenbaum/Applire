@@ -30,7 +30,7 @@ import { WhatNext } from "@/components/cv/WhatNext";
 import { PhotoPromptStep } from "@/components/cv/PhotoPromptStep";
 import { GenerateCoverLetterModal } from "@/components/cover-letter/GenerateCoverLetterModal";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "development" ? "http://localhost:8001" : "");
 
 type Phase = "photo_prompt" | "template_select" | "generating" | "preview" | "complete";
 type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_developer" | "creative_sidebar" | "academic" | "compact_pro";

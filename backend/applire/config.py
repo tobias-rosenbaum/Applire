@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./data/uploads"
     storage_backend: str = "local"
     ocr_backend: str = "mistral_vision"
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "*"
     log_level: str = "INFO"  # DEBUG | INFO | WARNING | ERROR — applied to all applire.* loggers
 
 
