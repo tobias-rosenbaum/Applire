@@ -66,6 +66,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-frontend:
     name: Build and push frontend image
@@ -111,6 +113,8 @@ jobs:
           build-args: |
             BACKEND_URL=http://backend:8000
             NEXT_PUBLIC_API_URL=
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-nginx:
     name: Build and push nginx image
@@ -152,3 +156,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
