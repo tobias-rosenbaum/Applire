@@ -50,8 +50,8 @@ services:
     env_file:
       - path: .env
         required: false
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,19 +60,15 @@ services:
 
   frontend:
     image: ghcr.io/tobias-rosenbaum/applire-frontend:latest
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       - backend
 
   nginx:
-    image: nginx:alpine
+    image: ghcr.io/tobias-rosenbaum/applire-nginx:latest
     ports:
       - "80:80"
-    environment:
-      NGINX_PROXY_TIMEOUT: "${NGINX_PROXY_TIMEOUT:-300}"
-    volumes:
-      - ./nginx/self-hosted.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
       - backend
       - frontend
