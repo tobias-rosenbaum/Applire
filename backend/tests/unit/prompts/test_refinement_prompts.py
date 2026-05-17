@@ -36,3 +36,16 @@ def test_cv_extraction_refinement_prompt_exists_and_is_distinct():
     assert "patch" in CV_EXTRACTION_REFINEMENT_PROMPT.lower()
     assert len(CV_EXTRACTION_REFINEMENT_PROMPT) < len(GENERIC_CV_EXTRACTION_PROMPT)
     assert len(CV_EXTRACTION_REFINEMENT_PROMPT) <= 1500
+
+
+def test_profile_extraction_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.profile_extraction import (
+        PROFILE_EXTRACTION_REFINEMENT_PROMPT,
+        SYSTEM_PROMPT,
+    )
+
+    assert isinstance(PROFILE_EXTRACTION_REFINEMENT_PROMPT, str)
+    assert "profile data corrector" in PROFILE_EXTRACTION_REFINEMENT_PROMPT.lower()
+    assert "patch" in PROFILE_EXTRACTION_REFINEMENT_PROMPT.lower()
+    assert len(PROFILE_EXTRACTION_REFINEMENT_PROMPT) < len(SYSTEM_PROMPT)
+    assert len(PROFILE_EXTRACTION_REFINEMENT_PROMPT) <= 1500

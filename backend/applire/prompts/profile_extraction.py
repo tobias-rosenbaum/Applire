@@ -20,6 +20,9 @@
 # Changes from v1: hardened SYSTEM_PROMPT with 4 strict extraction rules;
 #                  build_user_prompt adds grounding reminder;
 #                  added build_retry_prompt for review layer retries.
+# Added in retry-refinement work: PROFILE_EXTRACTION_REFINEMENT_PROMPT — refinement-mode
+#                  system prompt used on review-loop retries (patch previous draft, no
+#                  raw source re-read).
 
 import json
 from typing import Any
@@ -104,3 +107,21 @@ def build_retry_prompt(raw_text: str, previous_draft: dict[str, Any], feedback: 
         "---\n\n"
         + raw_text
     )
+
+
+PROFILE_EXTRACTION_REFINEMENT_PROMPT = """\
+You are a profile data corrector. You receive (1) a previously-extracted profile JSON
+(from a CV or LinkedIn export) and (2) a quality reviewer's critique listing specific
+issues. Patch the JSON to address every issue and return the corrected object.
+
+Rules:
+- The previous extraction is your working draft. Modify it to resolve the reviewer's issues.
+- Do not invent new content. If the reviewer's feedback quotes source passages, use those
+  passages as factual basis. Otherwise restrict your changes to deletions, nullifications,
+  and moves of existing content.
+- Preserve all fields that the reviewer did not flag.
+- Output ONLY the corrected JSON object in the same schema as the input — no markdown,
+  no commentary.
+- Each employer position must appear exactly once in work_history. Use null for missing
+  optional fields.
+"""
