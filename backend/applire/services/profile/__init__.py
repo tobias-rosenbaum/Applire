@@ -32,6 +32,7 @@ from applire.constants import LLM_REVIEW_MAX_RETRIES
 from applire.models.profile import MasterProfile
 from applire.models.uploads import UploadRecord
 from applire.prompts.cv_extraction import (
+    CV_EXTRACTION_REFINEMENT_PROMPT,
     GENERIC_CV_EXTRACTION_PROMPT,
     JD_AWARE_CV_EXTRACTION_PROMPT,
     build_generic_prompt,
@@ -39,6 +40,7 @@ from applire.prompts.cv_extraction import (
 )
 from applire.prompts.profile_extraction import (
     SYSTEM_PROMPT,
+    PROFILE_EXTRACTION_REFINEMENT_PROMPT,
     build_retry_prompt as _build_extraction_retry_prompt,
     build_user_prompt,
 )
@@ -254,12 +256,13 @@ async def _import_from_text(
         source=raw_text,
         draft=data,
         generator_prompt_fn=_build_extraction_retry_prompt,
-        generator_system=SYSTEM_PROMPT,
+        generator_system=PROFILE_EXTRACTION_REFINEMENT_PROMPT,
         reviewer_prompt_fn=_build_extraction_review_prompt,
         reviewer_system=_EXTRACTION_REVIEW_SYSTEM_PROMPT,
         provider=provider,
         max_retries=LLM_REVIEW_MAX_RETRIES,
         generator_max_tokens=8192,
+        chain_id="profile_extraction",
     )
     incoming = MasterProfileData.model_validate(data)
     incoming = await enrich_skills(incoming, provider)
@@ -583,12 +586,13 @@ async def upload_cv(
         source=raw_text,
         draft=data,
         generator_prompt_fn=_build_cv_extraction_retry_prompt,
-        generator_system=system,
+        generator_system=CV_EXTRACTION_REFINEMENT_PROMPT,
         reviewer_prompt_fn=_build_cv_extraction_review_prompt,
         reviewer_system=_CV_EXTRACTION_REVIEW_SYSTEM_PROMPT,
         provider=provider,
         max_retries=LLM_REVIEW_MAX_RETRIES,
         generator_max_tokens=8192,
+        chain_id="cv_extraction",
     )
     incoming = MasterProfileData.model_validate(data)
     incoming = await enrich_skills(incoming, provider)

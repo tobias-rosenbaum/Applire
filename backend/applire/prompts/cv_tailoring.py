@@ -103,28 +103,20 @@ def build_user_prompt(
     )
 
 
-def build_retry_prompt(
-    job_analysis: dict,
-    profile_json_str: str,
-    previous_draft: dict,
-    feedback: str,
-) -> str:
-    """Build the retry user prompt after a reviewer rejection.
+def build_retry_prompt(previous_draft: dict, feedback: str) -> str:
+    """Build the retry user prompt after a reviewer rejection of a tailored CV.
 
-    Args:
-        job_analysis: The structured job analysis dict (same as initial call).
-        profile_json_str: The candidate's master profile serialised as a JSON string.
-        previous_draft: The tailored CV the reviewer rejected.
-        feedback: The reviewer's critique — used verbatim as the correction instruction.
+    The job analysis and candidate profile are NOT re-sent — the reviewer is
+    expected to quote relevant facts from the candidate profile in `feedback`
+    when a correction needs profile content (e.g. a fabricated skill must be
+    replaced by a skill actually present in the profile).
     """
     return (
         "A quality review of your previous CV tailoring identified the following issues. "
-        "Correct them and return the updated JSON.\n\n"
+        "Patch the JSON to address every issue and return the corrected object.\n\n"
         f"REVIEW FEEDBACK:\n{feedback}\n\n"
         f"PREVIOUS OUTPUT:\n{json.dumps(previous_draft, ensure_ascii=False, indent=2)}\n\n"
-        f"JOB ANALYSIS:\n{json.dumps(job_analysis, ensure_ascii=False, indent=2)}\n\n"
-        f"CANDIDATE PROFILE (the only source of truth for facts):\n{profile_json_str}\n\n"
-        "Return the corrected tailored CV JSON."
+        "Return ONLY the corrected tailored CV JSON."
     )
 
 

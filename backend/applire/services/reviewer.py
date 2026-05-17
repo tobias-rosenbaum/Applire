@@ -37,30 +37,34 @@ logger = logging.getLogger(__name__)
 async def review_and_refine(
     source: str,
     draft: dict[str, Any],
-    generator_prompt_fn: Callable[[str, dict[str, Any], str], str],
+    generator_prompt_fn: Callable[[dict[str, Any], str], str],
     generator_system: str,
     reviewer_prompt_fn: Callable[[str, dict[str, Any]], str],
     reviewer_system: str,
     provider: LLMProvider,
     max_retries: int,
     generator_max_tokens: int = 4096,
+    chain_id: str = "unknown",
 ) -> dict[str, Any]:
     """Run a reviewer-guided retry loop over an LLM generator output.
 
+    Source text is passed to the reviewer only. The generator's retry call
+    receives the previous draft and the reviewer's feedback — no raw source.
+    If the reviewer's fix requires content not present in the draft, the
+    reviewer is expected to quote the relevant source passages in `feedback`.
+
     Args:
-        source: The original source material the reviewer checks the draft against
-                (raw CV text for extraction; serialised profile JSON for tailoring).
+        source: The original source material the reviewer checks the draft against.
         draft: The initial generator output to be reviewed.
-        generator_prompt_fn: Called as fn(source, previous_draft, feedback) -> str.
-                             Used to build the retry user prompt.
-        generator_system: The generator's system prompt (unchanged across retries).
+        generator_prompt_fn: Called as fn(previous_draft, feedback) -> str.
+        generator_system: The refinement-mode system prompt (NOT the extraction prompt).
         reviewer_prompt_fn: Called as fn(source, draft) -> str.
         reviewer_system: The reviewer's system prompt.
         provider: LLM provider — same instance used by the calling service.
         max_retries: Maximum number of generator retries. 0 = review layer disabled.
-        generator_max_tokens: Token budget for the generator retry calls. Set this to
-                              match the initial extraction call's max_tokens so that
-                              retry outputs are never truncated where the initial wasn't.
+        generator_max_tokens: Token budget for the generator retry calls.
+        chain_id: Identifier for the calling chain (cv_extraction, profile_extraction,
+                  cv_tailoring, interview_response). Used for log dimensionality.
 
     Returns:
         The approved draft, or the last generated draft if retries are exhausted.
@@ -90,18 +94,25 @@ async def review_and_refine(
             last_issues,
         )
 
+        retry_prompt = generator_prompt_fn(current_draft, feedback)
+        logger.info(
+            "review_and_refine: chain=%s attempt=%d retry_input_chars=%d feedback_chars=%d",
+            chain_id,
+            attempt + 1,
+            len(retry_prompt),
+            len(feedback),
+        )
+
         current_draft = await provider.aparse_json(
-            generator_prompt_fn(source, current_draft, feedback),
+            retry_prompt,
             system=generator_system,
             temperature=0.1,
             max_tokens=generator_max_tokens,
         )
 
-    # Exhausted all retries — return the last generated draft unreviewed.
-    # This is intentional: degraded output is preferable to a broken flow
-    # (spec: ADR-021; worst-case call count = 2 * max_retries).
     logger.warning(
-        "review_and_refine: %d retries exhausted. Last known issues: %r",
+        "review_and_refine: chain=%s %d retries exhausted. Last known issues: %r",
+        chain_id,
         max_retries,
         last_issues,
     )

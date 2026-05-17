@@ -88,24 +88,22 @@ def build_user_prompt(raw_text: str) -> str:
     )
 
 
-def build_retry_prompt(raw_text: str, previous_draft: dict[str, Any], feedback: str) -> str:
+def build_retry_prompt(previous_draft: dict[str, Any], feedback: str) -> str:
     """Build the retry user prompt after a reviewer rejection.
 
+    The raw source is NOT included — the reviewer is expected to quote relevant
+    source passages in `feedback` when a correction needs new content.
+
     Args:
-        raw_text: The original CV text (source of truth).
         previous_draft: The extraction the reviewer rejected.
         feedback: The reviewer's critique — used verbatim as the correction instruction.
     """
     return (
         "A quality review of your previous extraction identified the following issues. "
-        "Correct them and return the updated JSON.\n\n"
+        "Patch the JSON to address every issue and return the corrected object.\n\n"
         f"REVIEW FEEDBACK:\n{feedback}\n\n"
         f"PREVIOUS EXTRACTION:\n{json.dumps(previous_draft, ensure_ascii=False, indent=2)}\n\n"
-        "SOURCE CV TEXT (the only source of truth):\n"
-        "Remember: each position exactly once, only facts present in the source, "
-        "null for anything missing. Count the distinct positions again before writing work_history.\n\n"
-        "---\n\n"
-        + raw_text
+        "Return ONLY the corrected JSON."
     )
 
 

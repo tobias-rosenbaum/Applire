@@ -17,6 +17,7 @@
 
 """Profile enrichment endpoints — Mode C interview sessions (no JD required)."""
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -30,8 +31,8 @@ from applire.constants import INTERVIEW_SESSION_TTL_DAYS, LLM_REVIEW_MAX_RETRIES
 from applire.db.session import get_db
 from applire.models.profile import MasterProfile
 from applire.models.session import InterviewSession
-from applire.prompts.interview import RESPONSE_PARSER_SYSTEM_PROMPT
 from applire.prompts.review_interview_response import (
+    RESPONSE_PARSER_REFINEMENT_PROMPT,
     RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT,
     build_response_parser_review_prompt,
 )
@@ -275,17 +276,19 @@ async def respond_to_enrich(
     reviewed_draft = await review_and_refine(
         source=f"{current_gap} | {current_question} | {answer}",
         draft=raw_draft,
-        generator_prompt_fn=lambda src, prev, feedback: (
-            f"Gap: {current_gap}\nQuestion: {current_question}\nAnswer: {answer}\n"
-            f"Previous extraction had issues: {feedback}\nRe-extract accurately."
+        generator_prompt_fn=lambda prev, feedback: (
+            f"REVIEW FEEDBACK:\n{feedback}\n\n"
+            f"PREVIOUS EXTRACTION:\n{json.dumps(prev, ensure_ascii=False, indent=2)}\n\n"
+            "Return ONLY the corrected JSON."
         ),
-        generator_system=RESPONSE_PARSER_SYSTEM_PROMPT,
+        generator_system=RESPONSE_PARSER_REFINEMENT_PROMPT,
         reviewer_prompt_fn=lambda src, draft: build_response_parser_review_prompt(
             current_gap, current_question, answer, draft
         ),
         reviewer_system=RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT,
         provider=provider,
         max_retries=LLM_REVIEW_MAX_RETRIES,
+        chain_id="interview_response",
     )
 
     # ProfileUpdater — merge extracted data into the master profile
