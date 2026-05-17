@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
+
 """Drift-guard tests for refinement-mode system prompts.
 
 Each refinement prompt MUST:
@@ -102,3 +104,34 @@ def test_all_reviewer_prompts_include_quote_source_rule():
         ("review_interview_response", RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT),
     ]:
         assert rule in prompt.lower(), f"{name} missing quote-source rule"
+
+
+def test_mock_returns_schema_valid_response_for_each_refinement_prompt():
+    """The mock must recognise every refinement prompt fingerprint and return
+    a deterministic dict — never the generic fallback. This keeps the review
+    retry loop terminating cleanly in CI."""
+    from applire.prompts.cv_extraction import CV_EXTRACTION_REFINEMENT_PROMPT
+    from applire.prompts.profile_extraction import PROFILE_EXTRACTION_REFINEMENT_PROMPT
+    from applire.prompts.cv_tailoring import CV_TAILORING_REFINEMENT_PROMPT
+    from applire.prompts.review_interview_response import RESPONSE_PARSER_REFINEMENT_PROMPT
+    from applire.providers.llm.mock import MockLLMProvider
+
+    provider = MockLLMProvider()
+
+    async def call_all() -> list[dict]:
+        return [
+            await provider.aparse_json("patch this", system=p)
+            for p in (
+                CV_EXTRACTION_REFINEMENT_PROMPT,
+                PROFILE_EXTRACTION_REFINEMENT_PROMPT,
+                CV_TAILORING_REFINEMENT_PROMPT,
+                RESPONSE_PARSER_REFINEMENT_PROMPT,
+            )
+        ]
+
+    results = asyncio.run(call_all())
+    for r in results:
+        assert isinstance(r, dict)
+        # Generic fallback returns {"mock": True, "raw_prompt_length": N}.
+        # Real fingerprint matches return schema-shaped data without "mock".
+        assert "mock" not in r, f"Refinement prompt hit generic fallback: {r}"

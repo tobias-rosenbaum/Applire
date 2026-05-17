@@ -31,6 +31,10 @@ System prompt fingerprints:
   "expert career analyst"          → gap clustering        (aparse_json → list)
   "expert career coach"            → targeted question     (aparse_json → dict)
   "expert dach career coach"       → cover letter          (aparse_json → dict)
+  "cv profile corrector"           → CV extraction refinement   (aparse_json → dict)
+  "profile data corrector"         → profile extraction refinement (aparse_json → dict)
+  "tailored cv corrector"          → CV tailoring refinement    (aparse_json → dict)
+  "answer parser corrector"        → response parser refinement (aparse_json → dict)
   (acomplete, any)                 → interview question    (acomplete → str)
 """
 
@@ -315,6 +319,18 @@ class MockLLMProvider(LLMProvider):
 
         if "dach career coach" in system_lower:
             return dict(_COVER_LETTER_RESPONSE)
+
+        if "cv profile corrector" in system_lower:
+            return dict(_PROFILE_PARSE_RESPONSE)
+
+        if "profile data corrector" in system_lower:
+            return dict(_PROFILE_PARSE_RESPONSE)
+
+        if "tailored cv corrector" in system_lower:
+            return dict(_CV_TAILORING_RESPONSE)
+
+        if "answer parser corrector" in system_lower:
+            return dict(_RESPONSE_PARSER_RESPONSE)
 
         # Fallback: return a minimal valid dict for any unrecognised prompt
         return {"mock": True, "raw_prompt_length": len(prompt)}
