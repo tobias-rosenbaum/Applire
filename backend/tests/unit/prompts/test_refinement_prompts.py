@@ -49,3 +49,16 @@ def test_profile_extraction_refinement_prompt_exists_and_is_distinct():
     assert "patch" in PROFILE_EXTRACTION_REFINEMENT_PROMPT.lower()
     assert len(PROFILE_EXTRACTION_REFINEMENT_PROMPT) < len(SYSTEM_PROMPT)
     assert len(PROFILE_EXTRACTION_REFINEMENT_PROMPT) <= 1500
+
+
+def test_cv_tailoring_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.cv_tailoring import (
+        CV_TAILORING_REFINEMENT_PROMPT,
+        SYSTEM_PROMPT,
+    )
+
+    assert isinstance(CV_TAILORING_REFINEMENT_PROMPT, str)
+    assert "tailored cv corrector" in CV_TAILORING_REFINEMENT_PROMPT.lower()
+    assert "patch" in CV_TAILORING_REFINEMENT_PROMPT.lower()
+    assert len(CV_TAILORING_REFINEMENT_PROMPT) < len(SYSTEM_PROMPT)
+    assert len(CV_TAILORING_REFINEMENT_PROMPT) <= 1500

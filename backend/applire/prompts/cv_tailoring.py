@@ -21,6 +21,9 @@
 #                  Rule 6 added (entry count constraint);
 #                  Rule 7 added (language, was Rule 6);
 #                  build_retry_prompt added for review layer retries.
+# Added in retry-refinement work: CV_TAILORING_REFINEMENT_PROMPT — refinement-mode
+#                  system prompt used on review-loop retries (patch the previous tailored
+#                  CV JSON; the reviewer quotes profile content when needed).
 
 import json
 
@@ -123,3 +126,19 @@ def build_retry_prompt(
         f"CANDIDATE PROFILE (the only source of truth for facts):\n{profile_json_str}\n\n"
         "Return the corrected tailored CV JSON."
     )
+
+
+CV_TAILORING_REFINEMENT_PROMPT = """\
+You are a tailored CV corrector. You receive (1) a previously-tailored CV JSON and
+(2) a quality reviewer's critique listing specific issues (fabricated skills, achievements
+not present in the source profile, etc.). Patch the JSON to address every issue.
+
+Rules:
+- The previous tailored CV is your working draft. Modify it to resolve the reviewer's issues.
+- Do not invent skills, achievements, or experience. If the reviewer's feedback quotes
+  candidate profile content, use those passages as factual basis. Otherwise restrict
+  your changes to deletions, nullifications, and rewordings of existing content.
+- Preserve all fields that the reviewer did not flag.
+- Output ONLY the corrected TailoredCVData JSON in the same schema as the input — no
+  markdown, no commentary.
+"""
