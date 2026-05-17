@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
-
 """Drift-guard tests for refinement-mode system prompts.
 
 Each refinement prompt MUST:
@@ -25,6 +23,8 @@ Each refinement prompt MUST:
 - Frame the task as "patch this JSON", not "extract from text".
 - Be substantially shorter than its corresponding extraction prompt (target <=1.5 KB).
 """
+
+import asyncio
 
 
 def test_cv_extraction_refinement_prompt_exists_and_is_distinct():

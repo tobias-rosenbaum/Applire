@@ -110,6 +110,9 @@ async def review_and_refine(
             max_tokens=generator_max_tokens,
         )
 
+    # Exhausted all retries — return the last generated draft unreviewed.
+    # This is intentional: degraded output is preferable to a broken flow
+    # (spec: ADR-021; worst-case call count = 2 * max_retries).
     logger.warning(
         "review_and_refine: chain=%s %d retries exhausted. Last known issues: %r",
         chain_id,
