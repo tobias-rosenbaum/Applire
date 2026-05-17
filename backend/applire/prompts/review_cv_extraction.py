@@ -51,7 +51,10 @@ Respond ONLY with a valid JSON object — no markdown, no explanations:
   "approved": true or false,
   "issues": ["list of specific issues with work_experience index and description — empty array if approved"],
   "feedback": "concise instruction for the extractor to correct all issues — empty string if approved"
-}"""
+}
+
+If your correction requires content not present in the draft, quote the relevant source passages
+verbatim in the `feedback` field. The corrector will not re-read the source."""
 
 
 def build_cv_extraction_review_prompt(raw_cv_text: str, extracted_json: dict) -> str:
@@ -72,25 +75,18 @@ def build_cv_extraction_review_prompt(raw_cv_text: str, extracted_json: dict) ->
 
 
 def build_cv_extraction_retry_prompt(
-    raw_cv_text: str,
     previous_draft: dict[str, Any],
     feedback: str,
 ) -> str:
     """Build the retry user prompt after a reviewer rejection of a CV extraction.
 
-    Args:
-        raw_cv_text:    The original CV text (source of truth).
-        previous_draft: The extraction the reviewer rejected.
-        feedback:       The reviewer's critique — used verbatim as the correction instruction.
+    The raw CV text is NOT included — the reviewer is expected to quote relevant
+    source passages in `feedback` when a correction needs new content.
     """
     return (
         "A quality review of your previous extraction identified the following issues. "
-        "Correct them and return the updated JSON.\n\n"
+        "Patch the JSON to address every issue and return the corrected object.\n\n"
         f"REVIEW FEEDBACK:\n{feedback}\n\n"
         f"PREVIOUS EXTRACTION:\n{json.dumps(previous_draft, ensure_ascii=False, indent=2)}\n\n"
-        "SOURCE CV TEXT (the only source of truth):\n"
-        "Remember: each position exactly once, only facts present in the source, "
-        "null for anything missing. Count the distinct positions again before writing work_experience.\n\n"
-        "---\n\n"
-        + raw_cv_text
+        "Return ONLY the corrected JSON."
     )

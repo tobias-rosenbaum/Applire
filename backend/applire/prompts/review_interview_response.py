@@ -18,6 +18,9 @@
 # Prompt version: v1
 # Used by: services/interview_graph.py → ResponseParser node (Mode C)
 #          wrapped with reviewer.review_and_refine
+# Added in retry-refinement work: RESPONSE_PARSER_REFINEMENT_PROMPT — refinement-mode
+#          system prompt used on review-loop retries (patch the previous extraction,
+#          no answer-text re-read).
 
 import json
 
@@ -29,6 +32,9 @@ Respond with JSON only: {"approved": bool, "issues": list[str], "feedback": str}
 - approved: true only if all extracted fields are accurate and grounded in the answer
 - issues: list of specific problems found (empty list if approved)
 - feedback: one concise sentence telling the generator how to fix the draft (empty string if approved)
+
+If your correction requires content not present in the draft, quote the relevant source passages
+verbatim in the `feedback` field. The corrector will not re-read the source.
 """
 
 
@@ -56,4 +62,18 @@ Check all of the following:
 
 Respond with JSON only:
 {{"approved": bool, "issues": list[str], "feedback": str}}
+"""
+
+
+RESPONSE_PARSER_REFINEMENT_PROMPT = """\
+You are an answer parser corrector. You receive (1) a previously-extracted profile fragment
+JSON (from a user's interview answer) and (2) a quality reviewer's critique listing specific
+issues (hallucinated values, vague paraphrasing, fabricated numerics). Patch the JSON to
+address every issue.
+
+Rules:
+- The previous extraction is your working draft. Modify it to resolve the reviewer's issues.
+- Do not invent new content. If the reviewer's feedback quotes the user's answer, use those
+  exact phrases as factual basis. Otherwise restrict changes to deletions or nullifications.
+- Output ONLY the corrected JSON in the same schema as the input — no markdown, no commentary.
 """

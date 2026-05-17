@@ -1,0 +1,137 @@
+# Copyright (C) 2024-2026 Tobias Rosenbaum
+#
+# This file is part of Applire.
+#
+# Applire is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Applire is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Applire. If not, see <https://www.gnu.org/licenses/>.
+
+"""Drift-guard tests for refinement-mode system prompts.
+
+Each refinement prompt MUST:
+- Exist as a module-level constant.
+- Contain a distinctive lowercase fingerprint that the mock LLM can detect.
+- Frame the task as "patch this JSON", not "extract from text".
+- Be substantially shorter than its corresponding extraction prompt (target <=1.5 KB).
+"""
+
+import asyncio
+
+
+def test_cv_extraction_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.cv_extraction import (
+        CV_EXTRACTION_REFINEMENT_PROMPT,
+        GENERIC_CV_EXTRACTION_PROMPT,
+    )
+
+    assert isinstance(CV_EXTRACTION_REFINEMENT_PROMPT, str)
+    assert "cv profile corrector" in CV_EXTRACTION_REFINEMENT_PROMPT.lower()
+    assert "patch" in CV_EXTRACTION_REFINEMENT_PROMPT.lower()
+    assert len(CV_EXTRACTION_REFINEMENT_PROMPT) < len(GENERIC_CV_EXTRACTION_PROMPT)
+    assert len(CV_EXTRACTION_REFINEMENT_PROMPT) <= 1500
+
+
+def test_profile_extraction_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.profile_extraction import (
+        PROFILE_EXTRACTION_REFINEMENT_PROMPT,
+        SYSTEM_PROMPT,
+    )
+
+    assert isinstance(PROFILE_EXTRACTION_REFINEMENT_PROMPT, str)
+    assert "profile data corrector" in PROFILE_EXTRACTION_REFINEMENT_PROMPT.lower()
+    assert "patch" in PROFILE_EXTRACTION_REFINEMENT_PROMPT.lower()
+    assert len(PROFILE_EXTRACTION_REFINEMENT_PROMPT) < len(SYSTEM_PROMPT)
+    assert len(PROFILE_EXTRACTION_REFINEMENT_PROMPT) <= 1500
+
+
+def test_cv_tailoring_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.cv_tailoring import (
+        CV_TAILORING_REFINEMENT_PROMPT,
+        SYSTEM_PROMPT,
+    )
+
+    assert isinstance(CV_TAILORING_REFINEMENT_PROMPT, str)
+    assert "tailored cv corrector" in CV_TAILORING_REFINEMENT_PROMPT.lower()
+    assert "patch" in CV_TAILORING_REFINEMENT_PROMPT.lower()
+    assert len(CV_TAILORING_REFINEMENT_PROMPT) < len(SYSTEM_PROMPT)
+    assert len(CV_TAILORING_REFINEMENT_PROMPT) <= 1500
+
+
+def test_response_parser_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.review_interview_response import (
+        RESPONSE_PARSER_REFINEMENT_PROMPT,
+    )
+
+    assert isinstance(RESPONSE_PARSER_REFINEMENT_PROMPT, str)
+    assert "answer parser corrector" in RESPONSE_PARSER_REFINEMENT_PROMPT.lower()
+    assert "patch" in RESPONSE_PARSER_REFINEMENT_PROMPT.lower()
+    assert len(RESPONSE_PARSER_REFINEMENT_PROMPT) <= 1500
+    assert len(RESPONSE_PARSER_REFINEMENT_PROMPT) >= 100  # non-trivial
+
+
+def test_all_reviewer_prompts_include_quote_source_rule():
+    """Each reviewer system prompt must instruct the reviewer to quote source
+    passages in feedback when the correction needs new content. This is the
+    load-bearing rule that lets the generator refine without raw source."""
+    from applire.prompts.review_cv_extraction import (
+        CV_EXTRACTION_REVIEW_SYSTEM_PROMPT,
+    )
+    from applire.prompts.review_profile_extraction import (
+        REVIEW_SYSTEM_PROMPT as _PROFILE_REVIEW,
+    )
+    from applire.prompts.review_cv_tailoring import (
+        REVIEW_SYSTEM_PROMPT as _TAILORING_REVIEW,
+    )
+    from applire.prompts.review_interview_response import (
+        RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT,
+    )
+
+    rule = "quote the relevant source passages"
+
+    for name, prompt in [
+        ("review_cv_extraction", CV_EXTRACTION_REVIEW_SYSTEM_PROMPT),
+        ("review_profile_extraction", _PROFILE_REVIEW),
+        ("review_cv_tailoring", _TAILORING_REVIEW),
+        ("review_interview_response", RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT),
+    ]:
+        assert rule in prompt.lower(), f"{name} missing quote-source rule"
+
+
+def test_mock_returns_schema_valid_response_for_each_refinement_prompt():
+    """The mock must recognise every refinement prompt fingerprint and return
+    a deterministic dict — never the generic fallback. This keeps the review
+    retry loop terminating cleanly in CI."""
+    from applire.prompts.cv_extraction import CV_EXTRACTION_REFINEMENT_PROMPT
+    from applire.prompts.profile_extraction import PROFILE_EXTRACTION_REFINEMENT_PROMPT
+    from applire.prompts.cv_tailoring import CV_TAILORING_REFINEMENT_PROMPT
+    from applire.prompts.review_interview_response import RESPONSE_PARSER_REFINEMENT_PROMPT
+    from applire.providers.llm.mock import MockLLMProvider
+
+    provider = MockLLMProvider()
+
+    async def call_all() -> list[dict]:
+        return [
+            await provider.aparse_json("patch this", system=p)
+            for p in (
+                CV_EXTRACTION_REFINEMENT_PROMPT,
+                PROFILE_EXTRACTION_REFINEMENT_PROMPT,
+                CV_TAILORING_REFINEMENT_PROMPT,
+                RESPONSE_PARSER_REFINEMENT_PROMPT,
+            )
+        ]
+
+    results = asyncio.run(call_all())
+    for r in results:
+        assert isinstance(r, dict)
+        # Generic fallback returns {"mock": True, "raw_prompt_length": N}.
+        # Real fingerprint matches return schema-shaped data without "mock".
+        assert "mock" not in r, f"Refinement prompt hit generic fallback: {r}"

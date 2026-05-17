@@ -59,6 +59,7 @@ from applire.models.gap import GapAnalysis
 from applire.models.job import JobAnalysis
 from applire.models.profile import MasterProfile
 from applire.prompts.cv_tailoring import (
+    CV_TAILORING_REFINEMENT_PROMPT,
     SYSTEM_PROMPT,
     build_retry_prompt as _build_cv_retry_prompt,
     build_user_prompt,
@@ -396,19 +397,17 @@ async def _render_cv_background(
 
             source_material = _json.dumps(profile_json, ensure_ascii=False, indent=2)
 
-            def _cv_retry_prompt(source: str, draft: dict, feedback: str) -> str:
-                return _build_cv_retry_prompt(job_dict, source, draft, feedback)
-
             tailored_raw = await review_and_refine(
                 source=source_material,
                 draft=tailored_raw,
-                generator_prompt_fn=_cv_retry_prompt,
-                generator_system=SYSTEM_PROMPT,
+                generator_prompt_fn=_build_cv_retry_prompt,
+                generator_system=CV_TAILORING_REFINEMENT_PROMPT,
                 reviewer_prompt_fn=_build_cv_review_prompt,
                 reviewer_system=_CV_REVIEW_SYSTEM_PROMPT,
                 provider=provider,
                 max_retries=LLM_REVIEW_MAX_RETRIES,
                 generator_max_tokens=8192,
+                chain_id="cv_tailoring",
             )
 
             tailored = TailoredCVData.model_validate(tailored_raw)

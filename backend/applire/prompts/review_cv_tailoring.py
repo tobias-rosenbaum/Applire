@@ -41,7 +41,10 @@ Respond ONLY with a valid JSON object — no markdown, no explanations:
   "approved": true or false,
   "issues": ["list of specific issues with work_history index and description — empty array if approved"],
   "feedback": "concise instruction for the tailoring agent to correct all issues — empty string if approved"
-}"""
+}
+
+If your correction requires content not present in the draft, quote the relevant source passages
+verbatim in the `feedback` field. The corrector will not re-read the source."""
 
 
 def build_review_prompt(source_material: str, tailored_json: dict) -> str:
