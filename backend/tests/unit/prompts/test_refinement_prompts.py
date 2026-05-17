@@ -74,3 +74,31 @@ def test_response_parser_refinement_prompt_exists_and_is_distinct():
     assert "patch" in RESPONSE_PARSER_REFINEMENT_PROMPT.lower()
     assert len(RESPONSE_PARSER_REFINEMENT_PROMPT) <= 1500
     assert len(RESPONSE_PARSER_REFINEMENT_PROMPT) >= 100  # non-trivial
+
+
+def test_all_reviewer_prompts_include_quote_source_rule():
+    """Each reviewer system prompt must instruct the reviewer to quote source
+    passages in feedback when the correction needs new content. This is the
+    load-bearing rule that lets the generator refine without raw source."""
+    from applire.prompts.review_cv_extraction import (
+        CV_EXTRACTION_REVIEW_SYSTEM_PROMPT,
+    )
+    from applire.prompts.review_profile_extraction import (
+        REVIEW_SYSTEM_PROMPT as _PROFILE_REVIEW,
+    )
+    from applire.prompts.review_cv_tailoring import (
+        REVIEW_SYSTEM_PROMPT as _TAILORING_REVIEW,
+    )
+    from applire.prompts.review_interview_response import (
+        RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT,
+    )
+
+    rule = "quote the relevant source passages"
+
+    for name, prompt in [
+        ("review_cv_extraction", CV_EXTRACTION_REVIEW_SYSTEM_PROMPT),
+        ("review_profile_extraction", _PROFILE_REVIEW),
+        ("review_cv_tailoring", _TAILORING_REVIEW),
+        ("review_interview_response", RESPONSE_PARSER_REVIEW_SYSTEM_PROMPT),
+    ]:
+        assert rule in prompt.lower(), f"{name} missing quote-source rule"

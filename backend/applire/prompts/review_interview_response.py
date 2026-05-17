@@ -32,6 +32,9 @@ Respond with JSON only: {"approved": bool, "issues": list[str], "feedback": str}
 - approved: true only if all extracted fields are accurate and grounded in the answer
 - issues: list of specific problems found (empty list if approved)
 - feedback: one concise sentence telling the generator how to fix the draft (empty string if approved)
+
+If your correction requires content not present in the draft, quote the relevant source passages
+verbatim in the `feedback` field. The corrector will not re-read the source.
 """
 
 
