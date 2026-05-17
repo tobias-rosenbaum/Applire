@@ -17,12 +17,15 @@
 
 # Prompt version: v1
 # Used by: services/profile/__init__.py → upload_cv() → LLMProvider.aparse_json
+#          and reviewer.review_and_refine retry path
 #
-# Two variants (ADR 014):
-#   GENERIC_CV_EXTRACTION_PROMPT  — no JD context; general-purpose profile extraction
-#   JD_AWARE_CV_EXTRACTION_PROMPT — injects JobAnalysis context for relevance-weighted extraction
+# Three constants (ADR 014):
+#   GENERIC_CV_EXTRACTION_PROMPT      — no JD context; general-purpose profile extraction
+#   JD_AWARE_CV_EXTRACTION_PROMPT     — injects JobAnalysis context for relevance-weighted extraction
+#   CV_EXTRACTION_REFINEMENT_PROMPT   — refinement-mode prompt used on review-loop retries
+#                                       (patch the previous draft, no raw source re-read)
 #
-# Both variants target the full MasterProfileData schema (iter 11).
+# All three target the full MasterProfileData schema (iter 11).
 # The model_validator on MasterProfileData handles backwards-compat with older field names.
 
 _SCHEMA_DESCRIPTION = """\
