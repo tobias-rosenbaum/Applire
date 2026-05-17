@@ -62,3 +62,15 @@ def test_cv_tailoring_refinement_prompt_exists_and_is_distinct():
     assert "patch" in CV_TAILORING_REFINEMENT_PROMPT.lower()
     assert len(CV_TAILORING_REFINEMENT_PROMPT) < len(SYSTEM_PROMPT)
     assert len(CV_TAILORING_REFINEMENT_PROMPT) <= 1500
+
+
+def test_response_parser_refinement_prompt_exists_and_is_distinct():
+    from applire.prompts.review_interview_response import (
+        RESPONSE_PARSER_REFINEMENT_PROMPT,
+    )
+
+    assert isinstance(RESPONSE_PARSER_REFINEMENT_PROMPT, str)
+    assert "answer parser corrector" in RESPONSE_PARSER_REFINEMENT_PROMPT.lower()
+    assert "patch" in RESPONSE_PARSER_REFINEMENT_PROMPT.lower()
+    assert len(RESPONSE_PARSER_REFINEMENT_PROMPT) <= 1500
+    assert len(RESPONSE_PARSER_REFINEMENT_PROMPT) >= 100  # non-trivial
