@@ -511,15 +511,14 @@ class TestCVExtractionReviewPrompt:
         assert "Max Mustermann" in prompt
         assert "Siemens AG" in prompt
 
-    def test_retry_prompt_includes_feedback_and_source(self):
+    def test_retry_prompt_includes_feedback_and_previous_draft(self):
         from applire.prompts.review_cv_extraction import build_cv_extraction_retry_prompt
         prompt = build_cv_extraction_retry_prompt(
-            raw_cv_text="Max Mustermann CV",
-            previous_draft={"work_experience": []},
+            previous_draft={"work_experience": [{"company": "Siemens AG"}]},
             feedback="Missing work entries",
         )
         assert "Missing work entries" in prompt
-        assert "Max Mustermann CV" in prompt
+        assert "Siemens AG" in prompt
 
 
 # ---------------------------------------------------------------------------

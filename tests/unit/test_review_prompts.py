@@ -74,20 +74,17 @@ class TestProfileExtractionGeneratorPrompts:
         from applire.prompts.profile_extraction import build_retry_prompt
 
         result = build_retry_prompt(
-            raw_text="Acme GmbH 2020-2022",
             previous_draft={"work_history": []},
             feedback="Remove duplicate at index 1",
         )
         assert "Remove duplicate at index 1" in result
-        assert "Acme GmbH 2020-2022" in result
-        assert "return the updated JSON" in result
+        assert "Patch the JSON" in result
 
     def test_build_retry_prompt_includes_previous_draft(self):
         from applire.prompts.profile_extraction import build_retry_prompt
 
         previous = {"work_history": [{"company": "Acme"}]}
         result = build_retry_prompt(
-            raw_text="source",
             previous_draft=previous,
             feedback="fix it",
         )
@@ -232,20 +229,16 @@ class TestCVTailoringGeneratorPrompts:
         from applire.prompts.cv_tailoring import build_retry_prompt
 
         result = build_retry_prompt(
-            job_analysis=_SAMPLE_JOB,
-            profile_json_str=_SAMPLE_SOURCE_MATERIAL,
             previous_draft=_SAMPLE_TAILORED_CV,
             feedback="Remove fabricated Kubernetes bullet in work_history[0]",
         )
         assert "Remove fabricated Kubernetes bullet" in result
-        assert "Backend Engineer" in result
+        assert "Patch the JSON" in result
 
     def test_build_retry_prompt_includes_previous_draft(self):
         from applire.prompts.cv_tailoring import build_retry_prompt
 
         result = build_retry_prompt(
-            job_analysis=_SAMPLE_JOB,
-            profile_json_str=_SAMPLE_SOURCE_MATERIAL,
             previous_draft=_SAMPLE_TAILORED_CV,
             feedback="fix",
         )

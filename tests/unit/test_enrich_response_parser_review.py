@@ -128,10 +128,9 @@ def _make_reviewer_fn(gap: str, question: str, answer: str):
 def _make_generator_fn():
     """Simple generator retry prompt that includes feedback."""
 
-    def generator_prompt_fn(source: str, previous_draft: dict, feedback: str) -> str:
+    def generator_prompt_fn(previous_draft: dict, feedback: str) -> str:
         return (
             f"Previous extraction had issues: {feedback}\n\n"
-            f"Source: {source}\n\n"
             f"Previous draft:\n{json.dumps(previous_draft, ensure_ascii=False)}\n\n"
             "Re-extract the structured profile data, fixing the issues above."
         )
@@ -312,8 +311,8 @@ async def test_generator_retry_receives_feedback_from_reviewer(mock_provider):
 
     generator_calls: list[tuple] = []
 
-    def capturing_generator(source: str, previous_draft: dict, feedback: str) -> str:
-        generator_calls.append((source, previous_draft, feedback))
+    def capturing_generator(previous_draft: dict, feedback: str) -> str:
+        generator_calls.append((previous_draft, feedback))
         return f"retry prompt with feedback: {feedback}"
 
     mock_provider.aparse_json.side_effect = [
@@ -334,7 +333,6 @@ async def test_generator_retry_receives_feedback_from_reviewer(mock_provider):
     )
 
     assert len(generator_calls) == 1
-    source_arg, prev_draft_arg, feedback_arg = generator_calls[0]
-    assert source_arg == _ANSWER
+    prev_draft_arg, feedback_arg = generator_calls[0]
     assert prev_draft_arg == original_draft
     assert feedback_arg == "Add AWS EKS from user's answer"

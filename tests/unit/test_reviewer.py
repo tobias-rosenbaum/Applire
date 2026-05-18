@@ -38,7 +38,7 @@ async def test_max_retries_zero_returns_draft_immediately(mock_provider):
     result = await review_and_refine(
         source="Acme Software Developer 2020-2022",
         draft=draft,
-        generator_prompt_fn=lambda s, d, f: "retry prompt",
+        generator_prompt_fn=lambda d, f: "retry prompt",
         generator_system="gen system",
         reviewer_prompt_fn=lambda s, d: "review prompt",
         reviewer_system="rev system",
@@ -67,7 +67,7 @@ async def test_approves_on_first_pass_returns_draft_unchanged(mock_provider):
     result = await review_and_refine(
         source="Acme Dev 2020-2022",
         draft=draft,
-        generator_prompt_fn=lambda s, d, f: f"retry: {f}",
+        generator_prompt_fn=lambda d, f: f"retry: {f}",
         generator_system="gen system",
         reviewer_prompt_fn=lambda s, d: "review prompt",
         reviewer_system="rev system",
@@ -103,7 +103,7 @@ async def test_rejects_once_then_approves_returns_revised_draft(mock_provider):
     result = await review_and_refine(
         source="Acme Dev 2020-2022",
         draft=original,
-        generator_prompt_fn=lambda s, d, f: f"retry with feedback: {f}",
+        generator_prompt_fn=lambda d, f: f"retry with feedback: {f}",
         generator_system="gen system",
         reviewer_prompt_fn=lambda s, d: "review prompt",
         reviewer_system="rev system",
@@ -142,7 +142,7 @@ async def test_exhausts_retries_returns_last_draft_and_logs_warning(mock_provide
         result = await review_and_refine(
             source="original cv text",
             draft=original,
-            generator_prompt_fn=lambda s, d, f: f"retry: {f}",
+            generator_prompt_fn=lambda d, f: f"retry: {f}",
             generator_system="gen system",
             reviewer_prompt_fn=lambda s, d: "review prompt",
             reviewer_system="rev system",
@@ -175,7 +175,7 @@ async def test_reviewer_receives_source_and_current_draft(mock_provider):
     await review_and_refine(
         source="the source material",
         draft=draft,
-        generator_prompt_fn=lambda s, d, f: "retry",
+        generator_prompt_fn=lambda d, f: "retry",
         generator_system="gen",
         reviewer_prompt_fn=capture_reviewer,
         reviewer_system="rev",
@@ -197,8 +197,8 @@ async def test_generator_retry_receives_feedback_string(mock_provider):
     draft = {"key": "original"}
     received_args: list[tuple] = []
 
-    def capture_generator(source: str, d: dict, feedback: str) -> str:
-        received_args.append((source, d, feedback))
+    def capture_generator(d: dict, feedback: str) -> str:
+        received_args.append((d, feedback))
         return "retry prompt"
 
     mock_provider.aparse_json.side_effect = [
@@ -218,4 +218,4 @@ async def test_generator_retry_receives_feedback_string(mock_provider):
         max_retries=2,
     )
 
-    assert received_args[0] == ("the source", draft, "specific critique")
+    assert received_args[0] == (draft, "specific critique")

@@ -88,7 +88,9 @@ test.describe("Felix — Returning User: Profile Upload (Sprint 32 PQ)", () => {
     page,
   }) => {
     await runFullOnboardingFlow(page);
-    await page.goto("/profile/upload");
+    // ProfileUpdateChooser is shown at /profile/upload; the import view renders
+    // only when action=upload is set (matching the chooser's own link target).
+    await page.goto("/profile/upload?action=upload");
 
     // Hidden file input accepts the updated CV
     const fileInput = page.getByTestId("main-file-input");
@@ -112,7 +114,7 @@ test.describe("Felix — Returning User: Profile Upload (Sprint 32 PQ)", () => {
     page,
   }) => {
     await runFullOnboardingFlow(page);
-    await page.goto("/profile/upload");
+    await page.goto("/profile/upload?action=upload");
 
     // History panel must exist
     await expect(page.getByTestId("upload-history-panel")).toBeVisible({
