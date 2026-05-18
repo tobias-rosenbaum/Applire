@@ -58,6 +58,7 @@ class UserStatus(str, Enum):
     applied = "applied"
     rejected = "rejected"
     offer = "offer"
+    hired = "hired"
 
 
 # Map FlowSession.current_step → WorkflowStatus
