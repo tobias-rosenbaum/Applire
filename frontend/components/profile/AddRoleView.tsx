@@ -17,7 +17,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -52,6 +52,33 @@ export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps)
   const [error, setError] = useState("");
   const [jdText, setJdText] = useState("");
   const [analysing, setAnalysing] = useState(false);
+
+  useEffect(() => {
+    const applicationId = searchParams.get("application_id");
+    if (source !== "application" || !applicationId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/applications/${applicationId}`);
+        if (!res.ok) {
+          if (cancelled) return;
+          setError(t("noJdHint"));
+          return;
+        }
+        const app = await res.json();
+        if (cancelled) return;
+        setTitle(app.role_title ?? "");
+        setCompany(app.company_name ?? "");
+        // Note: ApplicationResponse does not include location or industry;
+        // those stay empty for Emma to fill manually.
+      } catch {
+        if (cancelled) return;
+        setError(t("noJdHint"));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, searchParams, t]);
 
   const canSave = !!(title.trim() && company.trim() && startDate && !submitting);
 

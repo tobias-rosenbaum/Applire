@@ -81,3 +81,36 @@ describe("AddRoleView — jd_paste mode", () => {
     expect(screen.getByRole("button", { name: /Analyse/i })).toBeInTheDocument();
   });
 });
+
+describe("AddRoleView — application pre-fill", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("pre-fills title/company from /api/applications/{id}", async () => {
+    vi.doMock("@/lib/profile-roles", () => ({
+      addRole: vi.fn(),
+      markApplicationHired: vi.fn(),
+    }));
+    vi.doMock("next/navigation", () => ({
+      useRouter: () => ({ push: vi.fn() }),
+      useSearchParams: () => new URLSearchParams("source=application&application_id=abc"),
+    }));
+    global.fetch = vi.fn(async (url) => {
+      if (String(url).includes("/api/applications/abc")) {
+        return new Response(JSON.stringify({
+          id: "abc",
+          role_title: "Director of QA",
+          company_name: "Roche",
+          flow_session_id: "f1",
+        }));
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    }) as unknown as typeof fetch;
+
+    const { AddRoleView: View } = await import("../AddRoleView");
+    render(withIntl(<View openRoles={[]} />, "en"));
+    expect(await screen.findByDisplayValue("Director of QA")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Roche")).toBeInTheDocument();
+  });
+});
