@@ -60,7 +60,7 @@ async def async_client(async_db: AsyncSession):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_db, None)
 
 
 @pytest_asyncio.fixture

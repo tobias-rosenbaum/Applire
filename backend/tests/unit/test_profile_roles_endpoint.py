@@ -3,8 +3,10 @@
 """Endpoint tests for POST /api/profile/roles."""
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from applire.main import app
+from applire.models.profile import MasterProfile
 from applire.schemas.profile import MasterProfileData, ProfileMetadata, WorkEntry
 
 
@@ -31,7 +33,9 @@ async def test_add_role_minimal(seed_profile, async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_add_role_closes_existing(seed_profile, async_client: AsyncClient):
+async def test_add_role_closes_existing(
+    seed_profile, async_client: AsyncClient, async_db: AsyncSession
+):
     existing = WorkEntry(company="A", role="Lead", start_date="2023-01-01", end_date=None)
     await seed_profile(MasterProfileData(
         work_experience=[existing],
@@ -50,6 +54,14 @@ async def test_add_role_closes_existing(seed_profile, async_client: AsyncClient)
     )
     assert res.status_code == 200
     assert res.json()["closed_role_ids"] == [existing.id]
+
+    # Verify the end_date was actually persisted to the DB, not just reflected
+    # in the response.
+    result = await async_db.execute(select(MasterProfile))
+    record = result.scalars().first()
+    persisted = MasterProfileData.model_validate(record.profile_json)
+    closed = next(w for w in persisted.work_experience if w.id == existing.id)
+    assert closed.end_date == "2026-05-31"
 
 
 @pytest.mark.asyncio
