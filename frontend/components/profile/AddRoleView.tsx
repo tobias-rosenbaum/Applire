@@ -50,8 +50,36 @@ export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps)
   const [closeRoles, setCloseRoles] = useState<CloseRoleEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [jdText, setJdText] = useState("");
+  const [analysing, setAnalysing] = useState(false);
 
   const canSave = !!(title.trim() && company.trim() && startDate && !submitting);
+
+  async function analyseJd() {
+    if (!jdText.trim()) return;
+    setAnalysing(true);
+    setError("");
+    try {
+      const res = await fetch("/api/job/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: jdText }),
+      });
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(detail || `HTTP ${res.status}`);
+      }
+      const job = await res.json();
+      setTitle(job.role_title ?? "");
+      setCompany(job.company_name ?? "");
+      // Note: /api/job/analyze does not return location or industry fields,
+      // so Emma fills those manually.
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "JD analysis failed");
+    } finally {
+      setAnalysing(false);
+    }
+  }
 
   async function handleSave() {
     setSubmitting(true);
@@ -79,6 +107,27 @@ export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps)
       <h1 className="text-2xl font-bold font-manrope text-gray-900">{t("heading")}</h1>
 
       <div className="mt-8">
+        {source === "jd_paste" && (
+          <div className="mb-6">
+            <label className="block">
+              <span className="text-sm text-gray-700">{t("pasteJdLabel")}</span>
+              <textarea
+                value={jdText}
+                onChange={(e) => setJdText(e.target.value)}
+                rows={6}
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={analyseJd}
+              disabled={analysing || !jdText.trim()}
+              className="mt-2 px-3 py-1.5 rounded-lg bg-primary-container text-primary text-sm font-bold disabled:opacity-50"
+            >
+              {t("analyseJd")}
+            </button>
+          </div>
+        )}
         <h2 className="text-base font-bold text-gray-900">{t("step1Heading")}</h2>
         <div className="mt-4 space-y-4">
           <Field label={t("titleLabel")} value={title} onChange={setTitle} required />

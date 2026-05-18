@@ -55,3 +55,29 @@ describe("AddRoleView — manual mode", () => {
     expect(saveBtn).not.toBeDisabled();
   });
 });
+
+describe("AddRoleView — jd_paste mode", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("renders JD textarea when source=jd_paste", async () => {
+    vi.doMock("@/lib/profile-roles", () => ({
+      addRole: vi.fn().mockResolvedValue({
+        profile_id: "p",
+        new_role_id: "r",
+        closed_role_ids: [],
+        completeness_score: 0.85,
+      }),
+      markApplicationHired: vi.fn(),
+    }));
+    vi.doMock("next/navigation", () => ({
+      useRouter: () => ({ push: vi.fn() }),
+      useSearchParams: () => new URLSearchParams("source=jd_paste"),
+    }));
+    const { AddRoleView: View } = await import("../AddRoleView");
+    render(withIntl(<View openRoles={[]} />, "en"));
+    expect(screen.getByLabelText(/Paste the job description/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Analyse/i })).toBeInTheDocument();
+  });
+});
