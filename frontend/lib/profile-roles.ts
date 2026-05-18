@@ -77,3 +77,25 @@ export async function markApplicationHired(applicationId: string): Promise<MarkH
   });
   return unwrap<MarkHiredResponse>(res);
 }
+
+export interface OpenRoleDTO {
+  id: string;
+  company: string;
+  role: string;
+  start_date: string | null;
+}
+
+export async function fetchOpenRoles(): Promise<OpenRoleDTO[]> {
+  const res = await fetch(`${API_BASE}/api/profile`);
+  if (!res.ok) return [];
+  const body = await res.json();
+  const items = body?.profile?.work_experience ?? body?.work_experience ?? [];
+  return items
+    .filter((w: { end_date?: string | null }) => !w.end_date)
+    .map((w: { id: string; company: string; role: string; start_date: string | null }) => ({
+      id: w.id,
+      company: w.company,
+      role: w.role,
+      start_date: w.start_date,
+    }));
+}

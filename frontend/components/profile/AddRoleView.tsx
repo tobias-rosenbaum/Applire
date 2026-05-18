@@ -21,22 +21,15 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { addRole, type AddRoleRequest, type AddRoleSource, type CloseRoleEntry } from "@/lib/profile-roles";
-
-export interface OpenRole {
-  id: string;
-  company: string;
-  role: string;
-  start_date: string | null;
-}
+import { addRole, type AddRoleRequest, type AddRoleSource, type CloseRoleEntry, fetchOpenRoles, type OpenRoleDTO } from "@/lib/profile-roles";
 
 interface AddRoleViewProps {
-  openRoles: OpenRole[];
+  openRoles?: OpenRoleDTO[];
   prefill?: { title?: string; company?: string; location?: string | null; industry?: string | null };
   sourceRef?: string | null;
 }
 
-export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps) {
+export function AddRoleView({ openRoles: openRolesProp, prefill, sourceRef }: AddRoleViewProps) {
   const t = useTranslations("profileUpdate.addRole");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,6 +45,12 @@ export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps)
   const [error, setError] = useState("");
   const [jdText, setJdText] = useState("");
   const [analysing, setAnalysing] = useState(false);
+  const [openRoles, setOpenRoles] = useState<OpenRoleDTO[]>(openRolesProp ?? []);
+
+  useEffect(() => {
+    if (openRolesProp !== undefined) return;
+    fetchOpenRoles().then(setOpenRoles).catch(() => setOpenRoles([]));
+  }, [openRolesProp]);
 
   useEffect(() => {
     const applicationId = searchParams.get("application_id");

@@ -121,6 +121,7 @@ describe("AddRoleView — close roles step", () => {
     vi.doMock("@/lib/profile-roles", () => ({
       addRole: vi.fn(),
       markApplicationHired: vi.fn(),
+      fetchOpenRoles: vi.fn(),
     }));
     vi.doMock("next/navigation", () => ({
       useRouter: () => ({ push: vi.fn() }),
@@ -152,5 +153,28 @@ describe("AddRoleView — close roles step", () => {
     render(withIntl(<View openRoles={twoOpenRoles} />, "en"));
     expect((screen.getByLabelText(/Acme/) as HTMLInputElement).checked).toBe(false);
     expect((screen.getByLabelText(/MyStartup/) as HTMLInputElement).checked).toBe(false);
+  });
+});
+
+describe("AddRoleView — fetches open roles when no prop supplied", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.doMock("@/lib/profile-roles", () => ({
+      addRole: vi.fn(),
+      markApplicationHired: vi.fn(),
+      fetchOpenRoles: vi.fn().mockResolvedValue([
+        { id: "r1", company: "Acme", role: "Lead", start_date: "2023-01-01" },
+      ]),
+    }));
+    vi.doMock("next/navigation", () => ({
+      useRouter: () => ({ push: vi.fn() }),
+      useSearchParams: () => new URLSearchParams("source=manual"),
+    }));
+  });
+
+  it("renders the fetched open role in Step 2", async () => {
+    const { AddRoleView: View } = await import("../AddRoleView");
+    render(withIntl(<View />, "en"));
+    expect(await screen.findByLabelText(/Acme/)).toBeInTheDocument();
   });
 });

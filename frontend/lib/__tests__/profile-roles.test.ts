@@ -16,7 +16,7 @@
 // along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
 import { describe, expect, it, vi } from "vitest";
-import { addRole, markApplicationHired } from "../profile-roles";
+import { addRole, markApplicationHired, fetchOpenRoles } from "../profile-roles";
 
 const okJson = (body: unknown) =>
   ({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response);
@@ -62,5 +62,31 @@ describe("markApplicationHired", () => {
       expect.objectContaining({ method: "POST" })
     );
     expect(res.redirect_url).toContain("action=add-role");
+  });
+});
+
+describe("fetchOpenRoles", () => {
+  it("filters out closed roles and returns open roles only", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okJson({
+        profile: {
+          work_experience: [
+            { id: "r1", company: "Acme", role: "Lead", start_date: "2023-01-01", end_date: null },
+            { id: "r2", company: "OldCorp", role: "Dev", start_date: "2020-01-01", end_date: "2022-12-31" },
+            { id: "r3", company: "Current", role: "Manager", start_date: "2024-01-01", end_date: null },
+          ],
+        },
+      })
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const roles = await fetchOpenRoles();
+    expect(roles).toHaveLength(2);
+    expect(roles.map((r) => r.id)).toEqual(["r1", "r3"]);
+  });
+
+  it("returns empty array on fetch error", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response);
+    const roles = await fetchOpenRoles();
+    expect(roles).toEqual([]);
   });
 });
