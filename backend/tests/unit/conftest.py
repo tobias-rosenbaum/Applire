@@ -9,9 +9,72 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 
 import pytest
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+
+from applire.db.session import Base, get_db
+from applire.main import app
+from applire.schemas.profile import MasterProfileData
 
 
 @pytest.fixture(scope="session", autouse=True)
 def docker_environment():
     """No-op override: unit tests use TestClient and need no running services."""
     yield
+
+
+@pytest_asyncio.fixture
+async def async_db():
+    """Create an in-memory SQLite database for testing."""
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+    # Create all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    # Create session factory
+    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    # Create and yield a session
+    async with async_session() as session:
+        yield session
+
+    # Cleanup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def async_client(async_db: AsyncSession):
+    """Create an async HTTP client with database dependency override."""
+    async def override_get_db():
+        yield async_db
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def seed_profile(async_db: AsyncSession):
+    """Fixture to seed a profile into the database."""
+    from applire.models.profile import MasterProfile
+
+    async def _seed(profile_data: MasterProfileData) -> MasterProfile:
+        record = MasterProfile(
+            profile_json=profile_data.model_dump(mode="json")
+        )
+        async_db.add(record)
+        await async_db.commit()
+        await async_db.refresh(record)
+        return record
+
+    return _seed
