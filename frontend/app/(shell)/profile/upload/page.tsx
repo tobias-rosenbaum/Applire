@@ -15,8 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
+import { AddRoleView } from "@/components/profile/AddRoleView";
 import { ProfileImportView } from "@/components/profile/ProfileImportView";
+import { ProfileUpdateChooser } from "@/components/profile/ProfileUpdateChooser";
 
-export default function ProfileUploadPage() {
-  return <ProfileImportView />;
+interface PageProps {
+  searchParams: Promise<{ action?: string }>;
+}
+
+export default async function ProfileUpdatePage({ searchParams }: PageProps) {
+  const { action } = await searchParams;
+
+  if (action === "upload") return <ProfileImportView />;
+  if (action === "add-role") return <AddRoleView />;
+  return <ProfileUpdateChooser />;
 }
