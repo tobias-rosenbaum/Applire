@@ -364,6 +364,7 @@ async def _build_state_response(
     return FlowStateResponse(
         flow_id=flow.id,
         job_id=flow.job_id,
+        application_id=flow.application_id,
         user_type=flow.user_type,
         current_step=flow.current_step,
         available_actions=flow.available_actions,

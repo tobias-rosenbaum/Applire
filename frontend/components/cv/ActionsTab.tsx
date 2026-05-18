@@ -18,8 +18,11 @@
 // along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { markApplicationHired } from "@/lib/profile-roles";
 import { TemplateSelector } from "./TemplateSelector";
 
 type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_developer" | "creative_sidebar" | "academic" | "compact_pro";
@@ -29,6 +32,7 @@ interface ActionsTabProps {
   matchScore: number | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;
   coverLetterId: string | null;
+  applicationId?: string | null;
   onDownloadPdf: () => void;
   onRegenerateSame: () => void;
   onRegenerateWithTemplate: (template: CVTemplate) => void;
@@ -41,6 +45,7 @@ export function ActionsTab({
   matchScore,
   expiryWarning,
   coverLetterId,
+  applicationId,
   onDownloadPdf,
   onRegenerateSame,
   onRegenerateWithTemplate,
@@ -48,6 +53,20 @@ export function ActionsTab({
   onGenerateCoverLetter,
 }: ActionsTabProps) {
   const t = useTranslations("cv");
+  const tHired = useTranslations("profileUpdate.markHired");
+  const router = useRouter();
+  const [hiring, setHiring] = useState(false);
+
+  async function handleMarkHired() {
+    if (!applicationId) return;
+    setHiring(true);
+    try {
+      const res = await markApplicationHired(applicationId);
+      router.push(res.redirect_url);
+    } finally {
+      setHiring(false);
+    }
+  }
   return (
     <div className="flex flex-col gap-4 p-3">
       {matchScore !== null && (
@@ -111,6 +130,17 @@ export function ActionsTab({
         >
           {t("regenerate")}
         </button>
+        {applicationId && (
+          <button
+            type="button"
+            onClick={() => void handleMarkHired()}
+            disabled={hiring}
+            className="w-full border border-primary text-primary text-sm font-medium py-2.5 rounded hover:bg-primary-container transition-colors disabled:opacity-50"
+            data-testid="mark-hired-btn"
+          >
+            {hiring ? tHired("confirming") : tHired("button")}
+          </button>
+        )}
       </div>
 
       <div className="border-t border-neutral-medium pt-4">

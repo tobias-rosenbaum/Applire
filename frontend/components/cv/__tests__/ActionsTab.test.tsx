@@ -15,10 +15,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, afterEach } from "vitest";
 import { withIntl } from "@/lib/test-utils/with-intl";
 import { ActionsTab } from "../ActionsTab";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+vi.mock("@/lib/profile-roles", () => ({
+  markApplicationHired: (...args: Parameters<typeof mockMarkApplicationHired>) =>
+    mockMarkApplicationHired(...args),
+  addRole: vi.fn(),
+  fetchOpenRoles: vi.fn(),
+}));
+
+const mockPush = vi.fn();
+const mockMarkApplicationHired = vi.fn();
 
 const BASE_PROPS = {
   flowId: "test-flow-id",
@@ -92,5 +106,44 @@ describe("ActionsTab", () => {
   it("renders without matchScore (null)", () => {
     render(withIntl(<ActionsTab {...BASE_PROPS} matchScore={null} />));
     expect(screen.queryByText(/%/)).toBeNull();
+  });
+});
+
+describe("ActionsTab — Mark as Hired", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does not render the button when applicationId is null", () => {
+    render(withIntl(<ActionsTab {...BASE_PROPS} applicationId={null} />));
+    expect(
+      screen.queryByRole("button", { name: /Mark as Hired/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the button when applicationId is provided", () => {
+    render(withIntl(<ActionsTab {...BASE_PROPS} applicationId="abc" />));
+    expect(
+      screen.getByRole("button", { name: /Mark as Hired/i })
+    ).toBeInTheDocument();
+  });
+
+  it("calls markApplicationHired and navigates on click", async () => {
+    mockMarkApplicationHired.mockResolvedValue({
+      application_id: "abc",
+      user_status: "hired",
+      redirect_url:
+        "/profile/upload?action=add-role&source=application&application_id=abc",
+    });
+
+    render(withIntl(<ActionsTab {...BASE_PROPS} applicationId="abc" />));
+    fireEvent.click(screen.getByRole("button", { name: /Mark as Hired/i }));
+
+    await waitFor(() => {
+      expect(mockMarkApplicationHired).toHaveBeenCalledWith("abc");
+      expect(mockPush).toHaveBeenCalledWith(
+        "/profile/upload?action=add-role&source=application&application_id=abc"
+      );
+    });
   });
 });

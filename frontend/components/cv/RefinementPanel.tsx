@@ -36,6 +36,7 @@ interface RefinementPanelProps {
   matchScore: number | null;
   expiryWarning: { level: "none" | "warning" | "critical"; expiresIn: string } | null;
   coverLetterId: string | null;
+  applicationId?: string | null;
   detectedCompany: { name: string; hex: string } | null;
   currentAccentHex: string;
   onHtmlRefresh: () => void;
@@ -59,6 +60,7 @@ export function RefinementPanel({
   matchScore,
   expiryWarning,
   coverLetterId,
+  applicationId,
   detectedCompany,
   currentAccentHex,
   onHtmlRefresh,
@@ -199,6 +201,7 @@ export function RefinementPanel({
             matchScore={matchScore}
             expiryWarning={expiryWarning}
             coverLetterId={coverLetterId}
+            applicationId={applicationId}
             onDownloadPdf={onDownloadPdf}
             onRegenerateSame={onRegenerateSame}
             onRegenerateWithTemplate={onRegenerateWithTemplate}

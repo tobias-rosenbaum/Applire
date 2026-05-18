@@ -20,6 +20,19 @@ import { vi, describe, it, expect, afterEach, beforeEach } from "vitest";
 import { withIntl } from "@/lib/test-utils/with-intl";
 import { RefinementPanel } from "../RefinementPanel";
 
+// ActionsTab now uses useRouter — mock next/navigation so RefinementPanel tests
+// don't fail when the Actions tab is rendered.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+// ActionsTab imports markApplicationHired — stub it to avoid real fetch calls.
+vi.mock("@/lib/profile-roles", () => ({
+  markApplicationHired: vi.fn(),
+  addRole: vi.fn(),
+  fetchOpenRoles: vi.fn(),
+}));
+
 const BASE_PROPS = {
   cvId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   flowId: "test-flow-id",

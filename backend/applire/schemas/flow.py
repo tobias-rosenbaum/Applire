@@ -97,6 +97,7 @@ class AdvanceFlowRequest(BaseModel):
 class FlowStateResponse(BaseModel):
     flow_id: uuid.UUID
     job_id: uuid.UUID | None = None
+    application_id: uuid.UUID | None = None  # linked Application, if any
     user_type: Literal["new", "returning"]
     current_step: FlowStep
     available_actions: dict[str, str]

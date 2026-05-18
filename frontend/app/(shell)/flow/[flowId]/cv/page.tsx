@@ -37,6 +37,7 @@ type CVTemplate = "classic_german" | "modern_swiss" | "executive" | "tech_develo
 
 interface FlowState {
   job_id: string;
+  application_id?: string | null;
   job_summary?: { role_title: string } | null;
   gap_summary?: {
     match_score: number;
@@ -244,6 +245,7 @@ export default function CVPage({
             matchScore={flowState?.gap_summary?.match_score ?? null}
             expiryWarning={expiryWarning}
             coverLetterId={flowState?.cover_letter_summary?.cover_letter_id ?? null}
+            applicationId={flowState?.application_id ?? null}
             detectedCompany={flowState?.gap_summary?.detected_company ?? null}
             currentAccentHex={flowState?.gap_summary?.current_accent_hex ?? "#2b5fa8"}
             onHtmlRefresh={() => cvDocRef.current?.refresh()}
