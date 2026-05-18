@@ -114,3 +114,43 @@ describe("AddRoleView — application pre-fill", () => {
     expect(screen.getByDisplayValue("Roche")).toBeInTheDocument();
   });
 });
+
+describe("AddRoleView — close roles step", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.doMock("@/lib/profile-roles", () => ({
+      addRole: vi.fn(),
+      markApplicationHired: vi.fn(),
+    }));
+    vi.doMock("next/navigation", () => ({
+      useRouter: () => ({ push: vi.fn() }),
+      useSearchParams: () => new URLSearchParams("source=manual"),
+    }));
+  });
+
+  const oneOpenRole = [{ id: "r1", company: "Acme", role: "Lead", start_date: "2023-01-01" }];
+  const twoOpenRoles = [
+    { id: "r1", company: "Acme", role: "Lead", start_date: "2023-01-01" },
+    { id: "r2", company: "MyStartup", role: "Founder", start_date: "2025-04-01" },
+  ];
+
+  it("hides Step 2 when no open roles", async () => {
+    const { AddRoleView: View } = await import("../AddRoleView");
+    render(withIntl(<View openRoles={[]} />, "en"));
+    expect(screen.queryByText(/Anything ending/i)).not.toBeInTheDocument();
+  });
+
+  it("checks single open role by default", async () => {
+    const { AddRoleView: View } = await import("../AddRoleView");
+    render(withIntl(<View openRoles={oneOpenRole} />, "en"));
+    const cb = screen.getByLabelText(/Acme/) as HTMLInputElement;
+    expect(cb.checked).toBe(true);
+  });
+
+  it("leaves all unchecked when multiple open roles", async () => {
+    const { AddRoleView: View } = await import("../AddRoleView");
+    render(withIntl(<View openRoles={twoOpenRoles} />, "en"));
+    expect((screen.getByLabelText(/Acme/) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByLabelText(/MyStartup/) as HTMLInputElement).checked).toBe(false);
+  });
+});

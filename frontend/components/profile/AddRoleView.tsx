@@ -80,6 +80,13 @@ export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, searchParams, t]);
 
+  useEffect(() => {
+    if (openRoles.length === 1 && closeRoles.length === 0) {
+      setCloseRoles([{ role_id: openRoles[0].id, end_date: "" }]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoles]);
+
   const canSave = !!(title.trim() && company.trim() && startDate && !submitting);
 
   async function analyseJd() {
@@ -165,6 +172,62 @@ export function AddRoleView({ openRoles, prefill, sourceRef }: AddRoleViewProps)
         </div>
       </div>
 
+      {openRoles.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-base font-bold text-gray-900">{t("step2Heading")}</h2>
+          <p className="mt-1 text-sm text-gray-500">{t("step2Hint")}</p>
+
+          <ul className="mt-4 space-y-3">
+            {openRoles.map((role) => {
+              const checked = closeRoles.some((c) => c.role_id === role.id);
+              return (
+                <li key={role.id} className="rounded-lg border border-gray-200 p-3">
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      aria-label={role.company}
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const defaultEnd = startDate ? minusOneDay(startDate) : "";
+                          setCloseRoles((prev) => [
+                            ...prev,
+                            { role_id: role.id, end_date: defaultEnd },
+                          ]);
+                        } else {
+                          setCloseRoles((prev) => prev.filter((c) => c.role_id !== role.id));
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                    <span className="text-sm">
+                      <span className="font-semibold">{role.role}</span> at <span className="font-semibold">{role.company}</span>
+                      {role.start_date && <span className="text-gray-500"> (since {role.start_date})</span>}
+                    </span>
+                  </label>
+                  {checked && (
+                    <label className="mt-2 ml-7 block">
+                      <span className="text-xs text-gray-600">{t("endDateLabel")}</span>
+                      <input
+                        type="date"
+                        value={closeRoles.find((c) => c.role_id === role.id)?.end_date ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCloseRoles((prev) =>
+                            prev.map((c) => (c.role_id === role.id ? { ...c, end_date: v } : c))
+                          );
+                        }}
+                        className="mt-1 block rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                      />
+                    </label>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-8 flex justify-between">
@@ -215,4 +278,10 @@ function Field({
       />
     </label>
   );
+}
+
+function minusOneDay(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
