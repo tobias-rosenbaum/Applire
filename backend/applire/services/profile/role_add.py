@@ -1,0 +1,117 @@
+# Copyright (C) 2024-2026 Tobias Rosenbaum
+#
+# This file is part of Applire.
+#
+# Applire is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Applire is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Applire. If not, see <https://www.gnu.org/licenses/>.
+
+"""Pure mutation logic for adding a new work entry and (optionally) closing
+existing open work entries on a MasterProfileData. No DB; the router/service
+that owns the session is responsible for loading and persisting the profile.
+"""
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+from applire.schemas.profile import (
+    EnrichmentRecord,
+    FieldChange,
+    MasterProfileData,
+    ProfileMetadata,
+    WorkEntry,
+)
+from applire.schemas.profile_roles import AddRoleRequest
+
+
+class AddRoleValidationError(ValueError):
+    """Raised when the request cannot be applied (router should map to HTTP 422)."""
+
+
+@dataclass
+class AddRoleResult:
+    profile: MasterProfileData
+    new_role_id: str
+    closed_role_ids: list[str]
+
+
+def apply_add_role(profile: MasterProfileData, req: AddRoleRequest) -> AddRoleResult:
+    """Apply the request to the profile in-place-style and return the result.
+
+    Validation is all-or-nothing: any failure raises AddRoleValidationError
+    before any mutation, so the caller never sees a partial profile.
+    """
+    # Validate close_roles
+    by_id: dict[str, WorkEntry] = {w.id: w for w in profile.work_experience}
+    for entry in req.close_roles:
+        we = by_id.get(entry.role_id)
+        if we is None:
+            raise AddRoleValidationError(f"unknown role_id: {entry.role_id}")
+        if we.end_date is not None:
+            raise AddRoleValidationError(f"role_id {entry.role_id} is not open")
+        if entry.end_date > req.start_date:
+            raise AddRoleValidationError(
+                f"end_date {entry.end_date} must be on or before new start_date {req.start_date}"
+            )
+
+    # Mutate
+    new_entry = WorkEntry(
+        company=req.company,
+        role=req.title,
+        location=req.location,
+        start_date=req.start_date,
+        end_date=None,
+        industry_context=req.industry,
+    )
+    profile.work_experience.insert(0, new_entry)
+
+    closed_ids: list[str] = []
+    for entry in req.close_roles:
+        by_id[entry.role_id].end_date = entry.end_date
+        closed_ids.append(entry.role_id)
+
+    # Audit
+    if profile.metadata is None:
+        profile.metadata = ProfileMetadata()
+
+    changes: list[FieldChange] = [
+        FieldChange(
+            section="work_experience",
+            field=f"[{new_entry.id}]",
+            action="added",
+            new_value={"company": new_entry.company, "role": new_entry.role,
+                       "start_date": new_entry.start_date},
+        )
+    ]
+    for entry in req.close_roles:
+        changes.append(
+            FieldChange(
+                section="work_experience",
+                field=f"[{entry.role_id}].end_date",
+                action="updated",
+                old_value=None,
+                new_value=entry.end_date,
+            )
+        )
+    profile.metadata.enrichment_history.append(
+        EnrichmentRecord(
+            timestamp=datetime.now(timezone.utc),
+            source="manual_role_add",
+            changes=changes,
+        )
+    )
+    profile.metadata.last_updated = datetime.now(timezone.utc)
+
+    return AddRoleResult(
+        profile=profile,
+        new_role_id=new_entry.id,
+        closed_role_ids=closed_ids,
+    )
