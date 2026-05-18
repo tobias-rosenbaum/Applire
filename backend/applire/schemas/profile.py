@@ -242,7 +242,7 @@ class FieldChange(BaseModel):
 
 class EnrichmentRecord(BaseModel):
     timestamp: datetime
-    source: Literal["cv_upload", "linkedin_import", "xing_import", "interview", "manual_edit"]
+    source: Literal["cv_upload", "linkedin_import", "xing_import", "interview", "manual_edit", "manual_role_add"]
     source_session_id: str | None = None
     changes: list[FieldChange] = Field(default_factory=list)
     confidence: float | None = None  # for LLM-extracted data
