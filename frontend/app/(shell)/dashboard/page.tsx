@@ -34,6 +34,7 @@ interface Application {
   role_title: string | null;
   company_name: string | null;
   workflow_status: string;
+  user_status?: string;
   flow_session_id: string | null;
   updated_at: string;
 }
@@ -139,6 +140,7 @@ export default function DashboardPage() {
                 roleTitle={app.role_title}
                 companyName={app.company_name}
                 workflowStatus={app.workflow_status}
+                userStatus={app.user_status}
                 flowSessionId={app.flow_session_id}
                 updatedAt={app.updated_at}
                 onStartFlow={() => handleStartFlow(app.id)}

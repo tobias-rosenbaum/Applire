@@ -25,6 +25,25 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => {
+    // Map known keys; fall through to raw key
+    if (key === "button") return "Mark as Hired";
+    if (key === "confirming") return "Marking as hired…";
+    return key;
+  },
+}));
+
+vi.mock("@/lib/profile-roles", () => ({
+  markApplicationHired: vi.fn().mockResolvedValue({
+    application_id: "a",
+    user_status: "hired",
+    redirect_url: "/profile/upload?action=add-role&source=application&application_id=a",
+  }),
+  addRole: vi.fn(),
+  fetchOpenRoles: vi.fn(),
+}));
+
 const NOW = new Date().toISOString();
 const STALE_48H = new Date(Date.now() - 49 * 36e5).toISOString();
 
@@ -148,5 +167,22 @@ describe("DashboardApplicationCard", () => {
   it("renders fallback text when roleTitle is null", () => {
     renderCard({ roleTitle: null, companyName: null });
     expect(screen.getByText("Unknown role")).toBeInTheDocument();
+  });
+
+  // ── Mark as Hired affordance ─────────────────────────────────────────────
+
+  it("shows when workflow_status=completed and user_status!=hired", () => {
+    renderCard({ workflowStatus: "completed", userStatus: "applied" });
+    expect(screen.getByRole("button", { name: /Mark as Hired/i })).toBeInTheDocument();
+  });
+
+  it("hides when user_status=hired", () => {
+    renderCard({ workflowStatus: "completed", userStatus: "hired" });
+    expect(screen.queryByRole("button", { name: /Mark as Hired/i })).not.toBeInTheDocument();
+  });
+
+  it("hides when CV is not yet ready", () => {
+    renderCard({ workflowStatus: "analyzing", userStatus: "applied" });
+    expect(screen.queryByRole("button", { name: /Mark as Hired/i })).not.toBeInTheDocument();
   });
 });

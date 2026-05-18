@@ -18,8 +18,11 @@
 // along with Applire. If not, see <https://www.gnu.org/licenses/>.
 
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { markApplicationHired } from "@/lib/profile-roles";
 
 export type CardStatus = "in_progress" | "cv_ready" | "interrupted" | "tracking";
 
@@ -28,6 +31,7 @@ export interface DashboardApplicationCardProps {
   roleTitle: string | null;
   companyName: string | null;
   workflowStatus: string;
+  userStatus?: string;
   flowSessionId: string | null;
   updatedAt: string;
   onStartFlow?: () => void;
@@ -69,6 +73,7 @@ export function DashboardApplicationCard({
   roleTitle,
   companyName,
   workflowStatus,
+  userStatus,
   flowSessionId,
   updatedAt,
   onStartFlow,
@@ -77,6 +82,10 @@ export function DashboardApplicationCard({
   const status = deriveCardStatus(workflowStatus, updatedAt);
   const chip = CHIP[status];
   const initial = (companyName ?? roleTitle ?? "?")[0].toUpperCase();
+
+  const tHired = useTranslations("profileUpdate.markHired");
+  const [hiring, setHiring] = useState(false);
+  const showMarkHired = workflowStatus === "completed" && userStatus !== "hired";
 
   const relativeTime = (() => {
     const h = Math.floor((Date.now() - new Date(updatedAt).getTime()) / 36e5);
@@ -92,6 +101,17 @@ export function DashboardApplicationCard({
     } else if (flowSessionId) {
       const dest = status === "cv_ready" ? `/flow/${flowSessionId}/cv` : `/flow/${flowSessionId}/interview`;
       router.push(dest);
+    }
+  }
+
+  async function handleMarkHired(e: React.MouseEvent) {
+    e.stopPropagation();
+    setHiring(true);
+    try {
+      const res = await markApplicationHired(applicationId);
+      router.push(res.redirect_url);
+    } finally {
+      setHiring(false);
     }
   }
 
@@ -144,21 +164,33 @@ export function DashboardApplicationCard({
 
       <div className="flex items-center justify-between">
         <span className="text-[11.5px] text-gray-400">{relativeTime}</span>
-        <button
-          onClick={handleAction}
-          data-testid={status === "cv_ready" ? "dashboard-card-open-btn" : undefined}
-          className={cn(
-            "text-[12px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors",
-            status === "cv_ready"
-              ? "bg-[#dcfce7] text-[#166534] hover:bg-[#bbf7d0]"
-              : "bg-teal-dim text-white hover:bg-primary"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleAction}
+            data-testid={status === "cv_ready" ? "dashboard-card-open-btn" : undefined}
+            className={cn(
+              "text-[12px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors",
+              status === "cv_ready"
+                ? "bg-[#dcfce7] text-[#166534] hover:bg-[#bbf7d0]"
+                : "bg-teal-dim text-white hover:bg-primary"
+            )}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+              {status === "cv_ready" ? "open_in_new" : status === "tracking" ? "bolt" : "play_arrow"}
+            </span>
+            {ACTION_LABEL[status]}
+          </button>
+          {showMarkHired && (
+            <button
+              type="button"
+              onClick={handleMarkHired}
+              disabled={hiring}
+              className="text-[12px] font-bold px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary-container disabled:opacity-50"
+            >
+              {hiring ? tHired("confirming") : tHired("button")}
+            </button>
           )}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-            {status === "cv_ready" ? "open_in_new" : status === "tracking" ? "bolt" : "play_arrow"}
-          </span>
-          {ACTION_LABEL[status]}
-        </button>
+        </div>
       </div>
     </div>
   );
