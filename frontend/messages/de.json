@@ -437,6 +437,38 @@
     "whyTitle": "Warum aktualisieren?",
     "whyBody": "Ein aktueller Lebenslauf verbessert die Treffsicherheit aller KI-Analysen — von der Lückenanalyse bis zur CV-Generierung. Änderungen werden sofort im Masterprofil zusammengeführt."
   },
+  "profileUpdate": {
+    "chooser": {
+      "heading": "Profil aktualisieren",
+      "subheading": "Was hat sich geändert?",
+      "uploadTitle": "Neuen Lebenslauf hochladen",
+      "uploadBody": "Lass Applire aus einer Datei extrahieren, was neu ist.",
+      "addRoleTitle": "Ich habe eine neue Stelle angetreten",
+      "addRoleBody": "Erzähl mir direkt von deiner neuen Position."
+    },
+    "addRole": {
+      "heading": "Neue Stelle hinzufügen",
+      "step1Heading": "Deine neue Position",
+      "titleLabel": "Jobtitel",
+      "companyLabel": "Unternehmen",
+      "startDateLabel": "Eintrittsdatum",
+      "locationLabel": "Standort",
+      "industryLabel": "Branche",
+      "pasteJdLabel": "Stellenbeschreibung einfügen (optional)",
+      "analyseJd": "Analysieren",
+      "step2Heading": "Endet etwas?",
+      "step2Hint": "Wenn du parallel eine Nebenrolle beginnst, lass alles unausgewählt.",
+      "endDateLabel": "Enddatum",
+      "save": "Änderungen speichern",
+      "cancel": "Abbrechen",
+      "savedSuccess": "Profil aktualisiert.",
+      "noJdHint": "Die Stellenbeschreibung dieser Bewerbung konnte nicht geladen werden – bitte fülle die Felder manuell aus."
+    },
+    "markHired": {
+      "button": "Als eingestellt markieren",
+      "confirming": "Wird als eingestellt markiert …"
+    }
+  },
   "documents": {
     "title": "Meine Dokumente",
     "subtitle": "Alle generierten Lebensläufe deiner Bewerbungen",

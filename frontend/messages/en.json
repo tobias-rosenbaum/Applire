@@ -437,6 +437,38 @@
     "whyTitle": "Why update?",
     "whyBody": "An up-to-date CV improves accuracy across all AI analyses — from gap analysis to CV generation. Changes are merged into your Master Profile immediately."
   },
+  "profileUpdate": {
+    "chooser": {
+      "heading": "Update profile",
+      "subheading": "What's changed?",
+      "uploadTitle": "Upload a new CV",
+      "uploadBody": "Let Applire extract what's new from a file.",
+      "addRoleTitle": "I started a new role",
+      "addRoleBody": "Tell me about your new position directly."
+    },
+    "addRole": {
+      "heading": "Add a new role",
+      "step1Heading": "Your new position",
+      "titleLabel": "Job title",
+      "companyLabel": "Company",
+      "startDateLabel": "Start date",
+      "locationLabel": "Location",
+      "industryLabel": "Industry",
+      "pasteJdLabel": "Paste the job description (optional)",
+      "analyseJd": "Analyse",
+      "step2Heading": "Anything ending?",
+      "step2Hint": "If you're starting a side role in parallel, leave them all unchecked.",
+      "endDateLabel": "End date",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "savedSuccess": "Profile updated.",
+      "noJdHint": "Couldn't load the job description from this application — please fill in the details."
+    },
+    "markHired": {
+      "button": "Mark as Hired",
+      "confirming": "Marking as hired…"
+    }
+  },
   "documents": {
     "title": "My Documents",
     "subtitle": "All generated CVs across your applications",
