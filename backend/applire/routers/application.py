@@ -41,12 +41,14 @@ from applire.schemas.application import (
     CreateApplicationRequest,
     PatchApplicationRequest,
 )
+from applire.schemas.application_mark_hired import MarkHiredResponse
 from applire.services.application import (
     ConflictError,
     create_application,
     delete_application,
     get_application,
     list_applications,
+    mark_application_hired,
     patch_application,
     start_application_workflow,
 )
@@ -159,3 +161,15 @@ async def start_workflow(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@router.post("/{application_id}/mark-hired", response_model=MarkHiredResponse)
+async def mark_hired(
+    application_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth: AuthProvider = Depends(get_auth_provider),
+) -> MarkHiredResponse:
+    try:
+        return await mark_application_hired(application_id, db)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

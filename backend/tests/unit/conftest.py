@@ -4,6 +4,7 @@ from the parent conftest so unit tests can run without a live Docker environment
 Sets DATABASE_URL before any app module is imported to satisfy the Settings validator.
 """
 import os
+import uuid
 
 # Must be set before app modules are imported (pydantic Settings validates at import time)
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
@@ -76,5 +77,41 @@ async def seed_profile(async_db: AsyncSession):
         await async_db.commit()
         await async_db.refresh(record)
         return record
+
+    return _seed
+
+
+@pytest_asyncio.fixture
+async def seed_application(async_db: AsyncSession):
+    """Insert a minimal Application row for testing.
+
+    Inserts both a JobAnalysis (required FK target) and the Application.
+    """
+    from applire.models.application import Application, UserStatus
+    from applire.models.job import JobAnalysis
+
+    async def _seed(*, user_status: str = UserStatus.tracking.value) -> Application:
+        # Insert a minimal JobAnalysis for the FK
+        ja = JobAnalysis(
+            raw_text_hash=f"hash-{uuid.uuid4()}",
+            raw_text="Sample job description",
+            role_title="Software Engineer",
+            seniority_level="mid",
+            language_requirement="English",
+        )
+        async_db.add(ja)
+        await async_db.flush()  # populate ja.id
+
+        app = Application(
+            user_id=uuid.uuid4(),
+            job_analysis_id=ja.id,
+            user_status=user_status,
+            company_name="Acme",
+            role_title="Engineer",
+        )
+        async_db.add(app)
+        await async_db.commit()
+        await async_db.refresh(app)
+        return app
 
     return _seed

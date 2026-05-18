@@ -51,6 +51,7 @@ from applire.schemas.application import (
     CreateApplicationRequest,
     PatchApplicationRequest,
 )
+from applire.schemas.application_mark_hired import MarkHiredResponse
 from applire.schemas.profile import MasterProfileData
 
 # Import flow helpers — these are pure functions with no import of application.py.
@@ -252,6 +253,36 @@ async def sync_workflow_status(
             updated_at=now,
             expires_at=now + timedelta(days=_APPLICATION_TTL_DAYS),
         )
+    )
+
+
+async def mark_application_hired(
+    application_id: uuid.UUID,
+    db: AsyncSession,
+) -> MarkHiredResponse:
+    """Idempotent: marks the application as hired and returns the redirect URL."""
+    result = await db.execute(
+        select(Application).where(
+            Application.id == application_id,
+            Application.deleted_at.is_(None),
+        )
+    )
+    app_row = result.scalar_one_or_none()
+    if app_row is None:
+        raise LookupError(f"Application {application_id} not found")
+
+    app_row.user_status = UserStatus.hired.value
+    if app_row.applied_at is None:
+        app_row.applied_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    return MarkHiredResponse(
+        application_id=str(app_row.id),
+        user_status=app_row.user_status,
+        redirect_url=(
+            f"/profile/upload?action=add-role"
+            f"&source=application&application_id={app_row.id}"
+        ),
     )
 
 
