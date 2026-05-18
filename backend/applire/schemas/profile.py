@@ -64,6 +64,7 @@ Contact = PersonalInfo
 
 
 class WorkEntry(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     company: str = ""
     role: str = ""
 
