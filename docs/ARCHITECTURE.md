@@ -121,9 +121,7 @@ All TTL values are configurable via environment variables in `applire/constants.
 
 ### ADR-007 — Open Core Architecture (AGPL-3.0)
 
-**Decision:** Community Edition is AGPL-3.0. Cloud Edition is proprietary. AGPL was chosen over MIT/Apache specifically to close the "SaaS loophole" — anyone hosting a modified version as a network service must release their modifications.
-
-**Why not MIT/Apache:** Permissive licenses allow competitors to build a proprietary SaaS on top of Applire without contributing back. AGPL prevents this.
+**Decision:** Community Edition is AGPL-3.0. AGPL was chosen over MIT/Apache specifically to close the "SaaS loophole" — anyone hosting a modified version as a network service must release their modifications.
 
 **API consumers are not derivative works:** An AI agent or application calling the MCP or REST API is not creating a derivative work under AGPL. The license restriction applies to hosting and distributing the software itself.
 
@@ -159,25 +157,6 @@ All TTL values are configurable via environment variables in `applire/constants.
 **Why direct SDKs over LangChain:** Consistent with the decision not to use LangGraph (ADR-004). Reduces the dependency surface and keeps the provider contract narrow and testable.
 
 **Temperature defaults:** `0.4` for question generation, `0.1` for structured JSON parsing.
-
----
-
-### ADR-010 — MCP Server Split-Layer Architecture
-
-**Decision:** MCP is split across two layers:
-
-- **Layer 1 (Community, stdio):** Core MCP tools, no auth, no rate limiting. This is the discovery and adoption channel. Ships in the AGPL-3.0 repository.
-- **Layer 2 (Cloud, SSE):** Network-accessible transport, API-Key auth, rate limiting, usage metering. Ships in `applire.cloud.mcp`.
-- **Layer 3 (Cloud, tools):** Cloud-only tools (`recruiter_intelligence_analyze`, etc.).
-
-**Normative agent flow:**
-```
-start_flow() → analyze_jd() → analyze_gaps() → [run_interview()] → generate_cv() → get_cv_status()
-```
-
-`flow_id` is the stable handle for agent session recovery — agents should always carry it across tool calls.
-
-**Why not stdio only:** Production agents need a network-accessible endpoint with auth. Revenue is captured at the transport layer (SSE + metering), not the tool layer — keeping core tools free maximises adoption.
 
 ---
 
@@ -359,8 +338,6 @@ This repository is the Community Edition. The table below documents what is and 
 | Recruiter Intelligence | ❌ | ✅ |
 | S3 storage backend | ❌ | ✅ |
 | Analytics dashboard + billing (Paddle) | ❌ | ✅ |
-
-**Rule:** If it touches `applire.cloud.*`, it does not belong in this repository. Cloud-only endpoints return HTTP 402 in Community Edition — this is intentional and correct behaviour.
 
 ---
 
